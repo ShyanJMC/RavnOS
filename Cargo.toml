@@ -1,0 +1,11 @@
+[build]
+target = "x86_64-unknown-linux-musl"
+
+[workspace]
+
+members = [
+	"show",
+	"ls",
+	"libconfarg",
+	"libstream",
+	]
