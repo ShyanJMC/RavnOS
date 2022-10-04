@@ -13,7 +13,6 @@ use std::io;
 // Process lib
 use std::process;
 
-
 // RavnOS libraries
 use libconfarg::RavnArguments;
 use libstream::getprocs;
@@ -38,7 +37,7 @@ fn main() {
         proc: false,
     };
 
-    if arguments.checkarguments_help( "show".to_string() ) {
+    if arguments.checkarguments_help("show".to_string()) {
         process::exit(0);
     }
 

@@ -50,6 +50,8 @@ cargo build --release --target [x86_64/arm64/etc]-unknown-[linux/windows/etc]-mu
 
 All binaries will be in "target/\[TARGET]/release".
 
+If you have space requeriments, do "strip" to the final binaries.
+
 ## Contact
 If you want contact me, you can do it trough:
 

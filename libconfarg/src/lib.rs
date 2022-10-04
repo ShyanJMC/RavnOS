@@ -63,7 +63,7 @@ impl RavnArguments for Vec<String> {
 
     // self argument is he Vec<String> variable with arguments.
     // "config" is the configuration struct variable.
-    fn checkarguments_show(&self,config: &mut ShowConfiguration) -> Vec<String> {
+    fn checkarguments_show(&self, config: &mut ShowConfiguration) -> Vec<String> {
         let mut files = Vec::new();
         for indexs in self {
             if indexs == "-c" {
@@ -83,7 +83,7 @@ impl RavnArguments for Vec<String> {
             } else if indexs == "--proc" {
                 config.proc = true;
             }
-        
+
             //  "chars" method breaks input in individual chars
             //  "next" method will do start to position zero, which we need to know if start with
             //  "-" which indicate that is an option.
@@ -126,9 +126,6 @@ impl RavnArguments for Vec<String> {
         dirs
     }
 
-            
-
-
     // self argument is he Vec<String> variable with arguments.
     // "config" is the configuration struct variable.
     // Check if some argument is "-h" or "--help"
@@ -162,11 +159,11 @@ impl RavnArguments for Vec<String> {
             -c      : clean verbose to show only file's content.
             --proc  : show the system's processes. Only in Unix systems.
             --stdin : read from standard input in addition of 'file n'.
-            ".to_string();
-            eprintln!("{}", var1);
-            
+            "
+                .to_string();
+                eprintln!("{}", var1);
             } else if program == "ls" {
-                 let var1= "Usage;
+                let var1 = "Usage;
             [option] [directory 1] [directory n]
 
             Options:
@@ -175,9 +172,9 @@ impl RavnArguments for Vec<String> {
             -v      : show owner, permissions, datetime format and size (in bytes).
             -c      : clean verbose to show only directory's content.
             --proc  : show the system's processes trough /proc filesystem. Only in Unix systems.
-            ".to_string();
-            eprintln!("{}",var1);
-            
+            "
+                .to_string();
+                eprintln!("{}", var1);
             } else if program == "edit" {
                 // Is not needed use format! macro because I'm just formatting a literal text, not
                 // with variables.
@@ -190,8 +187,9 @@ impl RavnArguments for Vec<String> {
             -i      : edit input
             [origin text] [dest text]
 
-            ".to_string();
-            eprintln!("{}", var1);
+            "
+                .to_string();
+                eprintln!("{}", var1);
             }
             help
         } else {

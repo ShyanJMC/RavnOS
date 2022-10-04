@@ -6,17 +6,15 @@ use std::env;
 // File System lib
 use std::fs;
 // Path lib
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 //  Metadata lib
 use std::os::unix::fs::MetadataExt;
 // Process lib
 use std::process;
 
-
 // RavnOS libraries
 use libconfarg::RavnArguments;
 use libstream::getprocs;
-
 
 // Take as input the directory's name . We use "&" in String because
 // in a loop the argument is always passed by reference.
@@ -52,7 +50,7 @@ fn main() {
         clean: false,
     };
 
-    if arguments.checkarguments_help( "ls".to_string() ) {
+    if arguments.checkarguments_help("ls".to_string()) {
         process::exit(0);
     }
 
@@ -65,36 +63,49 @@ fn main() {
     }
 
     for names in &lists {
-        let mut entries = readdir(names);
-        // I must use here and not as "readdir" method because if not the type will be forced to
-        // "()" (which is more like a unit and at the same time is a type also).
-        entries.sort();
-
-        if !config.clean {
-            if config.lines {
-                println!("\nList of elements in {}; {}", names, &entries.len() );
+        let mut entries = Vec::new();
+        let mut fbuffer = String::new();
+        // Check if arguments is directory.
+        if Path::new(names).is_dir() {
+            entries = readdir(names);
+            // I must use here and not as "readdir" method because if not the type will be forced to
+            // "()" (which is more like a unit and at the same time is a type also).
+            entries.sort();
+        } else {
+            if Path::new(names).is_file() {
+                fbuffer = String::from(names);
+                entries.push(PathBuf::from(fbuffer));
+            } else {
+                eprintln!("{names}; no such file or directory.");
+                process::exit(1);
             }
-            if config.verbose {
-                for h in &entries {
-                    buffer.push( format!("{} {}", &h.display().to_string(), fs::metadata(&h).unwrap().size() ));
-                }
-            }
-
-            if !config.verbose {
-                println!("{names}:\n{:?}\n", &entries);
-            }
-
-            for h in &buffer {
-                println!("{h}");
-            }
-            // If I use "clean" method, will be dropped from memory.
-            buffer = Vec::new();
         }
 
-        if config.clean {
-            println!("{:?}\n", &entries);
-        } 
+        if config.lines && !config.clean {
+            println!("\nList of elements in {}; {}", names, &entries.len());
+        }
 
+        if config.verbose && !config.clean {
+            // Here I found an issue; as "readdir" returns Vec<PathBuf>, "metadata" will have
+            // issues in some paths like; ~/ . Because of that, we must convert it to String. 
+            for h in &entries {
+                let vartemp: Vec<String> = h.clone().into_os_string().into_string().unwrap().lines().map(|e| e.to_string()).collect();
+                for ff in vartemp {
+                    buffer.push(format!("{} {}", &ff, fs::metadata( &ff ).unwrap().size() ));
+                }
+            }
+            for ee in &buffer {
+                println!("{}", ee);
+            }
+        } else {
+            if !config.clean {
+                println!("{names};\n{:?}", &entries);
+            } else {
+                println!("{:?}", &entries);
+            }
+        }
 
+        // I must do this because if I use "clean()" will be dropped from memory.
+        buffer = Vec::new();
     }
 }
