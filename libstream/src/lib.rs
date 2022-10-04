@@ -94,10 +94,19 @@ pub fn getprocs() {
     // Call to search a word inside a file.
     for file in buff {
         let vname = file_filter(&file, "Name".to_string());
+        let vpid = file_filter(&file, "Pid".to_string());
+        let vppid = file_filter(&file, "PPid".to_string());
+        let vuid = file_filter(&file, "Uid".to_string());
         // A simple way to extract strings from the vector,
         // I know I can use .iter().....etc but with this is more simple and equals quickly.
-        for strings in vname {
-            println!("{}", strings);
+        for strings in &vname {
+            for pid in &vpid {
+                for ppid in &vppid {
+                    for owner in &vuid {
+                        println!("{}\t{}\t{}\t{}", strings, pid, ppid, owner);
+                    }
+                }
+            }
         }
     }
 }
