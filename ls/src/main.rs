@@ -63,7 +63,9 @@ fn main() {
     }
 
     for names in &lists {
+        // Entries store the files and directories inside path.
         let mut entries = Vec::new();
+        // File buffer is used to store the file name if argument is not a dir.
         let mut fbuffer = String::new();
         // Check if arguments is directory.
         if Path::new(names).is_dir() {
@@ -72,10 +74,13 @@ fn main() {
             // "()" (which is more like a unit and at the same time is a type also).
             entries.sort();
         } else {
+            // Check if arguments is a file.
             if Path::new(names).is_file() {
+                // If is a file, store it in variables.
                 fbuffer = String::from(names);
                 entries.push(PathBuf::from(fbuffer));
             } else {
+                // If is not file or directory, means that do not exist.
                 eprintln!("{names}; no such file or directory.");
                 process::exit(1);
             }
@@ -89,11 +94,9 @@ fn main() {
             // Here I found an issue; as "readdir" returns Vec<PathBuf>, "metadata" will have
             // issues in some paths like; ~/ . Because of that, we must convert it to String. 
             for h in &entries {
-                let vartemp: Vec<String> = h.clone().into_os_string().into_string().unwrap().lines().map(|e| e.to_string()).collect();
-                for ff in vartemp {
-                    buffer.push(format!("{} {}", &ff, fs::metadata( &ff ).unwrap().size() ));
-                }
+                buffer.push(format!("{} {}", &h.display(), fs::metadata( &h ).unwrap().size() ));
             }
+            // Show filename and size.
             for ee in &buffer {
                 println!("{}", ee);
             }
