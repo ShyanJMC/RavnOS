@@ -10,7 +10,8 @@ use std::path::{Path, PathBuf};
 //  Metadata lib
 use std::os::unix::fs::MetadataExt;
 // Process lib
-use std::process;
+use std::process::{self,Command};
+
 
 // RavnOS libraries
 use libconfarg::RavnArguments;
@@ -94,14 +95,32 @@ fn main() {
             // Here I found an issue; as "readdir" returns Vec<PathBuf>, "metadata" will have
             // issues in some paths like; ~/ . Because of that, we must convert it to String. 
             for h in &entries {
-                buffer.push(format!("{} {}", &h.display(), fs::metadata( &h ).unwrap().size() ));
+                // 1; the name of file/directory
+                // 2; the time modified
+                // 3; the permissions (in octal)
+                // 4: the owner
+                // 5: the size
+                let fmetadata = fs::metadata(&h).unwrap();
+
+                // Permissions
+                let fper: String = format!("{:?}",fmetadata.permissions());
+                let fbuf: Vec<&str> = fper.split(' ').collect();
+                // Shadowing the variable.
+                let fbuf: u64 = fbuf[3].parse().unwrap();
+
+                // ID numeric to user
+                let ownerout = Command::new("/usr/bin/id").arg(fmetadata.uid().to_string()).output().unwrap();
+                // When you use "output" method, the stdout of command will be stored in
+                // "stdout" field. But, is stored as u8, and needs to be processed as utf8.
+                let mut owner = std::str::from_utf8(&ownerout.stdout).unwrap().strip_suffix("\n").unwrap();
+                buffer.push(format!("{} {} {:o} {} {}b", &h.display(), fmetadata.mtime() , fbuf, owner, fmetadata.size() ));
             }
             // Show filename and size.
             for ee in &buffer {
                 println!("{}", ee);
             }
         } else {
-            if !config.clean {
+            if !config.clean && lists.len()>1 {
                 println!("{names};\n{:?}", &entries);
             } else {
                 println!("{:?}", &entries);

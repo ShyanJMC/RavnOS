@@ -11,7 +11,7 @@ use std::os::unix::fs::MetadataExt;
 //// I/O lib
 use std::io;
 // Process lib
-use std::process;
+use std::process::{self,Command};
 
 // RavnOS libraries
 use libconfarg::RavnArguments;
@@ -63,33 +63,17 @@ fn main() {
 
     // Opening files and showing them
     for names in &archives {
+        let meta = fs::metadata(&names).unwrap();
         // " if X = false " is equal to; " if !X "
         // " if X = true " is equal to; " if X "
         if !config.clean {
             println!("File Name: {names}");
             if config.size {
-                println!(
-                    "Size (bytes): {:?}",
-                    fs::metadata(&names).expect("Error reading matadata").len()
-                );
+                println!("Size (bytes): {:?}",meta.len() );
             }
 
             if config.datetime {
-                println!(
-                    "Modified (DateTime): {:?}\nAccessed: {:?}\nCreated: {:?}",
-                    fs::metadata(&names)
-                        .expect("Error reading matadata")
-                        .modified()
-                        .unwrap(),
-                    fs::metadata(&names)
-                        .expect("Error reading matadata")
-                        .accessed()
-                        .unwrap(),
-                    fs::metadata(&names)
-                        .expect("Error reading matadata")
-                        .created()
-                        .unwrap()
-                );
+                println!( "Modified (EPoch): {:?}\nAccessed (EPoch): {:?}\nCreated (EPoch): {:?}", meta.mtime(), meta.atime(), meta.ctime() );
             }
 
             if config.lines {
@@ -111,22 +95,22 @@ fn main() {
                     || cfg!(target_os = "netbsd")
                     || cfg!(target_family = "unix")
                 {
-                    println!(
-                        "Owner: {:?}",
-                        fs::metadata(&names).expect("Error reading metadata").uid()
-                    );
+                    // Call "id" command to detect who is ID number owner.
+                    let ownerout = Command::new("/usr/bin/id").arg(meta.uid().to_string()).output().unwrap();
+                    // When you use "output" method, the stdout of command will be stored in
+                    // "stdout" field. But, is stored as u8, and needs to be processed as utf8.
+                    println!("Owner: {}", std::str::from_utf8(&ownerout.stdout).unwrap().strip_suffix("\n").unwrap() );
                 } else {
                     println!("Owner: Not supported because platform is not detected as Unix.");
                 }
             }
 
             if config.permission {
-                println!(
-                    "Permission: {:?}",
-                    fs::metadata(&names)
-                        .expect("Error reading matadata")
-                        .permissions()
-                );
+                let permission  = format!("{:?}", meta.permissions() );
+                let buff: Vec<&str> = permission.split(' ').collect();
+                // Shadowing the variable
+                let buff: u64 = buff[3].parse().unwrap();
+                println!("Permission (setuid, setgid, stickybit): {:o}", buff);
             }
         }
 
