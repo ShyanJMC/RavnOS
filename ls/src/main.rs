@@ -9,13 +9,14 @@ use std::fs;
 use std::path::{Path, PathBuf};
 //  Metadata lib
 use std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::PermissionsExt;
+
 // Process lib
 use std::process::{self,Command};
 
-
 // RavnOS libraries
 use libconfarg::RavnArguments;
-use libstream::getprocs;
+use libstream::{getprocs,permission_to_human};
 
 // Take as input the directory's name . We use "&" in String because
 // in a loop the argument is always passed by reference.
@@ -67,7 +68,6 @@ fn main() {
         // Entries store the files and directories inside path.
         let mut entries = Vec::new();
         // File buffer is used to store the file name if argument is not a dir.
-        let mut fbuffer = String::new();
         // Check if arguments is directory.
         if Path::new(names).is_dir() {
             entries = readdir(names);
@@ -78,8 +78,7 @@ fn main() {
             // Check if arguments is a file.
             if Path::new(names).is_file() {
                 // If is a file, store it in variables.
-                fbuffer = String::from(names);
-                entries.push(PathBuf::from(fbuffer));
+                entries.push(PathBuf::from(names));
             } else {
                 // If is not file or directory, means that do not exist.
                 eprintln!("{names}; no such file or directory.");
@@ -103,17 +102,19 @@ fn main() {
                 let fmetadata = fs::metadata(&h).unwrap();
 
                 // Permissions
-                let fper: String = format!("{:?}",fmetadata.permissions());
-                let fbuf: Vec<&str> = fper.split(' ').collect();
-                // Shadowing the variable.
-                let fbuf: u64 = fbuf[3].parse().unwrap();
+                // Permissions method by default will return in bits, if you want the octal chmod
+                // syntax need to use ".mode()".
+                let fper = fmetadata.permissions().mode();
+                // As Octal is not a type by it self, we need use "format!" macro to convert it in
+                // octal mode, the return is a String.
+                let hper = permission_to_human( format!("{fper:o}") );
 
                 // ID numeric to user
                 let ownerout = Command::new("/usr/bin/id").arg(fmetadata.uid().to_string()).output().unwrap();
                 // When you use "output" method, the stdout of command will be stored in
                 // "stdout" field. But, is stored as u8, and needs to be processed as utf8.
-                let mut owner = std::str::from_utf8(&ownerout.stdout).unwrap().strip_suffix("\n").unwrap();
-                buffer.push(format!("{} {} {:o} {} {}b", &h.display(), fmetadata.mtime() , fbuf, owner, fmetadata.size() ));
+                let owner = std::str::from_utf8(&ownerout.stdout).unwrap().strip_suffix("\n").unwrap();
+                buffer.push(format!("{} {} {:?} {} {}b", &h.display(), fmetadata.mtime() , hper, owner, fmetadata.size() ));
             }
             // Show filename and size.
             for ee in &buffer {
