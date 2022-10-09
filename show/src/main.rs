@@ -8,14 +8,17 @@ use std::fs;
 // use std::str;
 //// For Unix platform
 use std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::PermissionsExt;
+
 //// I/O lib
 use std::io;
 // Process lib
 use std::process::{self,Command};
 
+
 // RavnOS libraries
 use libconfarg::RavnArguments;
-use libstream::getprocs;
+use libstream::{getprocs,permission_to_human};
 
 fn main() {
     // env::args() takes program's arguments (the first is always the self binary).
@@ -106,11 +109,15 @@ fn main() {
             }
 
             if config.permission {
-                let permission  = format!("{:?}", meta.permissions() );
-                let buff: Vec<&str> = permission.split(' ').collect();
-                // Shadowing the variable
-                let buff: u64 = buff[3].parse().unwrap();
-                println!("Permission (setuid, setgid, stickybit): {:o}", buff);
+                // Permissions
+                // Permissions method by default will return in bits, if you want the octal chmod  
+                // syntax need to use ".mode()".
+                let fper = meta.permissions().mode();
+                // As Octal is not a type by it self, we need use "format!" macro to convert it in 
+                // octal mode, the return is a String.
+                let hper = permission_to_human( format!("{fper:o}") );
+
+                println!("Permission: {:?}", hper);
             }
         }
 
