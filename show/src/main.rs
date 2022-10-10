@@ -13,12 +13,11 @@ use std::os::unix::fs::PermissionsExt;
 //// I/O lib
 use std::io;
 // Process lib
-use std::process::{self,Command};
-
+use std::process::{self, Command};
 
 // RavnOS libraries
 use libconfarg::RavnArguments;
-use libstream::{getprocs,permission_to_human};
+use libstream::{getprocs, OutputMode};
 
 fn main() {
     // env::args() takes program's arguments (the first is always the self binary).
@@ -72,11 +71,16 @@ fn main() {
         if !config.clean {
             println!("File Name: {names}");
             if config.size {
-                println!("Size (bytes): {:?}",meta.len() );
+                println!("Size (bytes): {:?}", meta.len());
             }
 
             if config.datetime {
-                println!( "Modified (EPoch): {:?}\nAccessed (EPoch): {:?}\nCreated (EPoch): {:?}", meta.mtime(), meta.atime(), meta.ctime() );
+                println!(
+                    "Modified (EPoch): {:?}\nAccessed (EPoch): {:?}\nCreated (EPoch): {:?}",
+                    meta.mtime(),
+                    meta.atime(),
+                    meta.ctime()
+                );
             }
 
             if config.lines {
@@ -99,25 +103,35 @@ fn main() {
                     || cfg!(target_family = "unix")
                 {
                     // Call "id" command to detect who is ID number owner.
-                    let ownerout = Command::new("/usr/bin/id").arg(meta.uid().to_string()).output().unwrap();
+                    let ownerout = Command::new("/usr/bin/id")
+                        .arg(meta.uid().to_string())
+                        .output()
+                        .unwrap();
                     // When you use "output" method, the stdout of command will be stored in
                     // "stdout" field. But, is stored as u8, and needs to be processed as utf8.
-                    println!("Owner: {}", std::str::from_utf8(&ownerout.stdout).unwrap().strip_suffix("\n").unwrap() );
+                    println!(
+                        "Owner: {}",
+                        std::str::from_utf8(&ownerout.stdout)
+                            .unwrap()
+                            .strip_suffix("\n")
+                            .unwrap()
+                    );
                 } else {
                     println!("Owner: Not supported because platform is not detected as Unix.");
                 }
             }
 
             if config.permission {
-                // Permissions
-                // Permissions method by default will return in bits, if you want the octal chmod  
+                // Permissions method by default will return in bits, if you want the octal chmod
                 // syntax need to use ".mode()".
-                let fper = meta.permissions().mode();
-                // As Octal is not a type by it self, we need use "format!" macro to convert it in 
+                // As Octal is not a type by it self, we need use "format!" macro to convert it in
                 // octal mode, the return is a String.
-                let hper = permission_to_human( format!("{fper:o}") );
+                println!("{:o}", meta.permissions().mode());
 
-                println!("Permission: {:?}", hper);
+                println!(
+                    "Permission: {:?}",
+                    format!("{:o}", meta.permissions().mode()).permission_to_human()
+                );
             }
         }
 

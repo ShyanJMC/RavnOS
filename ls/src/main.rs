@@ -12,11 +12,11 @@ use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 
 // Process lib
-use std::process::{self,Command};
+use std::process::{self, Command};
 
 // RavnOS libraries
 use libconfarg::RavnArguments;
-use libstream::{getprocs,permission_to_human};
+use libstream::{getprocs, OutputMode};
 
 // Take as input the directory's name . We use "&" in String because
 // in a loop the argument is always passed by reference.
@@ -92,7 +92,7 @@ fn main() {
 
         if config.verbose && !config.clean {
             // Here I found an issue; as "readdir" returns Vec<PathBuf>, "metadata" will have
-            // issues in some paths like; ~/ . Because of that, we must convert it to String. 
+            // issues in some paths like; ~/ . Because of that, we must convert it to String.
             for h in &entries {
                 // 1; the name of file/directory
                 // 2; the time modified
@@ -101,27 +101,37 @@ fn main() {
                 // 5: the size
                 let fmetadata = fs::metadata(&h).unwrap();
 
-                // Permissions
-                // Permissions method by default will return in bits, if you want the octal chmod
-                // syntax need to use ".mode()".
-                let fper = fmetadata.permissions().mode();
-                // As Octal is not a type by it self, we need use "format!" macro to convert it in
-                // octal mode, the return is a String.
-                let hper = permission_to_human( format!("{fper:o}") );
-
                 // ID numeric to user
-                let ownerout = Command::new("/usr/bin/id").arg(fmetadata.uid().to_string()).output().unwrap();
+                let ownerout = Command::new("/usr/bin/id")
+                    .arg(fmetadata.uid().to_string())
+                    .output()
+                    .unwrap();
                 // When you use "output" method, the stdout of command will be stored in
                 // "stdout" field. But, is stored as u8, and needs to be processed as utf8.
-                let owner = std::str::from_utf8(&ownerout.stdout).unwrap().strip_suffix("\n").unwrap();
-                buffer.push(format!("{} {} {:?} {} {}b", &h.display(), fmetadata.mtime() , hper, owner, fmetadata.size() ));
+                let owner = std::str::from_utf8(&ownerout.stdout)
+                    .unwrap()
+                    .strip_suffix("\n")
+                    .unwrap();
+                buffer.push(format!(
+                    "{} {} {:?} {} {}b",
+                    &h.display(),
+                    fmetadata.mtime(),
+                    // Permissions
+                    // Permissions method by default will return in bits, if you want the octal chmod
+                    // syntax need to use ".mode()".
+                    // As Octal is not a type by it self, we need use "format!" macro to convert it in
+                    // octal mode, the return is a String.
+                    format!("{:o}", fmetadata.permissions().mode()).permission_to_human(),
+                    owner,
+                    fmetadata.size()
+                ));
             }
             // Show filename and size.
             for ee in &buffer {
                 println!("{}", ee);
             }
         } else {
-            if !config.clean && lists.len()>1 {
+            if !config.clean && lists.len() > 1 {
                 println!("{names};\n{:?}", &entries);
             } else {
                 println!("{:?}", &entries);
