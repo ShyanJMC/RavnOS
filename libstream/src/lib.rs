@@ -12,73 +12,130 @@ mod tests {
         getprocs();
     }
     #[test]
-    fn permissionchmod(){
-        permission_to_human(&644);
+    fn permissionchmod() {
+        permission_to_human(&10644);
     }
 }
 
-// Translate octal permission input to human redeable.
-pub fn permission_to_human(rawpermission: String) -> Vec<&'static str>  {
-    // Positions; 0 setuid/setguid/stickybit, 1 owner, 2 group, 3 others.
-    // Positions of rawpoermission; 0-1 setguid/setguid/stickybit, 2 owner, 3 group, 4 others
-    let mut vecper: Vec<&str> = Vec::new();
-    let buffer: Vec<u32> = rawpermission.chars().map(|d| d.to_digit(10).unwrap()).collect();
-    let mut fbuffer: Vec<u32> = Vec::new();
-    for word in &buffer {
-        fbuffer.push( *word );
+// Unix time to localtime
+//pub fn
+
+// Outputs
+pub trait OutputMode {
+    fn permission_to_human(&self) -> Vec<&'static str>;
+}
+
+impl OutputMode for String {
+    // Translate octal permission input to human redeable.
+    fn permission_to_human(&self) -> Vec<&'static str> {
+        // Positions; 0 setuid/setguid/stickybit, 1 owner, 2 group, 3 others.
+        // // Positions of string; 0-1 setguid/setguid/stickybit, 2 owner, 3 group, 4 others
+        let mut vecper: Vec<&str> = Vec::new();
+        let buffer: Vec<u32> = self
+            .clone()
+            .chars()
+            .map(|d| d.to_digit(10).unwrap())
+            .collect();
+        let mut fbuffer: Vec<u32> = Vec::new();
+        for word in &buffer {
+            fbuffer.push(*word);
+        }
+
+        // Setuid / Setguid / Stickybit
+        match fbuffer[0] {
+            0 => vecper.push(" "),
+            1 => vecper.push("sticky bit"),
+            2 => vecper.push("seted user id"),
+            4 => vecper.push("seted group id"),
+            _ => vecper.push("error"),
+        }
+
+        // Quick fix, because sometimes the octal output (self) is 5 digit and sometimes is 6
+        // digit lenght.
+        if fbuffer.len() == 5 {
+            // Owner
+            match fbuffer[2] {
+                0 => vecper.push("---"),
+                1 => vecper.push("--x"),
+                2 => vecper.push("-w-"),
+                3 => vecper.push("-wx"),
+                4 => vecper.push("r--"),
+                5 => vecper.push("r-x"),
+                6 => vecper.push("rw-"),
+                7 => vecper.push("rwx"),
+                _ => vecper.push("error"),
+            }
+
+            // Group
+            match fbuffer[3] {
+                0 => vecper.push("---"),
+                1 => vecper.push("--x"),
+                2 => vecper.push("-w-"),
+                3 => vecper.push("-wx"),
+                4 => vecper.push("r--"),
+                5 => vecper.push("r-x"),
+                6 => vecper.push("rw-"),
+                7 => vecper.push("rwx"),
+                _ => vecper.push("error"),
+            }
+
+            // Others
+            match fbuffer[4] {
+                0 => vecper.push("---"),
+                1 => vecper.push("--x"),
+                2 => vecper.push("-w-"),
+                3 => vecper.push("-wx"),
+                4 => vecper.push("r--"),
+                5 => vecper.push("r-x"),
+                6 => vecper.push("rw-"),
+                7 => vecper.push("rwx"),
+                _ => vecper.push("error"),
+            }
+        }
+
+        if fbuffer.len() == 6 {
+            // Owner
+            match fbuffer[3] {
+                0 => vecper.push("---"),
+                1 => vecper.push("--x"),
+                2 => vecper.push("-w-"),
+                3 => vecper.push("-wx"),
+                4 => vecper.push("r--"),
+                5 => vecper.push("r-x"),
+                6 => vecper.push("rw-"),
+                7 => vecper.push("rwx"),
+                _ => vecper.push("error"),
+            }
+
+            // Group
+            match fbuffer[4] {
+                0 => vecper.push("---"),
+                1 => vecper.push("--x"),
+                2 => vecper.push("-w-"),
+                3 => vecper.push("-wx"),
+                4 => vecper.push("r--"),
+                5 => vecper.push("r-x"),
+                6 => vecper.push("rw-"),
+                7 => vecper.push("rwx"),
+                _ => vecper.push("error"),
+            }
+
+            // Others
+            match fbuffer[5] {
+                0 => vecper.push("---"),
+                1 => vecper.push("--x"),
+                2 => vecper.push("-w-"),
+                3 => vecper.push("-wx"),
+                4 => vecper.push("r--"),
+                5 => vecper.push("r-x"),
+                6 => vecper.push("rw-"),
+                7 => vecper.push("rwx"),
+                _ => vecper.push("error"),
+            }
+        }
+
+        vecper
     }
-
-    // Setuid / Setguid / Stickybit
-    match fbuffer[0] {
-        0 => vecper.push(" "),
-        1 => vecper.push("sticky bit"),
-        2 => vecper.push("seted user id"),
-        4 => vecper.push("seted group id"),
-        _ => vecper.push("error"),
-    }
-
-    // Owner 
-    match fbuffer[2] {
-        0 => vecper.push("---"),
-        1 => vecper.push("--x"),
-        2 => vecper.push("-w-"),
-        3 => vecper.push("-wx"),
-        4 => vecper.push("r--"),
-        5 => vecper.push("r-x"),
-        6 => vecper.push("rw-"),
-        7 => vecper.push("rwx"),
-        _ => vecper.push("error"),
-    }
-
-    // Group
-    match fbuffer[3] {
-        0 => vecper.push("---"),
-        1 => vecper.push("--x"),
-        2 => vecper.push("-w-"),
-        3 => vecper.push("-wx"),
-        4 => vecper.push("r--"),
-        5 => vecper.push("r-x"),
-        6 => vecper.push("rw-"),
-        7 => vecper.push("rwx"),
-        _ => vecper.push("error"),
-
-    }
-
-    // Others
-    match fbuffer[4] {
-        0 => vecper.push("---"),
-        1 => vecper.push("--x"),
-        2 => vecper.push("-w-"),
-        3 => vecper.push("-wx"),
-        4 => vecper.push("r--"),
-        5 => vecper.push("r-x"),
-        6 => vecper.push("rw-"),
-        7 => vecper.push("rwx"),
-        _ => vecper.push("error"),
-    }
-
-    vecper
-
 }
 
 // Filename is the file's name to open.
