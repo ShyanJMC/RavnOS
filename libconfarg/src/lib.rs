@@ -17,6 +17,8 @@ pub struct ShowConfiguration {
     pub clean: bool,
     pub stdin: bool,
     pub proc: bool,
+    pub octal: bool,
+    pub words: bool,
 }
 
 // Ls
@@ -82,6 +84,8 @@ impl RavnArguments for Vec<String> {
                 config.permission = true;
             } else if indexs == "--proc" {
                 config.proc = true;
+            } else if indexs == "-w" {
+                config.words = true;
             }
 
             //  "chars" method breaks input in individual chars
@@ -153,10 +157,11 @@ impl RavnArguments for Vec<String> {
             --------
             -s      : show file size in bytes .
             -d      : show datetime format.
-            -l      : show file's data lines.
+            -l      : show file's lines.
             -o      : show owner.
             -p      : show file permissions.
             -c      : clean verbose to show only file's content.
+            -w      : show file's words.
             --proc  : show the system's processes. Only in Unix systems.
             --stdin : read from standard input in addition of 'file n'.
             "

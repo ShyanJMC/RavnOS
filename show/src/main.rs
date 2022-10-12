@@ -37,6 +37,8 @@ fn main() {
         clean: false,
         stdin: false,
         proc: false,
+        octal: false,
+        words: false,
     };
 
     if arguments.checkarguments_help("show".to_string()) {
@@ -93,6 +95,13 @@ fn main() {
                 );
             }
 
+            if config.words {
+                println!(
+                    "Words - Letters; {:?}",
+                    fs::read_to_string(names).expect("Error reading file").word_count()
+                    );
+            }
+
             if config.owner {
                 // Check if the target OS is some of Unix family.
                 if cfg!(target_os = "linux")
@@ -126,8 +135,6 @@ fn main() {
                 // syntax need to use ".mode()".
                 // As Octal is not a type by it self, we need use "format!" macro to convert it in
                 // octal mode, the return is a String.
-                println!("{:o}", meta.permissions().mode());
-
                 println!(
                     "Permission: {:?}",
                     format!("{:o}", meta.permissions().mode()).permission_to_human()

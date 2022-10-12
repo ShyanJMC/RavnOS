@@ -2,6 +2,9 @@
 use std::fs::{self, File};
 // Input Output lib
 use std::io::{self, Read};
+// Standard chars lib
+use std::str::Chars;
+
 
 // Tests to check if libstream works
 #[cfg(test)]
@@ -11,21 +14,47 @@ mod tests {
     fn search() {
         getprocs();
     }
-    #[test]
-    fn permissionchmod() {
-        permission_to_human(&10644);
-    }
 }
-
-// Unix time to localtime
-//pub fn
 
 // Outputs
 pub trait OutputMode {
     fn permission_to_human(&self) -> Vec<&'static str>;
+    fn word_count(&self) -> Vec<usize>;
 }
 
 impl OutputMode for String {
+
+    // Count words and letters
+    // Return's position; 0 words, 1 letters
+    fn word_count(&self) -> Vec<usize> {
+        let buffer: Vec<&str>;
+        let (mut words, mut letters) = (0,0);
+        let mut wl: Vec<usize> = Vec::new();
+
+        // By default split method only allows one argument, so to put more than one you need
+        // specify it as a slice.
+        buffer = self.split( &[' ', ',', '\t', ':', '@', '#', '<', '>', '(', ')', '/', '=', '!', '"', '$', '%', '&', '?']).collect();
+
+        for wr in buffer {
+            // This is because when "split" found something of those slice characters, add an ""
+            // per character stripped.
+            if wr != "" {
+                words +=1;
+            }
+        }
+
+        for ch in self.chars() {
+            if ch != '\n' {
+                letters += 1;
+            }
+        }
+
+        wl.push(words);
+        wl.push(letters);
+        wl
+
+    }
+
     // Translate octal permission input to human redeable.
     fn permission_to_human(&self) -> Vec<&'static str> {
         // Positions; 0 setuid/setguid/stickybit, 1 owner, 2 group, 3 others.
