@@ -1,6 +1,4 @@
 // Standar libraries
-// Input Output lib
-use std::io;
 // Environment lib
 use std::env;
 // File System lib
@@ -16,22 +14,7 @@ use std::process::{self, Command};
 
 // RavnOS libraries
 use libconfarg::RavnArguments;
-use libstream::{getprocs, OutputMode};
-
-// Take as input the directory's name . We use "&" in String because
-// in a loop the argument is always passed by reference.
-fn readdir(input: &String) -> Vec<PathBuf> {
-    // Read the directory
-    let entries = fs::read_dir(input)
-        .unwrap()
-        // Take the "DirEntry" struct from "read_dir" and returns the full path
-        .map(|res| res.map(|e| e.path()))
-        // Here we customice the collect method to returns as Result<V,E>
-        .collect::<Result<Vec<_>, io::Error>>()
-        .unwrap();
-
-    entries
-}
+use libstream::{getprocs, Stream};
 
 fn main() {
     // env::args() takes program's arguments
@@ -70,7 +53,7 @@ fn main() {
         // File buffer is used to store the file name if argument is not a dir.
         // Check if arguments is directory.
         if Path::new(names).is_dir() {
-            entries = readdir(names);
+            entries = names.readdir();
             // I must use here and not as "readdir" method because if not the type will be forced to
             // "()" (which is more like a unit and at the same time is a type also).
             entries.sort();
