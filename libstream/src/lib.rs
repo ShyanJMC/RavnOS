@@ -2,9 +2,8 @@
 use std::fs::{self, File};
 // Input Output lib
 use std::io::{self, Read};
-// Standard chars lib
-use std::str::Chars;
-
+// Standard path
+use std::path::{PathBuf};
 
 // Tests to check if libstream works
 #[cfg(test)]
@@ -17,29 +16,48 @@ mod tests {
 }
 
 // Outputs
-pub trait OutputMode {
+pub trait Stream {
     fn permission_to_human(&self) -> Vec<&'static str>;
     fn word_count(&self) -> Vec<usize>;
+    fn readdir(&self) -> Vec<PathBuf>;
 }
 
-impl OutputMode for String {
+impl Stream for String {
+    // Read directories and returns PathBuf with each file and directory.
+    fn readdir(&self) -> Vec<PathBuf> {
+        // Read the directory
+        let entries = fs::read_dir(&self)
+            .unwrap()
+            // Take the "DirEntry" struct from "read_dir" and returns the full path
+            .map(|res| res.map(|e| e.path()))
+            // Here we customice the collect method to returns as Result<V,E>
+            .collect::<Result<Vec<_>, io::Error>>()
+            .unwrap();
+
+        entries
+    }
 
     // Count words and letters
     // Return's position; 0 words, 1 letters
     fn word_count(&self) -> Vec<usize> {
         let buffer: Vec<&str>;
-        let (mut words, mut letters) = (0,0);
+        let (mut words, mut letters) = (0, 0);
         let mut wl: Vec<usize> = Vec::new();
 
         // By default split method only allows one argument, so to put more than one you need
         // specify it as a slice.
-        buffer = self.split( &[' ', ',', '\t', ':', '@', '#', '<', '>', '(', ')', '/', '=', '!', '"', '$', '%', '&', '?']).collect();
+        buffer = self
+            .split(&[
+                ' ', ',', '\t', ':', '@', '#', '<', '>', '(', ')', '/', '=', '!', '"', '$', '%',
+                '&', '?',
+            ])
+            .collect();
 
         for wr in buffer {
             // This is because when "split" found something of those slice characters, add an ""
             // per character stripped.
             if wr != "" {
-                words +=1;
+                words += 1;
             }
         }
 
@@ -52,7 +70,6 @@ impl OutputMode for String {
         wl.push(words);
         wl.push(letters);
         wl
-
     }
 
     // Translate octal permission input to human redeable.
