@@ -17,7 +17,7 @@ use std::process::{self, Command};
 
 // RavnOS libraries
 use libconfarg::RavnArguments;
-use libstream::{getprocs, OutputMode};
+use libstream::{getprocs, Stream};
 
 fn main() {
     // env::args() takes program's arguments (the first is always the self binary).
