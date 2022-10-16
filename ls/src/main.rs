@@ -35,13 +35,26 @@ fn main() {
         clean: false,
     };
 
-    if arguments.checkarguments_help("ls".to_string()) {
+    if arguments.checkarguments_help("ls") {
         process::exit(0);
     }
 
     // The vec<String> return with files index is stored in "lists" variable.
     // The method is from RavnArguments trait.
-    let lists: Vec<String> = arguments.checkarguments_ls(&mut config);
+    let mut options: Vec<&str> = Vec::new();
+    let lists: Vec<String> = arguments.check_arguments("ls", &mut options);
+
+    for confs in options {
+        if confs == "verbose" {
+            config.verbose = true;
+        } else if confs == "proc" {
+            config.proc = true;
+        } else if confs == "lines" {
+            config.lines = true;
+        } else if confs == "clean" {
+            config.clean = true;
+        }
+    }
 
     if config.proc {
         getprocs();
