@@ -37,17 +37,43 @@ fn main() {
         clean: false,
         stdin: false,
         proc: false,
-        octal: false,
+        hexa: false,
         words: false,
     };
 
-    if arguments.checkarguments_help("show".to_string()) {
+    if arguments.checkarguments_help("show") {
         process::exit(0);
     }
 
     // The vec<String> return with files index is stored in "archives" variable.
     // The method is from RavnArguments trait.
-    let archives: Vec<String> = arguments.checkarguments_show(&mut config);
+   let mut options: Vec<&str> = Vec::new();
+    let archives: Vec<String> = arguments.check_arguments("show",&mut options);
+
+    for confs in options {
+        if confs == "size" {
+            config.size = true;
+        } else if confs == "datetime" {
+            config.datetime = true;
+        } else if confs == "lines" {
+            config.lines = true;
+        } else if confs == "owner" {
+            config.owner = true;
+        } else if confs == "permission" {
+            config.permission = true;
+        } else if confs == "clean" {
+            config.clean = true;
+        } else if confs == "stdin" {
+            config.stdin = true;
+        } else if confs == "proc" {
+            config.proc = true;
+        } else if confs == "hexa" {
+            config.hexa = true;
+        } else if confs == "words" {
+            config.words = true;
+        }
+    }
+
 
     // Stdinput
     if config.stdin {
@@ -155,7 +181,20 @@ fn main() {
                 fstring
             );
         } else {
-            println!("{}", fstring);
+            if !config.hexa {
+                println!("{}", fstring);
+            }
+            else {
+                // Octal mode
+                // Remember; each char will be printed as octal.
+                for iteration in fstring.lines().collect::<Vec<&str>>() {
+                    for dchar in iteration.chars() {
+                        for fchar in dchar.to_string().into_bytes() {
+                            print!("{:x} ", fchar );
+                        }
+                    }
+                }
+            }
         }
     }
 }
