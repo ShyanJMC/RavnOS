@@ -80,6 +80,9 @@ fn main() {
         // Buffer variable to store returns
         let mut buffer = String::new();
         // To work with stdin
+        // Match takes the read_line output, if is
+        // Ok(_i) will print the buffer variable, but if
+        // is Err(j) will print "j" (the error per se).
         match io::stdin().read_line(&mut buffer) {
             Ok(_i) => println!("{buffer}"),
             Err(j) => println!("error; {j}"),
@@ -97,7 +100,9 @@ fn main() {
         // " if X = false " is equal to; " if !X "
         // " if X = true " is equal to; " if X "
         if !config.clean {
-            println!("File Name: {names}");
+            if archives.len() > 1 {
+                println!("File Name: {names}");
+            }
             if config.size {
                 println!("Size (bytes): {:?}", meta.len());
             }
@@ -172,7 +177,7 @@ fn main() {
         let fstring = fs::read_to_string(names).expect("Error reading file.");
         // Using by reference to not take "len" the ownership of "archives".
 
-        if !config.clean {
+        if !config.clean && archives.len() > 1 {
             println!("=================\n");
         }
         if archives.len() > 1 && !config.proc {
@@ -185,11 +190,15 @@ fn main() {
                 println!("{}", fstring);
             }
             else {
-                // Octal mode
+                // Hexa mode
                 // Remember; each char will be printed as octal.
+                // Split the file's data in lines() and collect each in &str vector.
                 for iteration in fstring.lines().collect::<Vec<&str>>() {
+                    // Splits each line in chars
                     for dchar in iteration.chars() {
+                        // Transform each char in string and then into bytes data
                         for fchar in dchar.to_string().into_bytes() {
+                            // Show each byte char into hexadecimal mode.
                             print!("{:x} ", fchar );
                         }
                     }
