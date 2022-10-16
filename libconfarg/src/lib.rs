@@ -1,9 +1,6 @@
-// Stream configuration
-// Configuration
-pub struct SConfiguration {
-    file: bool,
-    stdin: bool,
-}
+// Note; take under consideration that because String dereference to &str, is better use in
+// functions signatures &str instead String. Unless the variable is an String in another point of
+// the program.
 
 // Configuration struct
 // Each field determine if option is enabled or not.
@@ -17,7 +14,7 @@ pub struct ShowConfiguration {
     pub clean: bool,
     pub stdin: bool,
     pub proc: bool,
-    pub octal: bool,
+    pub hexa: bool,
     pub words: bool,
 }
 
@@ -29,25 +26,86 @@ pub struct LsConfiguration {
     pub clean: bool,
 }
 
+// Search
+pub struct SearchConfiguration {
+    pub file: bool,
+    pub directory: bool,
+    pub environment: bool,
+    pub processes: bool,
+}
+
 // Trait for checkarguments and returns files names
 pub trait RavnArguments {
-    fn checkarguments_stream(&self, config: &mut SConfiguration) -> Vec<String>;
-    fn checkarguments_ls(&self, config: &mut LsConfiguration) -> Vec<String>;
-    fn checkarguments_show(&self, config: &mut ShowConfiguration) -> Vec<String>;
-    fn checkarguments_help(&self, program: String) -> bool;
+    fn check_arguments(&self, soft: &str, options: &mut Vec<&str> ) -> Vec<String>;
+    fn checkarguments_help(&self, program: &str) -> bool;
 }
 
 // Behaviour and methods
 impl RavnArguments for Vec<String> {
-    fn checkarguments_stream(&self, config: &mut SConfiguration) -> Vec<String> {
+    // self is the Vec<String> with the arguments.
+    // options is the vec &str wich will contains the options based in the soft name.
+    // soft is the variable with programs name.
+    //
+    // The returns is a string vector with each argument without the options (that is 
+    // stored into config).
+    fn check_arguments(&self, soft: &str, options: &mut Vec<&str>) -> Vec<String> {
         let mut arguments = Vec::new();
-        for indexs in self {
-            if indexs == "-f" {
-                config.file = true;
-            } else if indexs == "-i" {
-                config.stdin = true;
-            }
+        // Match the variable value to some word, as String dereference to &str is better
+        // use &str directly.
+        match soft {
+            "edit" => {
+                for indexs in self {
+                    if indexs == "-f" {
+                        options.push("file");
+                    } else if indexs == "-i" {
+                        options.push("stdin");
+                    }
+                }
+            },
 
+            "show" => {
+                for indexs in self {
+                    if indexs == "-c" {
+                        options.push("clean");
+                    } else if indexs == "--stdin" {
+                        options.push("stdin");
+                    } else if indexs == "-s" {
+                        options.push("size");
+                    } else if indexs == "-d" {
+                        options.push("datetime");
+                    } else if indexs == "-l" {
+                        options.push("lines")
+                    } else if indexs == "-o" {
+                        options.push("owner");
+                    } else if indexs == "-p" {
+                        options.push("permission");
+                    } else if indexs == "--proc" {
+                        options.push("proc");
+                    } else if indexs == "-w" {
+                        options.push("words");
+                    } else if indexs == "--hexa" {
+                        options.push("hexa");
+                    }
+                }
+            },
+            "ls" => {
+                for indexs in self {
+                    if indexs == "-v" {
+                        options.push("verbose");
+                    } else if indexs == "--proc" {
+                        options.push("proc");
+                    } else if indexs == "-l" {
+                        options.push("lines");
+                    } else if indexs == "-c" {
+                        options.push("clean");
+                    }
+                }
+            },
+            
+            _ => std::process::exit(1),
+        }
+
+        for indexs in self {
             //  "chars" method breaks input in individual chars
             //  "next" method will do start to position zero, which we need to know if start with
             //  "-" which indicate that is an option.
@@ -63,77 +121,8 @@ impl RavnArguments for Vec<String> {
         arguments
     }
 
-    // self argument is he Vec<String> variable with arguments.
-    // "config" is the configuration struct variable.
-    fn checkarguments_show(&self, config: &mut ShowConfiguration) -> Vec<String> {
-        let mut files = Vec::new();
-        for indexs in self {
-            if indexs == "-c" {
-                config.clean = true;
-            } else if indexs == "--stdin" {
-                config.stdin = true;
-            } else if indexs == "-s" {
-                config.size = true;
-            } else if indexs == "-d" {
-                config.datetime = true;
-            } else if indexs == "-l" {
-                config.lines = true;
-            } else if indexs == "-o" {
-                config.owner = true;
-            } else if indexs == "-p" {
-                config.permission = true;
-            } else if indexs == "--proc" {
-                config.proc = true;
-            } else if indexs == "-w" {
-                config.words = true;
-            }
-
-            //  "chars" method breaks input in individual chars
-            //  "next" method will do start to position zero, which we need to know if start with
-            //  "-" which indicate that is an option.
-            //  Also I added for paths ( / ).
-            //  Remember "unwrap" method extract X from Some(X) or Err(X) and/or from "Option<X>"
-            //  also.
-            let pzero = indexs.chars().next().unwrap();
-            if pzero.to_string() != *"-".to_string() && !config.stdin {
-                files.push(indexs.clone());
-            }
-        }
-        // Returns vec string.
-        files
-    }
-
-    fn checkarguments_ls(&self, config: &mut LsConfiguration) -> Vec<String> {
-        let mut dirs = Vec::new();
-        for indexs in self {
-            if indexs == "-v" {
-                config.verbose = true;
-            } else if indexs == "--proc" {
-                config.proc = true;
-            } else if indexs == "-l" {
-                config.lines = true;
-            } else if indexs == "-c" {
-                config.clean = true;
-            }
-            //  "chars" method breaks input in individual chars
-            //  "next" method will do start to position zero, which we need to know if start with
-            //  "-" which indicate that is an option.
-            //  Also I added for paths ( / ).
-            //  Remember "unwrap" method extract X from Some(X) or Err(X) and/or from "Option<X>"
-            //  also.
-            let pzero = indexs.chars().next().unwrap();
-            if pzero.to_string() != *"-".to_string() {
-                dirs.push(indexs.clone());
-            }
-        }
-        // Returns vec string.
-        dirs
-    }
-
-    // self argument is he Vec<String> variable with arguments.
-    // "config" is the configuration struct variable.
-    // Check if some argument is "-h" or "--help"
-    fn checkarguments_help(&self, program: String) -> bool {
+    // check if some arguments is the help
+    fn checkarguments_help(&self, program: &str) -> bool {
         let mut help = false;
         // If you ask your self why I didn't put this in the "for" loop;
         // you can not assign a value to something that do not exist, basically
@@ -164,6 +153,7 @@ impl RavnArguments for Vec<String> {
             -w      : show file's words.
             --proc  : show the system's processes. Only in Unix systems.
             --stdin : read from standard input in addition of 'file n'.
+            --hexa  : show the file's content in hexa.
             "
                 .to_string();
                 eprintln!("{}", var1);
@@ -195,6 +185,18 @@ impl RavnArguments for Vec<String> {
             "
                 .to_string();
                 eprintln!("{}", var1);
+            } else if program == "search" {
+                let var1 = "Usage;
+            [option] [String] [path_or_file]
+
+            Options:
+            --------
+            -f      : search the string inside file.
+            -d      : search the string in directories' name.
+            -e      : search the string in environment variables.
+            -p      : search the string in system processes.
+            ".to_string();
+            eprintln!("{}", var1);
             }
             help
         } else {
