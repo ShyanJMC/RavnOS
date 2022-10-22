@@ -223,7 +223,8 @@ pub fn file_filter(filename: &String, input: String) -> Vec<String> {
 
 /// Unix.
 /// Get processes and information.
-pub fn getprocs() {
+pub fn getprocs() -> Vec<String> {
+	let mut result: Vec<String> = Vec::new();
     // Read the "/proc" directory.
     let mut entries = fs::read_dir("/proc")
         .unwrap()
@@ -287,10 +288,11 @@ pub fn getprocs() {
             for pid in &vpid {
                 for ppid in &vppid {
                     for owner in &vuid {
-                        println!("{}\t{}\t{}\t{}", strings, pid, ppid, owner);
+                        result.push(format!("{}\t{}\t{}\t{}", strings, pid, ppid, owner));
                     }
                 }
             }
         }
     }
+    result
 }
