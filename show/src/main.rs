@@ -106,7 +106,10 @@ fn main() {
 
     // Showing procs
     if config.proc {
-        getprocs();
+        let procs: Vec<String> = getprocs();
+        for strings in procs {
+        	println!("{strings}");
+        }
     }
 
     // Opening files and showing them

@@ -72,7 +72,10 @@ fn main() {
     }
 
     if config.proc {
-        getprocs();
+    	let procs: Vec<String> = getprocs();                                                                                                                                           
+        for strings in procs {                                                                                                                                                         
+        println!("{strings}"); 
+        }
     }
 
     for names in &lists {
