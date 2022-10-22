@@ -1,10 +1,27 @@
+//! This file is part of RavnOS.
+//!
+//! RavnOS is free software: 
+//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, 
+//! either version 3 of the License, or (at your option) any later version.
+//!
+//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+//! without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//!
+//! You should have received a copy of the GNU General Public License along with RavnOS. If not, see <https://www.gnu.org/licenses/>
+
+//!
+//! Copyright; Joaquin "ShyanJMC" Crespo - 2022
+
 // Note; take under consideration that because String dereference to &str, is better use in
 // functions signatures &str instead String. Unless the variable is an String in another point of
 // the program.
 
-// Configuration struct
-// Each field determine if option is enabled or not.
-// Show
+//! This lib contains the methods to check RavnOS's arguments in each program
+
+
+/// Configuration struct
+/// Each field determine if option is enabled or not.
+/// Show configuration struct
 pub struct ShowConfiguration {
     pub size: bool,
     pub datetime: bool,
@@ -18,7 +35,7 @@ pub struct ShowConfiguration {
     pub words: bool,
 }
 
-// Ls
+/// Ls configuration struct
 pub struct LsConfiguration {
     pub verbose: bool,
     pub proc: bool,
@@ -26,7 +43,7 @@ pub struct LsConfiguration {
     pub clean: bool,
 }
 
-// Search
+/// Search configuration struct
 pub struct SearchConfiguration {
     pub file: bool,
     pub directory: bool,
@@ -34,20 +51,20 @@ pub struct SearchConfiguration {
     pub processes: bool,
 }
 
-// Trait for checkarguments and returns files names
+/// Trait for checkarguments and returns files names or show help
 pub trait RavnArguments {
     fn check_arguments(&self, soft: &str, options: &mut Vec<&str> ) -> Vec<String>;
     fn checkarguments_help(&self, program: &str) -> bool;
 }
 
-// Behaviour and methods
+/// Behaviour and methods
 impl RavnArguments for Vec<String> {
-    // self is the Vec<String> with the arguments.
-    // options is the vec &str wich will contains the options based in the soft name.
-    // soft is the variable with programs name.
-    //
-    // The returns is a string vector with each argument without the options (that is 
-    // stored into config).
+    /// self is the Vec<String> with the arguments.
+    /// options is the vec &str wich will contains the options based in the soft name.
+    /// soft is the variable with programs name.
+    ///
+    /// The returns is a string vector with each argument without the options (that is 
+    /// stored into config).
     fn check_arguments(&self, soft: &str, options: &mut Vec<&str>) -> Vec<String> {
         let mut arguments = Vec::new();
         // Match the variable value to some word, as String dereference to &str is better
@@ -121,7 +138,7 @@ impl RavnArguments for Vec<String> {
         arguments
     }
 
-    // check if some arguments is the help
+    /// check if some arguments is the help
     fn checkarguments_help(&self, program: &str) -> bool {
         let mut help = false;
         // If you ask your self why I didn't put this in the "for" loop;

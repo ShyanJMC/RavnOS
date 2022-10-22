@@ -1,21 +1,30 @@
-// Filesystem System lib
+//! This file is part of RavnOS.
+//!
+//! RavnOS is free software: 
+//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, 
+//! either version 3 of the License, or (at your option) any later version.
+//!
+//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+//! without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//!
+//! You should have received a copy of the GNU General Public License along with RavnOS. If not, see <https://www.gnu.org/licenses/>. 
+
+//!
+//! Copyright; Joaquin "ShyanJMC" Crespo - 2022
+
+//!
+//! RavnOS's libstream
+//! This file contains some modules to work with stream data like; word_count, readdir, permission_to_human, etc.
+
+
+/// Filesystem System lib
 use std::fs::{self, File};
-// Input Output lib
+/// Input Output lib
 use std::io::{self, Read};
-// Standard path
+/// Standard path
 use std::path::{PathBuf};
 
-// Tests to check if libstream works
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn search() {
-        getprocs();
-    }
-}
-
-// Outputs
+/// Outputs 
 pub trait Stream {
     fn permission_to_human(&self) -> Vec<&'static str>;
     fn word_count(&self) -> Vec<usize>;
@@ -23,7 +32,7 @@ pub trait Stream {
 }
 
 impl Stream for String {
-    // Read directories and returns PathBuf with each file and directory.
+    /// Read directories and returns PathBuf with each file and directory.
     fn readdir(&self) -> Vec<PathBuf> {
         // Read the directory
         let entries = fs::read_dir(&self)
@@ -37,8 +46,8 @@ impl Stream for String {
         entries
     }
 
-    // Count words and letters
-    // Return's position; 0 words, 1 letters
+    /// Count words and letters
+    /// Return's position; 0 words, 1 letters
     fn word_count(&self) -> Vec<usize> {
         let buffer: Vec<&str>;
         let (mut words, mut letters) = (0, 0);
@@ -72,7 +81,7 @@ impl Stream for String {
         wl
     }
 
-    // Translate octal permission input to human redeable.
+    /// Translate octal permission input to human redeable.
     fn permission_to_human(&self) -> Vec<&'static str> {
         // Positions; 0 setuid/setguid/stickybit, 1 owner, 2 group, 3 others.
         // // Positions of string; 0-1 setguid/setguid/stickybit, 2 owner, 3 group, 4 others
@@ -184,9 +193,9 @@ impl Stream for String {
     }
 }
 
-// Filename is the file's name to open.
-// Input is the string to search
-// Search for "input" into the file and returns strings.
+/// Filename is the file's name to open.
+/// Input is the string to search
+/// Search for "input" into the file and returns strings.
 pub fn file_filter(filename: &String, input: String) -> Vec<String> {
     // Read the file as string and then save to lines buffer.
     let mut buffer1 = String::new();
@@ -212,8 +221,8 @@ pub fn file_filter(filename: &String, input: String) -> Vec<String> {
     rstr
 }
 
-// Unix.
-// Get processes and information.
+/// Unix.
+/// Get processes and information.
 pub fn getprocs() {
     // Read the "/proc" directory.
     let mut entries = fs::read_dir("/proc")
