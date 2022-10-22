@@ -8,4 +8,6 @@ members = [
 	"ls",
 	"libconfarg",
 	"libstream",
+	"libfile",
+	"search",
 	]
