@@ -9,3 +9,4 @@ edition = "2021"
 
 libconfarg = { path = "../libconfarg" }
 libstream = { path = "../libstream" }
+libfile = { path = "../libfile"}

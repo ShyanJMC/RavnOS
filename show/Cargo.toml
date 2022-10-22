@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 libconfarg = { path = "../libconfarg" }
 libstream = { path = "../libstream" }
+libfile = { path ="../libfile" }

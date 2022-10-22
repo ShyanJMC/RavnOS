@@ -1,3 +1,17 @@
+//! This file is part of RavnOS.
+//!
+//! RavnOS is free software: 
+//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, 
+//! either version 3 of the License, or (at your option) any later version.
+//!
+//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+//! without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//!
+//!  You should have received a copy of the GNU General Public License along with RavnOS. If not, see <https://www.gnu.org/licenses/>
+
+//!
+//! Copyright; Joaquin "ShyanJMC" Crespo - 2022
+
 // Standar libraries
 // Environment lib
 use std::env;
@@ -15,6 +29,7 @@ use std::process::{self, Command};
 // RavnOS libraries
 use libconfarg::RavnArguments;
 use libstream::{getprocs, Stream};
+use libfile::RavnFile;
 
 fn main() {
     // env::args() takes program's arguments
@@ -109,7 +124,7 @@ fn main() {
                     .strip_suffix("\n")
                     .unwrap();
                 buffer.push(format!(
-                    "{} {} {:?} {} {}b",
+                    "{} {} {:?} {} {}",
                     &h.display(),
                     fmetadata.mtime(),
                     // Permissions
@@ -119,7 +134,7 @@ fn main() {
                     // octal mode, the return is a String.
                     format!("{:o}", fmetadata.permissions().mode()).permission_to_human(),
                     owner,
-                    fmetadata.size()
+                    fmetadata.size().size_to_human()
                 ));
             }
             // Show filename and size.
