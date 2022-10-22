@@ -118,6 +118,19 @@ impl RavnArguments for Vec<String> {
                     }
                 }
             },
+            "search" => {
+            	for indexs in self {
+            		if indexs == "-f" {
+            			options.push("file");
+            		} else if indexs == "-d" {
+            			options.push("directory");
+            		} else if indexs == "-e" {
+            			options.push("environment");
+            		} else if indexs == "-p" {
+            			options.push("proc");
+            		}
+            	}
+            }
             
             _ => std::process::exit(1),
         }
