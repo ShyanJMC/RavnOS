@@ -217,13 +217,13 @@ impl RavnArguments for Vec<String> {
                 eprintln!("{}", var1);
             } else if program == "search" {
                 let var1 = "Usage;
-            [option] [String] [path_or_file]
+            [option] [String] [path_file_or_environment_variable]
 
             Options:
             --------
             -f      : search the string inside file.
             -d      : search the string in directories' name.
-            -e      : search the string in environment variables.
+            -e      : search the string in environment variables data.
             -p      : search the string in system processes.
             ".to_string();
             eprintln!("{}", var1);
