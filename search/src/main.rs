@@ -94,7 +94,8 @@ fn main() {
 	// release stable version
 	if inst1.directory {
 		for files in &inputs {
-			let output = files.readdir();
+			let mut output = files.readdir();
+			output.sort();
 			for archives in output {
 				if archives.to_str().unwrap().contains(&ssearch) {
 					println!("{:?}",archives);
