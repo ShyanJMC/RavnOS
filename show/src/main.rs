@@ -30,6 +30,10 @@ use std::io;
 use std::process::{self, Command};
 
 // RavnOS libraries
+extern crate libconfarg;
+extern crate libstream;
+extern crate libfile;
+
 use libconfarg::RavnArguments;
 use libstream::{getprocs, Stream};
 use libfile::RavnFile;

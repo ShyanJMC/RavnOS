@@ -6,6 +6,9 @@ use std::env;
 use std::process;
 
 // RavnOS libraries
+extern crate libconfarg;
+extern crate libstream;
+
 use libconfarg::RavnArguments;
 use libstream::{getprocs, file_filter, Stream};
 
