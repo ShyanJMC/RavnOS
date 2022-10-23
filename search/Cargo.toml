@@ -2,6 +2,12 @@
 name = "search"
 version = "0.4.0"
 edition = "2021"
+readme = "../README.md"
+license = "GPL-3.0"
+description = "A tool to search strings in files, directories and procs."
+authors = ["Joaquin 'ShyanJMC' Crespo <shyan@shyanjmc.com>"]
+homepage = "https://shyanjmc.com"
+documentation = "https://shyanjmc.com/ravnos"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
