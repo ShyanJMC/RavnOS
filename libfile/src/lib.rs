@@ -21,7 +21,7 @@ impl RavnFile for u64 {
 	/// takes as self input (bytes) the size of file/directory and returns String with human size.
 	fn size_to_human(&self) -> String {
 		let size = self.clone();
-		let mut dreturn = size.to_string();
+		let mut dreturn = String::new();
 		// Bytes
 		if size <= 1024 {
 			dreturn = size.to_string() + "B";
