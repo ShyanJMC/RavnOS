@@ -107,6 +107,10 @@ Show binary is used to print file's data and metadata
 - [X] System's processes (Linux) (--proc).
 - [X] Output mode in hexadecimal (--hexa).
 - [X] Clean mode (-c).
+- [X] Stdin mode (--stdin).
+- [ ] Recognition of environment variables.
+- [ ] Recognition of special characters in stdin mode (like; \n , \t and others).
+- [ ] Difference between two files.
 
 ### Ls
 
