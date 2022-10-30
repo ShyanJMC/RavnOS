@@ -121,7 +121,8 @@ fn main() {
                 // 3; the permissions (in octal)
                 // 4: the owner
                 // 5: the size
-                let fmetadata = fs::metadata(&h).unwrap();
+
+                let fmetadata = fs::metadata(h.display().to_string()).expect("Error reading metadata in file/directory/link. Please check if that file/directory/link exist and is not corrupted.");
 
                 // ID numeric to user
                 let ownerout = Command::new("/usr/bin/id")
