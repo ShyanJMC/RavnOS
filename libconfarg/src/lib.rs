@@ -33,6 +33,7 @@ pub struct ShowConfiguration {
     pub proc: bool,
     pub hexa: bool,
     pub words: bool,
+    pub env: bool,
 }
 
 /// Ls configuration struct
@@ -102,6 +103,8 @@ impl RavnArguments for Vec<String> {
                         options.push("words");
                     } else if indexs == "--hexa" {
                         options.push("hexa");
+                    } else if indexs == "-e" {
+                    	options.push("environment");
                     }
                 }
             },
@@ -176,6 +179,7 @@ impl RavnArguments for Vec<String> {
             -p      : show file permissions.
             -c      : clean verbose to show only file's content.
             -w      : show file's words.
+            -e      : show ENV environment variable value.
             --proc  : show the system's processes. Only in Unix systems.
             --stdin : read from standard input in addition of 'file n'.
             --hexa  : show the file's content in hexa.
