@@ -108,7 +108,7 @@ Show binary is used to print file's data and metadata
 - [X] Output mode in hexadecimal (--hexa).
 - [X] Clean mode (-c).
 - [X] Stdin mode (--stdin).
-- [ ] Recognition of environment variables.
+- [X] Recognition of environment variables.
 - [ ] Recognition of special characters in stdin mode (like; \n , \t and others).
 - [ ] Difference between two files.
 
@@ -120,7 +120,7 @@ Ls binary is used to print directories content.
 - [X] Directoyies and files verbose (-v).
 - [X] Clean mode (-c).
 - [X] System's processes (Linux) (--proc).
-- [ ] Fix issue with verbose mode in HOME directory.
+- [X] Fix issue with verbose mode in HOME directory. ---> Was an issue in my system with Steam folder.
 
 ### Search
 
