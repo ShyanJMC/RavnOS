@@ -154,12 +154,7 @@ impl RavnArguments for Vec<String> {
     /// check if some arguments is the help
     fn checkarguments_help(&self, program: &str) -> bool {
         let mut help = false;
-        // If you ask your self why I didn't put this in the "for" loop;
-        // you can not assign a value to something that do not exist, basically
-        // if is empty skip "for" loop.
-        if self.is_empty() {
-            help = true;
-        }
+        
         for indexs in self {
             if indexs == "-h" || indexs == "--help" {
                 help = true;
