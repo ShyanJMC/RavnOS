@@ -108,8 +108,8 @@ Show binary is used to print file's data and metadata
 - [X] Output mode in hexadecimal (--hexa).
 - [X] Clean mode (-c).
 - [X] Stdin mode (--stdin).
-- [X] Recognition of environment variables.
-- [ ] Recognition of special characters in stdin mode (like; \n , \t and others).
+- [X] Recognition of environment variables (-e).
+- [ ] Recognition of special characters in stdin mode (like; \n , \t and others) with EOF as delimiter.
 - [ ] Difference between two files.
 
 ### Ls
@@ -131,6 +131,7 @@ Search binary is used to search into the system.
 - [X] Search string in environment variables.
 - [X] Search string in system's processes.
 - [ ] Search recursively in path.
+- [ ] Search in stdin.
 
 ### Edit
 
