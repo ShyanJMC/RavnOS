@@ -50,6 +50,9 @@ fn main() {
 	// Vector to store options
 	let mut options: Vec<&str> = Vec::new();
 	let mut inputs: Vec<String> = arguments.check_arguments("search", &mut options);
+	if inputs.is_empty() {
+		process::exit(0);
+	}
 	// String to search must be the first position (0)
 	let ssearch: String = inputs[0].clone();
 	// Delete the string to search from the vector because can be more than just 1 file in which search.
