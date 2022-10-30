@@ -61,9 +61,13 @@ fn main() {
     // The vec<String> return with files index is stored in "lists" variable.
     // The method is from RavnArguments trait.
     let mut options: Vec<&str> = Vec::new();
-    let lists: Vec<String> = arguments.check_arguments("ls", &mut options);
+    let mut lists: Vec<String> = arguments.check_arguments("ls", &mut options);
 
-    for confs in options {
+    if lists.is_empty(){
+    	lists.push(env::current_dir().unwrap().display().to_string());
+    }
+
+	for confs in options {
         if confs == "verbose" {
             config.verbose = true;
         } else if confs == "proc" {
