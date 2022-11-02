@@ -1,53 +1,77 @@
 # RavnOS
-RanvOS, from norwegian; raven,  is a operative system programmed in Rust.
+![](ravnos.svg)
 
-Aims to be; minimal, fast, secure and modern ( this maybe you know as; state-of-art ).
+RanvOS, (from norwegian; raven),  is a operative system programmed in Rust. Aims to be; minimal, stable, secure and modern ( this maybe you know as; state-of-art ).
+
+Is my personal project to make from scratch an operative system, take this project as a hobby, nothing professional.
 
 ## Target
-The target of this project is not do the next Linux, GNU HURD or Redox. 
 
-Is my personal project to make from scratch an operative system with special focus in minimalism, portability, cyber security and wherever I need in the future.
+The pillars of RavnOS are;
 
-Take this project as a hobby, nothing professional.
+- Minimalism
 
-I prefer build my programs as statically linked, with native CPU support and without debug information. Because of that I recommend set this configuration in " ~/.cargo/config.toml ":
+Nothing of bloatware inside the code or system. Just the necessary to do the job.
 
-> \[build]
-> 
-> jobs = 20
-> 
-> rustc = "rustc"
-> 
-> rustflags = ["-C","opt-level=2","-C","debuginfo=0","-C", "target-feature=+crt-static","-C","target-cpu=native"]
+Also the minimalism affects the system's scope, check that point.
 
-## Standard
+- Stability and security over features
 
-When I writte RavnOS I just put this topics as standard for development, distribution and use;
+Will have absolute priority the stability and security of the system over X feature. 
 
-1. No external crates allowed (crates from internet).
+- Isolation and portability
 
-2. The musl standard c-lib is used for compile.
+Each part of system must be portable over Rust supported platforms.
 
-3. All must be compiled as static binary. Becuase of this musl is the best option.
+Each part of system must be self hosted, no external crates (over internet) are allowed. All must be local.
 
-## Note
-I like do this project thiking; 
-
-> if you are in the middle of mountain (or in the middle of zombie apocalypse) without Starlink or any other internet connection, how you will build this?
-
-Because of that, and one fun challenge, is not add dependencies that need internet, all must be local. 
+Each part of system distributed in binary form must be done as static, at 2022 the best way for this is use MUSL standard C library.
 
 ## Requirements 
 - Rustc
 - A terminal
-- Cargo with the target toolchain you want/need: This is not mandatory but will help you to build with one just command.
-- Musl target: This is not mandatory, but I recommend it to build as static.
+- Cargo with the target toolchain you want/need:
+
+ This is not mandatory but will help you to build with one just command.
+
+- Musl target: 
+
+This is not mandatory, but I recommend it to build as static.
+
+## Documentation
+
+- Documentation/ROADMAP.md
+
+Contains information about ROADMAP for each release.
+
+- Documentation/PATRONS.md
+
+Contains information about each patrons in each month.
+
+- Documentation/ISSUES.md
+
+Contains information about each issue fixed.
+
+- Documentation/PARTS.md
+
+Contains information about each system part.
 
 ## Build
 
-There are two ways for build RavnOS;
+There are two ways for build RavnOS. ;
 
 - Cargo
+
+I recommend use this configuration inside "~/.cargo/.config";
+
+```rust
+[build]
+target= "x86_64-unknown-linux-musl"
+jobs=20
+rustflags = ["-C","opt-level=2","-C","debuginfo=0","-C", "target-feature=+crt-static","-C","target-cpu=native"]
+```
+
+To build;
 
 ```rust
 cargo build --release --target [x86_64/arm64/etc]-unknown-[linux/windows/etc]-musl
@@ -55,7 +79,7 @@ cargo build --release --target [x86_64/arm64/etc]-unknown-[linux/windows/etc]-mu
 
 All binaries will be in "target/\[TARGET]/release".
 
-If you have space requeriments, do "strip" to the final binaries. This is because even with "--release" target I still found debug symbols in the final binary.
+If you have space requeriments, do "strip" to the final binaries. This is because even with "-\-release" target I still found debug symbols in the final binary.
 
 - Rustc
 
@@ -91,74 +115,7 @@ After strip;
 
 The strip command clean the debug symbols, which are the 94.49869791666667% of space.
 
-## Roadmap
 
-### Show
-
-Show binary is used to print file's data and metadata
-
-- [X] File's data (normal).
-- [X] File's size (-s).
-- [X] File's lines (-l).
-- [X] File's owner (-o).
-- [X] File's permissions (-p).
-- [X] File's datetime modification (-d).
-- [X] File's words and letters (-w).
-- [X] System's processes (Linux) (--proc).
-- [X] Output mode in hexadecimal (--hexa).
-- [X] Clean mode (-c).
-- [X] Stdin mode (--stdin).
-- [X] Recognition of environment variables (-e).
-- [ ] Recognition of special characters in stdin mode (like; \n , \t and others) with EOF as delimiter.
-- [ ] Difference between two files.
-
-### Ls
-
-Ls binary is used to print directories content.
-
-- [X] Directories files and sub-directories number (-l).
-- [X] Directoyies and files verbose (-v).
-- [X] Clean mode (-c).
-- [X] System's processes (Linux) (--proc).
-- [X] Fix issue with verbose mode in HOME directory. ---> Was an issue in my system with Steam folder.
-
-### Search
-
-Search binary is used to search into the system.
-
-- [X] Search string inside one or more files.
-- [X] Search string in directory's name/path.
-- [X] Search string in environment variables.
-- [X] Search string in system's processes.
-- [ ] Search recursively in path.
-- [ ] Search in stdin.
-
-### Edit
-
-Edit binary is used to edit file's and system's information.
-
-- [ ] Edit environment variable.
-- [ ] Edit file.
-- [ ] Edit stdin and/or file based in patterns.
-
-### Huginn 
-
-Hugin, from old norse: thought, is the system init.
-
-The binary name is; init (Linux kernel try to load this file name).
-
-- [ ] Read TOML configuration files.
-- [ ] Start process based in configuration file.
-- [ ] Network Ethernet (with DHCP and DNS) support.
-- [ ] Command line interface (C.L.I.) to manage services/daemons.
-
-### Muninn (pkg)
-
-Munin, from old norse: memory - mind, is the package manager.
-
-- [ ] Read TOML configuration files.
-- [ ] Install, uninstall packages with and without root access.
-- [ ] Install pre-build package or build from source.
 
 ## Contact
 If you want contact me, you can do it trough:
@@ -189,7 +146,6 @@ Donate me crypto;
 - Ethereum (ETH); 0x27219354cC70dE84e7fae0B71E9e2605026b10B2
 - Cosmos (ATOM); cosmos1fmyh8kkdmz4wfhec5k5h97g9syl8e9lpufww8n
 - DAI (ERC-20); 0x27219354cC70dE84e7fae0B71E9e2605026b10B2
-- Ravencoin (RVN); RRmpKJyu2TTLA94oXCf9PL3u1dmXUAMTd4
 
 Also you can donate trought crypto-coffee.xyz;
 
