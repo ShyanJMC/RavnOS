@@ -115,7 +115,9 @@ After strip;
 
 The strip command clean the debug symbols, which are the 94.49869791666667% of space.
 
+## License
 
+RavnOS and all parts are licensed under GPLv3.
 
 ## Contact
 If you want contact me, you can do it trough:
