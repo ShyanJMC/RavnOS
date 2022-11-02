@@ -40,6 +40,21 @@ This is not mandatory, but I recommend it to build as static.
 
 ## Documentation
 
+The versioning schema for releases follows Semantic Versioning v2 ( https://semver.org/spec/v2.0.0.html ), here a resume;
+
+```
+Given a version number MAJOR.MINOR.PATCH, increment the:
+
+    MAJOR version when you make incompatible API changes
+    MINOR version when you add functionality in a backwards compatible manner
+    PATCH version when you make backwards compatible bug fixes
+
+Additional labels for pre-release and build metadata are available 
+as extensions to the MAJOR.MINOR.PATCH format.
+```
+
+The files with documentation like; roadmap, issues, etc are;
+
 - Documentation/ROADMAP.md
 
 Contains information about ROADMAP for each release.
