@@ -159,10 +159,18 @@ Join my patreon;
 
 Donate me crypto;
 
-- Bitcoin (BTC); 16n6GP4XkZiyoGCZei6uxdpohCkPm7eQ7L
-- Ethereum (ETH); 0x27219354cC70dE84e7fae0B71E9e2605026b10B2
-- Cosmos (ATOM); cosmos1fmyh8kkdmz4wfhec5k5h97g9syl8e9lpufww8n
-- DAI (ERC-20); 0x27219354cC70dE84e7fae0B71E9e2605026b10B2
+- DAI (ERC-20) - The preferred stablecoin;
+
+ 0x27219354cC70dE84e7fae0B71E9e2605026b10B2
+
+- Bitcoin (BTC); 
+
+16n6GP4XkZiyoGCZei6uxdpohCkPm7eQ7L
+
+- Ethereum (ETH); 
+
+0x27219354cC70dE84e7fae0B71E9e2605026b10B2
+
 
 Also you can donate trought crypto-coffee.xyz;
 
