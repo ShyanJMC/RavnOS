@@ -91,23 +91,21 @@ fn main() {
         let mut entries = Vec::new();
         // File buffer is used to store the file name if argument is not a dir.
         // Check if arguments is directory.
+        	
         if Path::new(names).is_dir() {
-            entries = names.readdir();
-            // I must use here and not as "readdir" method because if not the type will be forced to
-            // "()" (which is more like a unit and at the same time is a type also).
-            entries.sort();
+            	entries = names.readdir();
+            	// I must use here and not as "readdir" method because if not the type will be forced to
+            	// "()" (which is more like a unit and at the same time is a type also).
+            	entries.sort();
         } else {
-            // Check if arguments is a file.
-            if Path::new(names).is_file() {
-                // If is a file, store it in variables.
-                entries.push(PathBuf::from(names));
-            } else {
-                // If is not file or directory, means that do not exist.
-                eprintln!("{names}; no such file or directory.");
-                process::exit(1);
-            }
+            	// Check if arguments is a file.
+            	if Path::new(names).is_file() {
+                	// If is a file, store it in variables.
+                	entries.push(PathBuf::from(names));
+            	}
         }
 
+        
         if config.lines && !config.clean {
             println!("\nList of elements in {}; {}", names, &entries.len());
         }
@@ -122,7 +120,15 @@ fn main() {
                 // 4: the owner
                 // 5: the size
 
-                let fmetadata = fs::metadata(h.display().to_string()).expect("Error reading metadata in file/directory/link. Please check if that file/directory/link exist and is not corrupted.");
+				// Here "unwrap()" is not a good option because can fail, for example; if some symlink not points properly
+				// because of it I use a check.
+
+				if !h.exists() {
+					panic!("{}: File/dir/symlink do not exist, is invalid or is broken.", h.display());
+				}
+				
+                let fmetadata = fs::metadata(h.display().to_string()).unwrap();
+                
 
                 // ID numeric to user
                 let ownerout = Command::new("/usr/bin/id")
