@@ -92,16 +92,19 @@ fn main() {
         // File buffer is used to store the file name if argument is not a dir.
         // Check if arguments is directory.
         	
-        if Path::new(names).is_dir() {
-            	entries = names.readdir();
-            	// I must use here and not as "readdir" method because if not the type will be forced to
-            	// "()" (which is more like a unit and at the same time is a type also).
-            	entries.sort();
-        } else {
-            	// Check if arguments is a file.
-            	if Path::new(names).is_file() {
-                	// If is a file, store it in variables.
-                	entries.push(PathBuf::from(names));
+        match Path::new(names).is_dir() {
+        		true => {
+        			entries = names.readdir();
+            		// I must use here and not as "readdir" method because if not the type will be forced to
+            		// "()" (which is more like a unit and at the same time is a type also).
+            		entries.sort();
+            		},
+            	false => {
+            		// Check if arguments is a file.
+            		if Path::new(names).is_file() {
+                		// If is a file, store it in variables.
+                		entries.push(PathBuf::from(names));
+            		}
             	}
         }
 
