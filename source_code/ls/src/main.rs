@@ -153,7 +153,10 @@ fn main() {
                 
                 buffer.push(format!(
                     "{} {} {:?} {} {}",
-                    &h.display(),
+                    match &h.is_file() { 
+                    	true => format!("f: {}", h.display() ),
+                    	false => format!("d: {}", h.display() ),
+                    },
                     fmetadata.mtime(),
                     // Permissions
                     // Permissions method by default will return in bits, if you want the octal chmod
