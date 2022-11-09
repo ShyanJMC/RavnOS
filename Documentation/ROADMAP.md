@@ -34,8 +34,8 @@
 - [X] Search string in directory's name/path.
 - [X] Search string in environment variables.
 - [X] Search string in system's processes.
-- [ ] Search recursively in path.
-- [ ] Search in stdin.
+- [X] Search recursively in path.
+- [X] Search in stdin.
 
 ### Edit
 
@@ -43,7 +43,7 @@
 - [ ] Edit file.
 - [ ] Edit stdin and/or file based in patterns.
 
-### Huginn 
+### Huginn (sysinit)
 
 - [ ] Read TOML configuration files.
 - [ ] Start process based in configuration file.
@@ -56,13 +56,13 @@
 - [ ] Install, uninstall packages with and without root access.
 - [ ] Install pre-build binary or build from source.
 
-### Rune 
+### Rune (shell)
 
 - [ ] Read TOML configuration file.
 - [ ] Support for pipelines ("|") and redirections (<, >).
 - [ ] Support for create files and directories.
 
-### Futhark
+### Futhark (net)
 - [ ] Ethernet support.
 - [ ] DNS and DNSSEC support.
 - [ ] TCP/IP and UDP support.
