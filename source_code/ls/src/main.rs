@@ -127,7 +127,10 @@ fn main() {
 				// because of it I use a check.
 
 				if !h.exists() {
-					panic!("{}: File/dir/symlink do not exist, is invalid or is broken.", h.display());
+					// eprintln! shows string in stderr
+					eprintln!("{}: File/dir/symlink do not exist, is invalid or is broken.", h.display());
+					// break the loop for current stage
+					break;
 				}
 				
                 let fmetadata = fs::metadata(h.display().to_string()).unwrap();
