@@ -1,6 +1,6 @@
 [package]
 name = "show"
-version = "0.10.3"
+version = "0.11.3"
 edition = "2021"
 readme = "../README.md"
 license = "GPL-3.0"
