@@ -50,6 +50,8 @@ pub struct SearchConfiguration {
     pub directory: bool,
     pub environment: bool,
     pub processes: bool,
+    pub recursive: bool,
+    pub input: bool,
 }
 
 /// Trait for checkarguments and returns files names or show help
@@ -131,7 +133,11 @@ impl RavnArguments for Vec<String> {
             			options.push("environment");
             		} else if indexs == "-p" {
             			options.push("proc");
-            		}
+            		} else if indexs == "-r" {
+            			options.push("recursive");
+            		} else if indexs == "-s" {
+            			options.push("input");
+            		} 
             	}
             }
             
@@ -224,6 +230,8 @@ impl RavnArguments for Vec<String> {
             -d      : search the string in directories' name.
             -e      : search the string in environment variables data.
             -p      : search the string in system processes.
+            -r      : search recursively the string in directories' name and file's data.
+            -s      : search the string in stdin
             ".to_string();
             eprintln!("{}", var1);
             }

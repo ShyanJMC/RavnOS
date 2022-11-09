@@ -19,6 +19,9 @@ use std::env;
 // Process lib
 use std::process;
 
+// Stdinput and stdoutput read
+use std::io::Read;
+
 // RavnOS libraries
 extern crate libconfarg;
 extern crate libstream;
@@ -45,6 +48,8 @@ fn main() {
         directory: false,
         environment: false,
         processes: false,
+        recursive: false,
+        input: false,
     };
 
 	// Vector to store options
@@ -68,9 +73,55 @@ fn main() {
 			inst1.environment = true;
 		} else if confs == "proc" {
 			inst1.processes = true;
+		} else if confs == "recursive" {
+			inst1.recursive = true;
+		} else if confs == "input" {
+			inst1.input = true;
 		}
 	}
 
+	// Search in stdin
+	if inst1.input {
+		// Where to save data
+		let mut stdin_buffer: Vec<u8> = Vec::new();
+		// Stdinput control
+		let stdinvar = std::io::stdin();
+		// Block stdinput to control it
+		let mut locking = stdinvar.lock();
+
+		// Take in consideration this; read_to_end saves data in u8
+		locking.read_to_end(&mut stdin_buffer).expect("Error reading stdin.");
+
+
+		// Transform u8 (integers 8 bytes) to strings
+		let strings = std::str::from_utf8(&stdin_buffer).expect("Error converting input to UTF-8 strings.");
+		
+		// Read stdin_buffer and search in each line
+		for inl in strings.lines() {
+			if inl.contains(&ssearch) {
+				println!("{inl}");
+			}
+		}
+	}
+
+	// Search recursively 
+	if inst1.recursive {
+		let results = inputs[0].readdir_recursive();
+		// Each struct field is Vec<String> so, we must use an iterator over them
+
+		// Dir
+		for dir in &results.dbuff {
+			if dir.contains(&ssearch) {
+				println!("d; {dir}");
+			}
+		}
+		// Files
+		for files in &results.fbuff {
+			for outputs in file_filter ( &files, ssearch.clone() ){
+				println!("f; {files}\n\n {outputs}\n\n");
+			}
+		}
+	}
 
 	// Start to check and work.
 	// Remember; if XX {YYY} will execute YYYY if XX's returns is true.

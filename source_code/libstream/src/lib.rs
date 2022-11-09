@@ -24,11 +24,20 @@ use std::io::{self, Read};
 /// Standard path
 use std::path::{PathBuf};
 
+/// Struct for recursive reading
+// With the derive(Clone) we allow it to be cloned
+#[derive(Clone,Debug)]
+pub struct DirStructure {
+	pub dbuff: Vec<String>,
+	pub fbuff: Vec<String>,
+}
+
 /// Outputs 
 pub trait Stream {
     fn permission_to_human(&self) -> Vec<&'static str>;
     fn word_count(&self) -> Vec<usize>;
     fn readdir(&self) -> Vec<PathBuf>;
+    fn readdir_recursive(&self) -> DirStructure;
 }
 
 impl Stream for String {
@@ -44,6 +53,80 @@ impl Stream for String {
             .unwrap();
 
         entries
+    }
+
+    // Read dir recursive
+    // Is not stable yet, I must fix first an issue with do not read sub dirs after first round
+    fn readdir_recursive(&self) -> DirStructure { 
+    	// I must use a closure here to not re write readdir function
+    	let readdir = |path: String| -> Vec<PathBuf> {
+    		// Read the directory
+    		let entries = fs::read_dir(path).unwrap()
+    		// Take the "DirEntry" struct from "read_dir" and returns the full path
+    		.map(|res| res.map(|e| e.path()))
+    		// Here we customice the collect method to returns as Result<V,E>
+    		.collect::<Result<Vec<_>, io::Error>>()
+    		.unwrap();
+
+    		entries
+    	};
+    	
+    	// Path buff
+    	let mut vec: Vec<PathBuf> = readdir( self.clone() );
+
+		// Structure
+		let mut dstructure_complete = DirStructure {
+			dbuff: Vec::new(),
+			fbuff: Vec::new(),
+		};
+
+		let mut dstructure: Vec<String> = Vec::new();
+		let mut fstructure: Vec<String> = Vec::new();
+		
+		// We must use another variable to use as check
+		// This is becasue we must verify if already readed the directory before.
+		let mut dstructure_check: Vec<String> = Vec::new();
+    	
+    	// Verification variable
+    	// alod = at least one directory
+    	let mut alod = true;
+    	
+    	// While "alod" is true keeps in loop
+    	while alod {
+
+    	    // Iterate over each "vec" value.
+    	    // As then is overwritted we must use it by reference. 
+    		for entry in &vec {
+    			// Check if is dir.
+    			let metadata = fs::metadata(entry).unwrap();
+
+				if metadata.is_dir() {
+					if !dstructure.contains(&entry.display().to_string()) {
+						dstructure.push( entry.clone().display().to_string() );
+					}					
+    			} else {
+    				// If is file cast it to string and save it in vector.
+    				fstructure.push( entry.display().to_string() );
+    			}
+    		}
+
+    		for entry_n in &dstructure {
+    			if !dstructure_check.contains(&entry_n) {
+    				dstructure_check.push( entry_n.to_string() );
+    				alod = true;
+    				vec = readdir ( entry_n.clone() );
+    			} else {
+    				alod = false;
+    			}
+    		}
+
+    	}
+
+		dstructure_complete.dbuff = dstructure.clone();
+		dstructure_complete.fbuff = fstructure.clone();
+    	
+    	dstructure_complete
+    	
     }
 
     /// Count words and letters
@@ -204,7 +287,16 @@ pub fn file_filter(filename: &String, input: String) -> Vec<String> {
     let mut file = File::open(filename).unwrap();
 
     // Read file to string and save in buffer1
-    file.read_to_string(&mut buffer1).unwrap();
+    match file.read_to_string(&mut buffer1) {
+    	// If provides error
+    	Err(_e) => {
+    		// Show an error about the specific file and cleans the buffer to not break all process.
+    		eprintln!("Error to read file; {filename} do not contains valid UTF-8 data");
+    		buffer1 = String::new();
+    		1	
+    	},
+    	Ok(d) => d,
+    };
 
     // Split in lines
     let lbuffer = buffer1.lines();
