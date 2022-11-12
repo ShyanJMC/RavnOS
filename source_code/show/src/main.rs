@@ -26,6 +26,8 @@ use std::os::unix::fs::PermissionsExt;
 
 //// I/O lib
 use std::io;
+use std::io::Read;
+
 // Process lib
 use std::process::{self, Command};
 
@@ -104,7 +106,7 @@ fn main() {
         // Match takes the read_line output, if is
         // Ok(_i) will print the buffer variable, but if
         // is Err(j) will print "j" (the error per se).
-        match io::stdin().read_line(&mut buffer) {
+        match io::stdin().read_to_string(&mut buffer) {
             Ok(_i) => println!("{buffer}"),
             Err(j) => println!("error; {j}"),
         }
