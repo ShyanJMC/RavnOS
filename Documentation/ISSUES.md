@@ -1,3 +1,10 @@
+# 12-12-2022
+
+- search
+
+-\- Recursive search do not works more than just 2.1 level 
+
+
 # 02-12-2022
 
 - ls
