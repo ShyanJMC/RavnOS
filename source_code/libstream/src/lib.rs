@@ -40,6 +40,111 @@ pub trait Stream {
     fn readdir_recursive(&self) -> DirStructure;
 }
 
+/// Transform
+pub trait Epoch {
+	fn epoch_to_human(&self) -> String;
+}
+
+impl Epoch for i64 {
+	// I based the below code in;
+	// https://www.geeksforgeeks.org/convert-unix-timestamp-to-dd-mm-yyyy-hhmmss-format/
+	// Thanks guys! :D
+	
+	fn epoch_to_human(&self) -> String {
+		let daysm = vec![31,28,31,30,31,30,31,31,30,31,30,31];
+		let mut currYear: i64;
+		let mut daysTillNow: i64;
+		let extraTime: i64;
+		let mut extraDays: i64;
+		let mut index: usize = 0;
+		let date: i64;
+		let mut month:usize = 0;
+		let hours: i64;
+		let minutes: i64;
+		let secondss: i64;
+		let mut flag: usize = 0;
+	
+	    // Calculate total days unix time T
+	    daysTillNow = self.clone() / (24 * 60 * 60);
+	    extraTime = ( self.clone() % (24 * 60 * 60) ) as i64;
+	    currYear = 1970;
+	 
+	    // Calculating current year
+	    loop {
+	        if currYear % 400 == 0 || (currYear % 4 == 0 && currYear % 100 != 0) {
+	            if daysTillNow < 366 {
+	                break;
+	            }
+	            daysTillNow -= 366;
+	        } else {
+	            if daysTillNow < 365 {
+	                break;
+	            }
+	            daysTillNow -= 365;
+	        }
+	        currYear += 1;
+	    }
+	    // Updating extradays because it
+	    // will give days till previous day
+	    // and we have include current day
+	    extraDays = ( daysTillNow + 1 ) as i64;
+	 
+	    if currYear % 400 == 0 || (currYear % 4 == 0 && currYear % 100 != 0) {
+	        	flag = 1;
+	    } else {
+	    	flag = 0;
+	    }
+	
+	    if flag == 1 {
+	        loop {
+	            if index == 1 {
+	                if extraDays - 29 < 0 {
+	                    break;
+	                }
+	                month += 1;
+	                extraDays -= 29;
+	            } else {
+	                if extraDays - daysm[index] < 0 {
+	                    break;
+	                }
+	                month += 1;
+	                extraDays -= daysm[index];
+	            }
+	            index += 1;
+	        }
+	    } else {
+	        loop {
+	            if extraDays - daysm[index] < 0 {
+	                break;
+	            }
+	            month += 1;
+	            extraDays -= daysm[index];
+	            index += 1;
+	        }
+	    }
+	 
+	    // Current Month
+	    if extraDays > 0 {
+	        month += 1;
+	        date = extraDays;
+	    } else {
+	        if month == 2 && flag == 1 {
+	            date = 29;
+	        } else {
+	            date = daysm[month - 1];
+	        }
+	    }
+	 
+	    // Calculating HH:MM:YYYY
+	    hours = extraTime / 3600;
+	    minutes = (extraTime % 3600) / 60;
+	    secondss = (extraTime % 3600) % 60;
+	 
+	    format!("{}/{}/{} {}:{}:{} UTC-0/GMT-0",&date, &month, &currYear, &hours, &minutes, &secondss)
+		
+	}
+}
+
 impl Stream for String {
     /// Read directories and returns PathBuf with each file and directory.
     fn readdir(&self) -> Vec<PathBuf> {
