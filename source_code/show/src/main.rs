@@ -31,6 +31,9 @@ use std::io::Read;
 // Process lib
 use std::process::{self, Command};
 
+// Time lib
+use std::time::SystemTime;
+
 // RavnOS libraries
 extern crate libconfarg;
 extern crate libfile;
@@ -38,7 +41,7 @@ extern crate libstream;
 
 use libconfarg::RavnArguments;
 use libfile::RavnFile;
-use libstream::{getprocs, Stream};
+use libstream::{getprocs, Stream, Epoch};
 
 fn main() {
     // env::args() takes program's arguments (the first is always the self binary).
@@ -61,6 +64,7 @@ fn main() {
         hexa: false,
         words: false,
         env: false,
+        date: false
     };
 
     if arguments.checkarguments_help("show") {
@@ -95,6 +99,8 @@ fn main() {
             config.words = true;
         } else if confs == "environment" {
             config.env = true;
+        } else if confs == "date" {
+        	config.date = true;
         }
     }
 
@@ -126,6 +132,13 @@ fn main() {
         }
     }
 
+    // Date
+    if config.date {
+    	let systime = SystemTime::now();
+    	let diff = systime.duration_since(SystemTime::UNIX_EPOCH);
+    	println!("{}", (diff.unwrap().as_secs() as i64).epoch_to_human() );
+    }
+
     // Opening files and showing them
     for names in &archives {
         if !config.env {
@@ -142,10 +155,10 @@ fn main() {
 
                 if config.datetime {
                     println!(
-                        "Modified (EPoch): {:?}\nAccessed (EPoch): {:?}\nCreated (EPoch): {:?}",
-                        meta.mtime(),
-                        meta.atime(),
-                        meta.ctime()
+                        "Modified: {}\nAccessed: {}\nCreated: {}",
+                        meta.mtime().epoch_to_human(),
+                        meta.atime().epoch_to_human(),
+                        meta.ctime().epoch_to_human(),
                     );
                 }
 
