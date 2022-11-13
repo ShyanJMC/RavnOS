@@ -34,6 +34,7 @@ pub struct ShowConfiguration {
     pub hexa: bool,
     pub words: bool,
     pub env: bool,
+    pub date: bool,
 }
 
 /// Ls configuration struct
@@ -107,6 +108,8 @@ impl RavnArguments for Vec<String> {
                         options.push("hexa");
                     } else if indexs == "-e" {
                     	options.push("environment");
+                    } else if indexs == "--date" {
+                    	options.push("date");
                     }
                 }
             },
@@ -179,7 +182,7 @@ impl RavnArguments for Vec<String> {
             Options:
             --------
             -s      : show file size in bytes .
-            -d      : show datetime format.
+            -d      : show datetime format (in UTC).
             -l      : show file's lines.
             -o      : show owner.
             -p      : show file permissions.
@@ -189,6 +192,7 @@ impl RavnArguments for Vec<String> {
             --proc  : show the system's processes. Only in Unix systems.
             --stdin : read from standard input in addition of 'file n'.
             --hexa  : show the file's content in hexa.
+            --date  : show current date based in Unix Epoch.
             "
                 .to_string();
                 eprintln!("{}", var1);
