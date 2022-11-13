@@ -18,6 +18,7 @@
 - [X] Recognition of environment variables (-e).
 - [X] Recognition of special characters in stdin mode (like; \n , \t and others) with EOF (this depends of shell, file format, etc) as delimiter.
 - [ ] Difference between two files.
+- [X] Current date time.
 
 ### Ls
 
@@ -27,7 +28,7 @@
 - [X] Clean mode (-c).
 - [X] System's processes (Linux) (--proc).
 - [X] Fix issue with verbose mode in HOME directory. ---> Was an issue in my system with Steam folder.
-- [ ] Show modified time in UTC and not in Unix Epoch
+- [X] Show modified time in UTC and not in Unix Epoch
 
 ### Search
 
