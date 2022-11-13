@@ -32,7 +32,7 @@ extern crate libstream;
 extern crate libfile;
 
 use libconfarg::RavnArguments;
-use libstream::{getprocs, Stream};
+use libstream::{getprocs, Stream, Epoch};
 use libfile::RavnFile;
 
 fn main() {
@@ -163,7 +163,7 @@ fn main() {
                     	true => format!("f: {}", h.display() ),
                     	false => format!("d: {}", h.display() ),
                     },
-                    fmetadata.mtime(),
+                    fmetadata.mtime().epoch_to_human(),
                     // Permissions
                     // Permissions method by default will return in bits, if you want the octal chmod
                     // syntax need to use ".mode()".
