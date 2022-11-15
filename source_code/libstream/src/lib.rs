@@ -195,15 +195,21 @@ impl Stream for String {
     	// Verification variable
     	// alod = at least one directory
     	let mut alod = true;
-    	
+
     	// While "alod" is true keeps in loop
     	while alod {
-
+    	
     	    // Iterate over each "vec" value.
     	    // As then is overwritted we must use it by reference. 
     		for entry in &vec {
     			// Check if is dir.
-    			let metadata = fs::metadata(entry).unwrap();
+    			let metadata = match fs::metadata(entry) {
+    				Ok(r) => r,
+    				Err(_e) => {
+    					eprintln!("{}; Error reading metadata.", entry.display());
+    					continue;
+    				},
+    			};
 
 				if metadata.is_dir() {
 					if !dstructure.contains(&entry.display().to_string()) {
@@ -219,7 +225,9 @@ impl Stream for String {
     			if !dstructure_check.contains(&entry_n) {
     				dstructure_check.push( entry_n.to_string() );
     				alod = true;
-    				vec = readdir ( entry_n.clone() );
+    				for ndir in readdir ( entry_n.clone() ) {
+    					vec.push(ndir);
+    				}
     			} else {
     				alod = false;
     			}
