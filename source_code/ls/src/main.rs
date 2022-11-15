@@ -130,7 +130,7 @@ fn main() {
 					// eprintln! shows string in stderr
 					eprintln!("{}: File/dir/symlink do not exist, is invalid or is broken.", h.display());
 					// break the loop for current stage
-					break;
+					continue;
 				}
 				
                 let fmetadata = fs::metadata(h.display().to_string()).unwrap();
