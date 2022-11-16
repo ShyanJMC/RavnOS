@@ -1,6 +1,70 @@
 # Roadmap
 
-## 0.1.0 ALPHA
+## v1.0.0 
+
+After some months of beta, depending the amount of bugs detected in 0.9.0, will be released the first stable release.
+
+---
+
+## 0.9.0 BETA
+
+In this stage will not be added any new feature, just fix bugs and performance improvements.
+
+---
+
+## 0.8.0 ALPHA
+
+### Futhark (net)
+- [ ] Ethernet support.
+- [ ] DNS and DNSSEC support.
+- [ ] TCP/IP and UDP support.
+
+---
+
+## 0.7.0 ALPHA
+
+### Rune (shell)
+
+- [ ] Read TOML configuration file.
+- [ ] Support for pipelines ("|") and redirections (<, >).
+- [ ] Support for create files and directories.
+
+---
+
+## 0.6.0 ALPHA
+
+### Muninn (pkg)
+
+- [ ] Read TOML configuration files.
+- [ ] Install, uninstall packages with and without root access.
+- [ ] Install pre-build binary or build from source.
+
+----
+
+## 0.5.0 ALPHA
+
+### Huginn (sysinit)
+
+- [ ] Read TOML configuration files.
+- [ ] Start process based in configuration file.
+- [ ] Socket support.
+- [ ] Command line interface (C.L.I.) to manage services/daemons.
+
+---
+
+## 0.4.0 ALPHA
+
+
+### Edit
+
+- [ ] Edit environment variable.
+- [ ] Edit file.
+- [ ] Edit stdin and/or file based in patterns.
+
+
+---
+
+## 0.3.0 ALPHA
 
 ### Show
 
@@ -20,15 +84,13 @@
 - [ ] Difference between two files.
 - [X] Current date time.
 
-### Ls
 
+---
 
-- [X] Directories files and sub-directories number (-l).
-- [X] Directoyies and files verbose (-v).
-- [X] Clean mode (-c).
-- [X] System's processes (Linux) (--proc).
-- [X] Fix issue with verbose mode in HOME directory. ---> Was an issue in my system with Steam folder.
-- [X] Show modified time in UTC and not in Unix Epoch
+## 0.2.0 ALPHA
+
+- Mon Nov 14 23:45:31 2022 -0300 
+- commit 15925d1bde7222a22930b85522c29dea0e8f6f0d
 
 ### Search
 
@@ -39,32 +101,21 @@
 - [X] Search recursively in path.
 - [X] Search in stdin.
 
-### Edit
 
-- [ ] Edit environment variable.
-- [ ] Edit file.
-- [ ] Edit stdin and/or file based in patterns.
+---
 
-### Huginn (sysinit)
+## 0.1.0 ALPHA
 
-- [ ] Read TOML configuration files.
-- [ ] Start process based in configuration file.
-- [ ] Socket support.
-- [ ] Command line interface (C.L.I.) to manage services/daemons.
+- Sun Nov 13 19:53:45 2022 -0300
+- commit eb499d29c3cd67f5074841cb317d729271c3ca59
 
-### Muninn (pkg)
+### Ls
 
-- [ ] Read TOML configuration files.
-- [ ] Install, uninstall packages with and without root access.
-- [ ] Install pre-build binary or build from source.
 
-### Rune (shell)
+- [X] Directories files and sub-directories number (-l).
+- [X] Directoyies and files verbose (-v).
+- [X] Clean mode (-c).
+- [X] System's processes (Linux) (--proc).
+- [X] Fix issue with verbose mode in HOME directory. ---> Was an issue in my system with Steam folder.
+- [X] Show modified time in UTC and not in Unix Epoch
 
-- [ ] Read TOML configuration file.
-- [ ] Support for pipelines ("|") and redirections (<, >).
-- [ ] Support for create files and directories.
-
-### Futhark (net)
-- [ ] Ethernet support.
-- [ ] DNS and DNSSEC support.
-- [ ] TCP/IP and UDP support.
