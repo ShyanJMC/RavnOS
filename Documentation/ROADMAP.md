@@ -60,6 +60,8 @@ In this stage will not be added any new feature, just fix bugs and performance i
 - [ ] Edit environment variable.
 - [ ] Edit file.
 - [ ] Edit stdin and/or file based in patterns.
+- [ ] Edit file/directory permissions and owner/group.
+- [ ] Edit hostname.
 
 
 ---
@@ -83,6 +85,7 @@ In this stage will not be added any new feature, just fix bugs and performance i
 - [X] Recognition of special characters in stdin mode (like; \n , \t and others) with EOF (this depends of shell, file format, etc) as delimiter.
 - [ ] Difference between two files.
 - [X] Current date time.
+- [ ] Show system information (like distro, kernel version, etc)
 
 
 ---
