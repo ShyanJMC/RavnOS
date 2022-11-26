@@ -6,13 +6,13 @@ After some months of beta, depending the amount of bugs detected in 0.9.0, will 
 
 ---
 
-## 0.9.0 BETA
+## v1.0.0 BETA
 
 In this stage will not be added any new feature, just fix bugs and performance improvements.
 
 ---
 
-## 0.8.0 ALPHA
+## 0.51.0 ALPHA
 
 ### Futhark (net)
 - [ ] Ethernet support.
@@ -21,27 +21,27 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 ---
 
-## 0.7.0 ALPHA
+## 0.48.0 ALPHA
 
 ### Rune (shell)
 
-- [ ] Read TOML configuration file.
+- [ ] Read configuration file.
 - [ ] Support for pipelines ("|") and redirections (<, >).
 - [ ] Support for create files and directories.
 
 ---
 
-## 0.6.0 ALPHA
+## 0.45.0 ALPHA
 
 ### Muninn (pkg)
 
-- [ ] Read TOML configuration files.
+- [ ] Read configuration files.
 - [ ] Install, uninstall packages with and without root access.
 - [ ] Install pre-build binary or build from source.
 
 ----
 
-## 0.5.0 ALPHA
+## 0.42.0 ALPHA
 
 ### Huginn (sysinit)
 
@@ -52,7 +52,7 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 ---
 
-## 0.4.0 ALPHA
+## 0.38.0 ALPHA
 
 
 ### Edit
@@ -64,9 +64,17 @@ In this stage will not be added any new feature, just fix bugs and performance i
 - [ ] Edit hostname.
 
 
+### Show
+- [ ] Show system's resource like nmon or htop
+
+### libtui
+
+- [ ] Support for charts, bars, stderr, stdout, stdin, sections / frames and keys.
+
+
 ---
 
-## 0.3.0 ALPHA
+## 0.31.0 ALPHA
 
 ### Show
 
@@ -83,14 +91,24 @@ In this stage will not be added any new feature, just fix bugs and performance i
 - [X] Stdin mode (-\-stdin).
 - [X] Recognition of environment variables (-e).
 - [X] Recognition of special characters in stdin mode (like; \n , \t and others) with EOF (this depends of shell, file format, etc) as delimiter.
-- [ ] Difference between two files.
-- [X] Current date time.
-- [ ] Show system information (like distro, kernel version, etc)
+- [X] Difference between two files. (-\-diff)
+- [X] Current date time (-\-date).
+- [ ] Show system information (like distro, kernel version, etc) (-\-info)
+- [X] Adapt to work with; [key] { [data] } syntax.
 
+
+### Search
+
+- [ ] Extract data from keys
+
+
+### libs / crates
+
+- [ ] Adapt them to work with; [key] { [data] } syntax.
 
 ---
 
-## 0.2.0 ALPHA
+## 0.12.0 ALPHA
 
 - Mon Nov 14 23:45:31 2022 -0300 
 - commit 15925d1bde7222a22930b85522c29dea0e8f6f0d
@@ -107,7 +125,7 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 ---
 
-## 0.1.0 ALPHA
+## 0.6.0 ALPHA
 
 - Sun Nov 13 19:53:45 2022 -0300
 - commit eb499d29c3cd67f5074841cb317d729271c3ca59

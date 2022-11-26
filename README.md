@@ -27,6 +27,18 @@ Each part of system must be self hosted, no external crates (over internet) are 
 
 Each part of system distributed in binary form must be done as static, at 2022 the best way for this is use MUSL standard C library.
 
+- Keys - Data
+
+The information is printed in screen and worked with syntax;
+
+```
+[key] {
+	[data]
+}
+```
+
+This allow work with data grouped by keys and avoid issues traying to extract data when it have "", '', \\, \\\, and others characters.
+
 ## Requirements 
 - Rustc
 - A terminal
@@ -38,7 +50,7 @@ Each part of system distributed in binary form must be done as static, at 2022 t
 
 This is not mandatory, but I recommend it to build as static.
 
-## Documentation
+## Versioning
 
 The versioning schema for releases follows Semantic Versioning v2 ( https://semver.org/spec/v2.0.0.html ), here a resume;
 
@@ -52,6 +64,12 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
 Additional labels for pre-release and build metadata are available 
 as extensions to the MAJOR.MINOR.PATCH format.
 ```
+
+A change from early development is; each MINOR version also indicate each new / existing feature inside internal programs.
+
+With this versioning schema you know that whitin each MAJOR version the system is always compatible with the oldest versions.
+
+## Documentation
 
 The files with documentation like; roadmap, issues, etc are;
 
