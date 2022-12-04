@@ -3,7 +3,7 @@
 
 RanvOS, (from norwegian; raven),  is a operative system programmed in Rust. Aims to be; minimal, stable, secure and modern ( this maybe you know as; state-of-art ).
 
-Is my personal project to make from scratch an operative system, take this project as a hobby, nothing professional.
+Is my personal project to make from scratch an operative system, take this project as a hobby, nothing professional. 
 
 ## Target
 
@@ -11,7 +11,7 @@ The pillars of RavnOS are;
 
 - Minimalism
 
-Nothing of bloatware inside the code or system. Just the necessary to do the job.
+Nothing of bloatware inside the code or system. Just the necessary to do the job (maximum viable product).
 
 Also the minimalism affects the system's scope, check that point.
 
@@ -65,7 +65,7 @@ Additional labels for pre-release and build metadata are available
 as extensions to the MAJOR.MINOR.PATCH format.
 ```
 
-A change from early development is; each MINOR version also indicate each new / existing feature inside internal programs.
+A change from early development is; each MINOR version also indicate each new / existing feature inside internal programs. And performance patches go to "PATCH" section instead "MINOR" section.
 
 With this versioning schema you know that whitin each MAJOR version the system is always compatible with the oldest versions.
 
