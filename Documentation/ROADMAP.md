@@ -2,13 +2,23 @@
 
 ## v1.0.0 
 
-After some months of beta, depending the amount of bugs detected in 0.9.0, will be released the first stable release.
+After some months of beta, depending the amount of bugs detected in v1.0.0-BETA, will be released the first stable release.
 
 ---
 
 ## v1.0.0 BETA
 
 In this stage will not be added any new feature, just fix bugs and performance improvements.
+
+---
+
+## X ALPHA
+
+### Show
+
+- [ ] Add support to show kernel's syscalls from a process. Like "strace".
+- [ ] Add support to read DMI BIOS table to show information about hardware vendor, hardware model and firmware version.
+ 
 
 ---
 
