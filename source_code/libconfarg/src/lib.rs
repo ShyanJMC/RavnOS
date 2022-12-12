@@ -35,6 +35,8 @@ pub struct ShowConfiguration {
     pub words: bool,
     pub env: bool,
     pub date: bool,
+    pub diff: bool,
+    pub systeminfo: bool,
 }
 
 /// Ls configuration struct
@@ -53,6 +55,7 @@ pub struct SearchConfiguration {
     pub processes: bool,
     pub recursive: bool,
     pub input: bool,
+    pub ravnkey: bool,
 }
 
 /// Trait for checkarguments and returns files names or show help
@@ -110,6 +113,10 @@ impl RavnArguments for Vec<String> {
                     	options.push("environment");
                     } else if indexs == "--date" {
                     	options.push("date");
+                    } else if indexs == "--diff" {
+                    	options.push("diff");
+                    } else if indexs == "--info" {
+                    	options.push("systeminfo");
                     }
                 }
             },
@@ -140,7 +147,9 @@ impl RavnArguments for Vec<String> {
             			options.push("recursive");
             		} else if indexs == "-s" {
             			options.push("input");
-            		} 
+            		} else if indexs == "-rk" {
+            			options.push("ravnkey");
+            		}
             	}
             }
             
@@ -193,6 +202,8 @@ impl RavnArguments for Vec<String> {
             --stdin : read from standard input in addition of 'file n'.
             --hexa  : show the file's content in hexa.
             --date  : show current date based in Unix Epoch.
+            --diff  : show the differences of second file with respect to first.
+            --info  : show basic information about the operative system.
             "
                 .to_string();
                 eprintln!("{}", var1);
@@ -226,7 +237,7 @@ impl RavnArguments for Vec<String> {
                 eprintln!("{}", var1);
             } else if program == "search" {
                 let var1 = "Usage;
-            [option] [String] [path_file_or_environment_variable]
+            [option] [String] [path_file_key_or_environment_variable]
 
             Options:
             --------
@@ -236,6 +247,7 @@ impl RavnArguments for Vec<String> {
             -p      : search the string in system processes.
             -r      : search recursively the string in directories' name and file's data.
             -s      : search the string in stdin
+            -rk		: search the data from key. Take the data and key with sintax; [key] { [data] }
             ".to_string();
             eprintln!("{}", var1);
             }
