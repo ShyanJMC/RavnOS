@@ -31,3 +31,7 @@ Is the network manager.
 - rune
 
 Is the shell.
+
+- web
+
+Is the web browser and downloader files.

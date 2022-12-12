@@ -12,12 +12,31 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 ---
 
+## 0.57.0 ALPHA
+
+### Show
+
+- [ ] Add support to show information in BASE64.
+
+### Rune (shell)
+- [ ] Support for read git information.
+- [ ] Support to save some process's stdout into image (PNG and JPEG).
+
+### Futhark (net)
+- [ ] TCP/IP (v6) support.
+
+### Web
+- [ ] Download resource from Internet.
+- [ ] Browse webpages without javascript, only HTML and CSS from terminal. 
+
+---
+
 ## 0.51.0 ALPHA
 
 ### Futhark (net)
 - [ ] Ethernet support.
 - [ ] DNS and DNSSEC support.
-- [ ] TCP/IP and UDP support.
+- [ ] TCP/IP (v4) and UDP support.
 
 ---
 
@@ -27,7 +46,7 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 - [ ] Read configuration file.
 - [ ] Support for pipelines ("|") and redirections (<, >).
-- [ ] Support for create files and directories.
+- [ ] Support for create files and directories (show information from Cargo.toml file inside directory)
 
 ---
 
@@ -93,7 +112,8 @@ In this stage will not be added any new feature, just fix bugs and performance i
 - [X] Recognition of special characters in stdin mode (like; \n , \t and others) with EOF (this depends of shell, file format, etc) as delimiter.
 - [X] Difference between two files. (-\-diff)
 - [X] Current date time (-\-date).
-- [ ] Show system information (like distro, kernel version, etc) (-\-info)
+- [X] Show system information (like distro, kernel version, etc) (-\-info)
+  - For now is compatible with Linux kernel, in the future I will add BSD too.
 - [X] Adapt to work with; [key] { [data] } syntax.
 
 
