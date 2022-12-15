@@ -23,7 +23,7 @@ Will have absolute priority the stability and security of the system over X feat
 
 Each part of system must be portable over Rust supported platforms.
 
-Each part of system must be self hosted, no external crates (over internet) are allowed. All must be local.
+Each part of system must be self hosted, no external crates (over internet) are allowed. All must be local, how can you be sure that the remote dependency is secure? how can you be sure that the remote dependency will be developed to the end of times? how can you be sure that the remote dependency will not break the compatibility?
 
 Each part of system distributed in binary form must be done as static, at 2022 the best way for this is use MUSL standard C library.
 
