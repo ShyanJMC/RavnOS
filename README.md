@@ -3,7 +3,7 @@
 
 RanvOS, (from norwegian; raven),  is a operative system programmed in Rust. Aims to be; minimal, stable, secure and modern ( this maybe you know as; state-of-art ).
 
-Is my personal project to make from scratch an operative system, take this project as a hobby, nothing professional. 
+Is my personal project to make from scratch an operative system, take this project as a hobby, nothing professional.
 
 ## Target
 
@@ -17,13 +17,13 @@ Also the minimalism affects the system's scope, check that point.
 
 - Stability and security over features
 
-Will have absolute priority the stability and security of the system over X feature. 
+Will have absolute priority the stability and security of the system over X feature.
 
 - Isolation and portability
 
 Each part of system must be portable over Rust supported platforms.
 
-Each part of system must be self hosted, no external crates (over internet) are allowed. All must be local, how can you be sure that the remote dependency is secure? how can you be sure that the remote dependency will be developed to the end of times? how can you be sure that the remote dependency will not break the compatibility?
+Each part of system must be self hosted, no external crates (over internee) are allowed. All must be local, how can you be sure that the remote dependency is secure? how can you be sure that the remote dependency will be developed to the end of times? how can you be sure that the remote dependency will not break the compatibility?
 
 Each part of system distributed in binary form must be done as static, at 2022 the best way for this is use MUSL standard C library.
 
@@ -37,16 +37,21 @@ The information is printed in screen and worked with syntax;
 }
 ```
 
-This allow work with data grouped by keys and avoid issues traying to extract data when it have "", '', \\, \\\, and others characters.
+This allow work with data grouped by keys and avoid issues trying to extract data when it have "", '', \\, \\\, and others characters.
 
-## Requirements 
+ - OS Image - Container
+
+The final distribution must use the 'OS image' schema; the base system is immutable and the mutable part
+is used trough containers schema.
+
+## Requirements
 - Rustc
 - A terminal
 - Cargo with the target toolchain you want/need:
 
  This is not mandatory but will help you to build with one just command.
 
-- Musl target: 
+- Musl target:
 
 This is not mandatory, but I recommend it to build as static.
 
@@ -61,13 +66,13 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
     MINOR version when you add functionality in a backwards compatible manner
     PATCH version when you make backwards compatible bug fixes
 
-Additional labels for pre-release and build metadata are available 
+Additional labels for pre-release and build metadata are available
 as extensions to the MAJOR.MINOR.PATCH format.
 ```
 
 A change from early development is; each MINOR version also indicate each new / existing feature inside internal programs. And performance patches go to "PATCH" section instead "MINOR" section.
 
-With this versioning schema you know that whitin each MAJOR version the system is always compatible with the oldest versions.
+With this versioning schema you know that whiting each MAJOR version the system is always compatible with the oldest versions.
 
 ## Documentation
 
@@ -112,7 +117,7 @@ cargo build --release --target [x86_64/arm64/etc]-unknown-[linux/windows/etc]-mu
 
 All binaries will be in "target/\[TARGET]/release".
 
-If you have space requeriments, do "strip" to the final binaries. This is because even with "-\-release" target I still found debug symbols in the final binary.
+If you have space requirements, do "strip" to the final binaries. This is because even with "-\-release" target I still found debug symbols in the final binary.
 
 - Rustc
 
@@ -132,7 +137,7 @@ rustc --target=[x86_64/arm64/etc]-unknown-[linux/windows/etc]-musl -C opt-level=
 
 with above command, you will the final binary of [COMPONENT] in static final form (aka; statically linked) with optimization level 2 and specific libs (crates).
 
-As with cargo, I reccomend do "strip" to the final binaries to delete debug symbols.
+As with cargo, I recommend do "strip" to the final binaries to delete debug symbols.
 
 ### Before - After strip binary
 
@@ -163,11 +168,11 @@ Email:
 
 Linkedin:
 
-- https://www.linkedin.com/in/joaquin-mcrespo/ 
+- https://www.linkedin.com/in/joaquin-mcrespo/
 
 ## Contributions and support
 
-For now I am the main and only dev in this project, maybe in the future I will allow collaborations. 
+For now I am the main and only dev in this project, maybe in the future I will allow collaborations.
 
 If you want support this project you can;
 
@@ -181,11 +186,11 @@ Donate me crypto;
 
  0x27219354cC70dE84e7fae0B71E9e2605026b10B2
 
-- Bitcoin (BTC); 
+- Bitcoin (BTC);
 
 16n6GP4XkZiyoGCZei6uxdpohCkPm7eQ7L
 
-- Ethereum (ETH); 
+- Ethereum (ETH);
 
 0x27219354cC70dE84e7fae0B71E9e2605026b10B2
 
