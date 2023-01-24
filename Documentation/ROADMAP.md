@@ -1,6 +1,6 @@
 # Roadmap
 
-## v1.0.0 
+## v1.0.0
 
 After some months of beta, depending the amount of bugs detected in v1.0.0-BETA, will be released the first stable release.
 
@@ -18,7 +18,16 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 - [ ] Add support to show kernel's syscalls from a process. Like "strace".
 - [ ] Add support to read DMI BIOS table to show information about hardware vendor, hardware model and firmware version.
- 
+
+
+---
+
+## 0.58.0 ALPHA
+
+### Search
+
+- [ ] Search inside binaries
+
 
 ---
 
@@ -37,7 +46,7 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 ### Web
 - [ ] Download resource from Internet.
-- [ ] Browse webpages without javascript, only HTML and CSS from terminal. 
+- [ ] Browse webpages without javascript, only HTML and CSS from terminal.
 
 ---
 
@@ -129,18 +138,18 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 ### Search
 
-- [ ] Extract data from keys
+- [X] Extract data from keys
 
 
 ### libs / crates
 
-- [ ] Adapt them to work with; [key] { [data] } syntax.
+- [X] Adapt them to work with; [key] { [data] } syntax.
 
 ---
 
 ## 0.12.0 ALPHA
 
-- Mon Nov 14 23:45:31 2022 -0300 
+- Mon Nov 14 23:45:31 2022 -0300
 - commit 15925d1bde7222a22930b85522c29dea0e8f6f0d
 
 ### Search
@@ -169,4 +178,3 @@ In this stage will not be added any new feature, just fix bugs and performance i
 - [X] System's processes (Linux) (--proc).
 - [X] Fix issue with verbose mode in HOME directory. ---> Was an issue in my system with Steam folder.
 - [X] Show modified time in UTC and not in Unix Epoch
-

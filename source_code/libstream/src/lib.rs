@@ -1,13 +1,13 @@
 //! This file is part of RavnOS.
 //!
-//! RavnOS is free software: 
-//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, 
+//! RavnOS is free software:
+//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation,
 //! either version 3 of the License, or (at your option) any later version.
 //!
-//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 //! without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 //!
-//! You should have received a copy of the GNU General Public License along with RavnOS. If not, see <https://www.gnu.org/licenses/>. 
+//! You should have received a copy of the GNU General Public License along with RavnOS. If not, see <https://www.gnu.org/licenses/>.
 
 //!
 //! Copyright; Joaquin "ShyanJMC" Crespo - 2022
@@ -23,6 +23,8 @@ use std::fs::{self, File};
 use std::io::{self, Read};
 /// Standard path
 use std::path::{PathBuf};
+/// HashMap lib
+use std::collections::HashMap;
 
 /// Struct for recursive reading
 // With the derive(Clone) we allow it to be cloned
@@ -32,8 +34,9 @@ pub struct DirStructure {
 	pub fbuff: Vec<String>,
 }
 
-/// Outputs 
+/// Outputs
 pub trait Stream {
+	fn readkey(&self) -> HashMap<String,String>;
     fn permission_to_human(&self) -> Vec<&'static str>;
     fn word_count(&self) -> Vec<usize>;
     fn readdir(&self) -> Vec<PathBuf>;
@@ -49,13 +52,13 @@ impl Epoch for i64 {
 	// I based the below code in;
 	// https://www.geeksforgeeks.org/convert-unix-timestamp-to-dd-mm-yyyy-hhmmss-format/
 	// Thanks guys! :D
-	
+
 	fn epoch_to_human(&self) -> String {
 		let daysm = vec![31,28,31,30,31,30,31,31,30,31,30,31];
-		let mut currYear: i64;
-		let mut daysTillNow: i64;
-		let extraTime: i64;
-		let mut extraDays: i64;
+		let mut curr_year: i64;
+		let mut days_till_now: i64;
+		let extra_time: i64;
+		let mut extra_days: i64;
 		let mut index: usize = 0;
 		let date: i64;
 		let mut month:usize = 0;
@@ -63,70 +66,70 @@ impl Epoch for i64 {
 		let minutes: i64;
 		let secondss: i64;
 		let mut flag: usize = 0;
-	
+
 	    // Calculate total days unix time T
-	    daysTillNow = self.clone() / (24 * 60 * 60);
-	    extraTime = ( self.clone() % (24 * 60 * 60) ) as i64;
-	    currYear = 1970;
-	 
+	    days_till_now = self.clone() / (24 * 60 * 60);
+	    extra_time = ( self.clone() % (24 * 60 * 60) ) as i64;
+	    curr_year = 1970;
+
 	    // Calculating current year
 	    loop {
-	        if currYear % 400 == 0 || (currYear % 4 == 0 && currYear % 100 != 0) {
-	            if daysTillNow < 366 {
+	        if curr_year % 400 == 0 || (curr_year % 4 == 0 && curr_year % 100 != 0) {
+	            if days_till_now < 366 {
 	                break;
 	            }
-	            daysTillNow -= 366;
+	            days_till_now -= 366;
 	        } else {
-	            if daysTillNow < 365 {
+	            if days_till_now < 365 {
 	                break;
 	            }
-	            daysTillNow -= 365;
+	            days_till_now -= 365;
 	        }
-	        currYear += 1;
+	        curr_year += 1;
 	    }
 	    // Updating extradays because it
 	    // will give days till previous day
 	    // and we have include current day
-	    extraDays = ( daysTillNow + 1 ) as i64;
-	 
-	    if currYear % 400 == 0 || (currYear % 4 == 0 && currYear % 100 != 0) {
+	    extra_days = ( days_till_now + 1 ) as i64;
+
+	    if curr_year % 400 == 0 || (curr_year % 4 == 0 && curr_year % 100 != 0) {
 	        	flag = 1;
 	    } else {
 	    	flag = 0;
 	    }
-	
+
 	    if flag == 1 {
 	        loop {
 	            if index == 1 {
-	                if extraDays - 29 < 0 {
+	                if extra_days - 29 < 0 {
 	                    break;
 	                }
 	                month += 1;
-	                extraDays -= 29;
+	                extra_days -= 29;
 	            } else {
-	                if extraDays - daysm[index] < 0 {
+	                if extra_days - daysm[index] < 0 {
 	                    break;
 	                }
 	                month += 1;
-	                extraDays -= daysm[index];
+	                extra_days -= daysm[index];
 	            }
 	            index += 1;
 	        }
 	    } else {
 	        loop {
-	            if extraDays - daysm[index] < 0 {
+	            if extra_days - daysm[index] < 0 {
 	                break;
 	            }
 	            month += 1;
-	            extraDays -= daysm[index];
+	            extra_days -= daysm[index];
 	            index += 1;
 	        }
 	    }
-	 
+
 	    // Current Month
-	    if extraDays > 0 {
+	    if extra_days > 0 {
 	        month += 1;
-	        date = extraDays;
+	        date = extra_days;
 	    } else {
 	        if month == 2 && flag == 1 {
 	            date = 29;
@@ -134,18 +137,66 @@ impl Epoch for i64 {
 	            date = daysm[month - 1];
 	        }
 	    }
-	 
+
 	    // Calculating HH:MM:YYYY
-	    hours = extraTime / 3600;
-	    minutes = (extraTime % 3600) / 60;
-	    secondss = (extraTime % 3600) % 60;
-	 
-	    format!("{}/{}/{} {}:{}:{} UTC-0/GMT-0",&date, &month, &currYear, &hours, &minutes, &secondss)
-		
+	    hours = extra_time / 3600;
+	    minutes = (extra_time % 3600) / 60;
+	    secondss = (extra_time % 3600) % 60;
+
+	    format!("{}/{}/{} {}:{}:{} UTC-0/GMT-0",&date, &month, &curr_year, &hours, &minutes, &secondss)
+
 	}
 }
 
 impl Stream for String {
+	/// The self string is the data.
+	/// The return is a HashMap with syntax <key,data>
+	fn readkey(&self) -> HashMap<String,String> {
+		// Split the string into chars slice.
+		// Must be mutable so we can iterate with "next" method.
+		let char_collector = self.chars();
+		let mut str_collector: Vec<String> = Vec::new();
+		let mut keys: Vec<String> = Vec::new();
+		let mut data: Vec<String> = Vec::new();
+		let mut hmap: HashMap<String,String> = HashMap::new();
+
+		let mut buffer_k: String = String::new();
+		let mut buffer_d: String = String::new();
+
+		for value in char_collector {
+			str_collector.push( value.to_string() );
+		}
+
+		for value in str_collector   {
+
+			// Check if the value not start with { or }
+			// this is for the key
+			if  value != "{" && value != "}"  {
+				if data.len() < keys.len() || data.len() == keys.len(){
+					buffer_d = buffer_d.clone() + &value.to_string();
+				}
+
+			} else {
+				keys.push( buffer_k.trim().to_string() );
+				// Shadowing
+				buffer_k = String::new();
+				data.push( buffer_d.trim().to_string() );
+				// Shadowing
+				buffer_d = String::new();
+			}
+
+		}
+
+		for value in 0..data.len() {
+			// check if position is odd
+			if let 0=value%2 {
+				hmap.insert( data[value].clone() , data[value+1].clone() );
+			}
+		}
+
+		hmap
+	}
+
     /// Read directories and returns PathBuf with each file and directory.
     fn readdir(&self) -> Vec<PathBuf> {
         // Read the directory
@@ -162,7 +213,7 @@ impl Stream for String {
 
     // Read dir recursive
     // Is not stable yet, I must fix first an issue with do not read sub dirs after first round
-    fn readdir_recursive(&self) -> DirStructure { 
+    fn readdir_recursive(&self) -> DirStructure {
     	// I must use a closure here to not re write readdir function
     	let readdir = |path: String| -> Vec<PathBuf> {
     		// Read the directory
@@ -175,7 +226,7 @@ impl Stream for String {
 
     		entries
     	};
-    	
+
     	// Path buff
     	let mut vec: Vec<PathBuf> = readdir( self.clone() );
 
@@ -187,20 +238,20 @@ impl Stream for String {
 
 		let mut dstructure: Vec<String> = Vec::new();
 		let mut fstructure: Vec<String> = Vec::new();
-		
+
 		// We must use another variable to use as check
 		// This is becasue we must verify if already readed the directory before.
 		let mut dstructure_check: Vec<String> = Vec::new();
-    	
+
     	// Verification variable
     	// alod = at least one directory
     	let mut alod = true;
 
     	// While "alod" is true keeps in loop
     	while alod {
-    	
+
     	    // Iterate over each "vec" value.
-    	    // As then is overwritted we must use it by reference. 
+    	    // As then is overwritted we must use it by reference.
     		for entry in &vec {
     			// Check if is dir.
     			let metadata = match fs::metadata(entry) {
@@ -214,7 +265,7 @@ impl Stream for String {
 				if metadata.is_dir() {
 					if !dstructure.contains(&entry.display().to_string()) {
 						dstructure.push( entry.clone().display().to_string() );
-					}					
+					}
     			} else {
     				// If is file cast it to string and save it in vector.
     				fstructure.push( entry.display().to_string() );
@@ -237,9 +288,9 @@ impl Stream for String {
 
 		dstructure_complete.dbuff = dstructure.clone();
 		dstructure_complete.fbuff = fstructure.clone();
-    	
+
     	dstructure_complete
-    	
+
     }
 
     /// Count words and letters
@@ -406,7 +457,7 @@ pub fn file_filter(filename: &String, input: String) -> Vec<String> {
     		// Show an error about the specific file and cleans the buffer to not break all process.
     		eprintln!("Error to read file; {filename} do not contains valid UTF-8 data");
     		buffer1 = String::new();
-    		1	
+    		1
     	},
     	Ok(d) => d,
     };
@@ -418,7 +469,9 @@ pub fn file_filter(filename: &String, input: String) -> Vec<String> {
     // instead String.
     let mut rstr: Vec<String> = Vec::new();
 
+	// Goes over each line
     for word in lbuffer {
+    	// Verify if the line contains the word
         if word.contains(&input) {
             rstr.push(word.to_string());
         }

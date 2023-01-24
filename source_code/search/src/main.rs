@@ -50,6 +50,7 @@ fn main() {
         processes: false,
         recursive: false,
         input: false,
+        ravnkey: false,
     };
 
 	// Vector to store options
@@ -77,7 +78,29 @@ fn main() {
 			inst1.recursive = true;
 		} else if confs == "input" {
 			inst1.input = true;
+		} else if confs == "ravnkey" {
+			inst1.ravnkey = true;
 		}
+	}
+
+	// Search for [key] and extract [data]
+	if inst1.ravnkey {
+		let mut stdin_buffer: Vec<u8> = Vec::new();
+		let stdinvar = std::io::stdin();
+		let mut locking = stdinvar.lock();
+
+		// Shadowing
+		let ssearch = ssearch.as_str();
+
+		locking.read_to_end(&mut stdin_buffer).expect("Error reading stdin.");
+		let string: &str = std::str::from_utf8(&stdin_buffer).expect("Error converting input to UTF-8 strings.");
+		let hmap = string.to_string().readkey();
+
+		match hmap.get(ssearch) {
+			Some(e) => println!("{e}"),
+			None => eprintln!("Not found"),
+		}
+		
 	}
 
 	// Search in stdin
