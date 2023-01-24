@@ -114,6 +114,10 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 ## 0.31.0 ALPHA
 
+commit d5de0ec1a5d60858bc74541dcc1ef57b9c1c52fe (HEAD -> master)
+Author: ShyanJMC <shyanjmc@protonmail.com>
+Date:   Tue Jan 24 04:52:07 2023 -0300
+
 ### Show
 
 - [X] File's data (normal).
