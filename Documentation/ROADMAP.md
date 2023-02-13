@@ -12,13 +12,28 @@ In this stage will not be added any new feature, just fix bugs and performance i
 
 ---
 
-## X ALPHA
+## 0.70.0 ALPHA
 
 ### Show
 
 - [ ] Add support to show kernel's syscalls from a process. Like "strace".
 - [ ] Add support to read DMI BIOS table to show information about hardware vendor, hardware model and firmware version.
+- [ ] Add support to render image with ASCII / UTF-8/16
 
+### Microhttp
+
+- [ ] Add support for TCP
+- [ ] Add support for UDP
+- [ ] Add support for HTTP/2
+- [ ] Add support for HTTP/3
+- [ ] Add support for read configuration file
+- [ ] Add support for security features and hardening
+- [ ] Add support for TLSv1.3
+
+### Web
+
+- [ ] Add support for user-agent and behavior as curl
+- [ ] Check use of TLS and security headers
 
 ---
 

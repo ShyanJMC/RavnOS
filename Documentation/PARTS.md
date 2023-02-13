@@ -4,7 +4,7 @@
 
 Used to show information about files, files and system metadata.
 
-- ls 
+- ls
 
 Used to show files and directories in specific path with metadata support.
 
@@ -18,7 +18,7 @@ Used to edit environment variables, files, directories and stdin.
 
 - huginn (from old norse; thought )
 
-Is the sysinit. 
+Is the sysinit.
 
 - muninn ( from old norse; memory / mind )
 
@@ -34,4 +34,8 @@ Is the shell.
 
 - web
 
-Is the web browser and downloader files.
+Is the tui web browser and downloader files.
+
+- microhttp
+
+Is a simple and static web server with support for HTTP/2 (TCP) and HTTP3 (UDP) only.
