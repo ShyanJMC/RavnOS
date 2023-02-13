@@ -1,5 +1,8 @@
 # RavnOS
-![](ravnos.svg)
+| ![](ravnos-2.png) |
+| :---: |
+| Image created with Stable Diffusion 2.1 |
+
 
 RanvOS, (from norwegian; raven),  is a operative system programmed in Rust. Aims to be; minimal, stable, secure and modern ( this maybe you know as; state-of-art ).
 
