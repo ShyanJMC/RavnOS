@@ -156,6 +156,14 @@ After strip;
 
 The strip command clean the debug symbols, which are the 94.49869791666667% of space.
 
+## Coypright
+
+I, Joaquin Mannuel 'ShyanJMC' Crespo, am the main developer and creator of this project.
+
+- 2023-02-13; I have the signed copyright disclaimer agreement with my employer in which they (the company) waive the copyright on this. 
+- 2023-02-13; I am in the process of registering the software at my name in República Argentina.
+
+
 ## License
 
 RavnOS and all parts are licensed under GPLv3.
