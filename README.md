@@ -158,9 +158,9 @@ The strip command clean the debug symbols, which are the 94.49869791666667% of s
 
 ## Coypright
 
-I, Joaquin Mannuel 'ShyanJMC' Crespo, am the main developer and creator of this project.
+I, Joaquin Manuel 'ShyanJMC' Crespo, am the main developer and creator of this project.
 
-- 2023-02-13; I have the signed copyright disclaimer agreement with my employer in which they (the company) waive the copyright on this. 
+- 2023-02-13; I have the signed copyright disclaimer agreement with my employer in which they (the company) waive the copyright on this.
 - 2023-02-13; I am in the process of registering the software at my name in República Argentina.
 
 
@@ -206,7 +206,7 @@ Donate me crypto;
 0x27219354cC70dE84e7fae0B71E9e2605026b10B2
 
 
-Also you can donate trought crypto-coffee.xyz;
+Also you can donate trough crypto-coffee.xyz;
 
 - https://crypto-coffee.xyz/donate/shyanjmc
 
