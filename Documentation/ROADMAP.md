@@ -1,5 +1,49 @@
 # Roadmap
 
+<!-- TOC START min:1 max:5 link:true asterisk:false update:true -->
+- [Roadmap](#roadmap)
+  - [v1.0.0](#v100)
+  - [v1.0.0 BETA](#v100-beta)
+  - [0.XX.0 ALPHA](#0xx0-alpha)
+    - [BlackRavnTunnel](#blackravntunnel)
+  - [0.73.0 ALPHA](#0730-alpha)
+    - [Show](#show)
+    - [Microhttp](#microhttp)
+  - [0.70.0 ALPHA](#0700-alpha)
+    - [Show](#show-1)
+    - [Microhttp](#microhttp-1)
+    - [Web](#web)
+  - [0.58.0 ALPHA](#0580-alpha)
+    - [Search](#search)
+  - [0.57.0 ALPHA](#0570-alpha)
+    - [Show](#show-2)
+    - [Rune (shell)](#rune-shell)
+    - [Futhark (net)](#futhark-net)
+    - [Web](#web-1)
+  - [0.51.0 ALPHA](#0510-alpha)
+    - [Futhark (net)](#futhark-net-1)
+  - [0.48.0 ALPHA](#0480-alpha)
+    - [Rune (shell)](#rune-shell-1)
+  - [0.45.0 ALPHA](#0450-alpha)
+    - [Muninn (pkg)](#muninn-pkg)
+  - [0.42.0 ALPHA](#0420-alpha)
+    - [Huginn (sysinit)](#huginn-sysinit)
+  - [0.38.0 ALPHA](#0380-alpha)
+    - [Edit](#edit)
+    - [Show](#show-3)
+    - [libtui](#libtui)
+  - [0.31.0 ALPHA](#0310-alpha)
+    - [Show](#show-4)
+    - [Search](#search-1)
+    - [libs / crates](#libs--crates)
+  - [0.12.0 ALPHA](#0120-alpha)
+    - [Search](#search-2)
+  - [0.6.0 ALPHA](#060-alpha)
+    - [Ls](#ls)
+<!-- TOC END -->
+
+
+
 ## v1.0.0
 
 After some months of beta, depending the amount of bugs detected in v1.0.0-BETA, will be released the first stable release.
@@ -9,6 +53,29 @@ After some months of beta, depending the amount of bugs detected in v1.0.0-BETA,
 ## v1.0.0 BETA
 
 In this stage will not be added any new feature, just fix bugs and performance improvements.
+
+---
+
+## 0.XX.0 ALPHA
+
+### BlackRavnTunnel
+
+- [ ] Add support for openvpn protocol.
+- [ ] Add support for wireguard protocol.
+- [ ] Add support for IKEv2 and IPSec protocols.
+
+---
+
+## 0.73.0 ALPHA
+
+### Show
+
+- [ ] Add support to read binary information and print the same information that; ldd and file.
+- [ ] Add support to show information in Hexadecimal.
+
+### Microhttp
+
+- [ ] Add support for reverse proxy
 
 ---
 
@@ -42,7 +109,6 @@ In this stage will not be added any new feature, just fix bugs and performance i
 ### Search
 
 - [ ] Search inside binaries
-
 
 ---
 
