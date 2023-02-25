@@ -8,6 +8,22 @@ RanvOS, (from norwegian; raven),  is a operative system programmed in Rust. Aims
 
 Is my personal project to make from scratch an operative system, take this project as a hobby, nothing professional.
 
+<!-- TOC START min:1 max:5 link:true asterisk:false update:true -->
+- [RavnOS](#ravnos)
+	- [Target](#target)
+	- [Requirements](#requirements)
+	- [Versioning](#versioning)
+	- [Documentation](#documentation)
+	- [Build](#build)
+		- [Before - After strip binary](#before---after-strip-binary)
+	- [Coypright](#coypright)
+	- [License](#license)
+	- [Contact](#contact)
+	- [Contributions and support](#contributions-and-support)
+<!-- TOC END -->
+
+
+
 ## Target
 
 The pillars of RavnOS are;
