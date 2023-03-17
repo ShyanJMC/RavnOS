@@ -95,11 +95,11 @@ With this versioning schema you know that whiting each MAJOR version the system 
 
 ## Documentation
 
-The files with documentation like; roadmap, issues, etc are;
+The files with documentation (like features, issues, etc) are;
 
-- Documentation/ROADMAP.md
+- Documentation/FEATURES.md
 
-Contains information about ROADMAP for each release.
+Contains information about each program and features.
 
 - Documentation/PATRONS.md
 
