@@ -1,10 +1,10 @@
 //! This file is part of RavnOS.
 //!
-//! RavnOS is free software: 
-//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, 
+//! RavnOS is free software:
+//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation,
 //! either version 3 of the License, or (at your option) any later version.
 //!
-//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 //! without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 //!
 //!  You should have received a copy of the GNU General Public License along with RavnOS. If not, see <https://www.gnu.org/licenses/>
@@ -33,7 +33,7 @@ extern crate libfile;
 
 use libconfarg::RavnArguments;
 use libstream::{getprocs, Stream, Epoch};
-use libfile::RavnFile;
+use libfile::RavnSizeFile;
 
 fn main() {
     // env::args() takes program's arguments
@@ -80,9 +80,9 @@ fn main() {
     }
 
     if config.proc {
-    	let procs: Vec<String> = getprocs();                                                                                                                                           
-        for strings in procs {                                                                                                                                                         
-        println!("{strings}"); 
+    	let procs: Vec<String> = getprocs();
+        for strings in procs {
+        println!("{strings}");
         }
     }
 
@@ -91,7 +91,7 @@ fn main() {
         let mut entries = Vec::new();
         // File buffer is used to store the file name if argument is not a dir.
         // Check if arguments is directory.
-        	
+
         match Path::new(names).is_dir() {
         		true => {
         			entries = names.readdir();
@@ -108,7 +108,7 @@ fn main() {
             	}
         }
 
-        
+
         if config.lines && !config.clean {
             println!("\nList of elements in {}; {}", names, &entries.len());
         }
@@ -132,9 +132,9 @@ fn main() {
 					// break the loop for current stage
 					continue;
 				}
-				
+
                 let fmetadata = fs::metadata(h.display().to_string()).unwrap();
-                
+
 
                 // ID numeric to user
                 let ownerout = Command::new("/usr/bin/id")
@@ -156,10 +156,10 @@ fn main() {
                 		None => "Error reading owner, check file/dir permissions.",
                 	},
                 };
-                
+
                 buffer.push(format!(
                     "{} {} {:?} {} {}",
-                    match &h.is_file() { 
+                    match &h.is_file() {
                     	true => format!("f: {}", h.display() ),
                     	false => format!("d: {}", h.display() ),
                     },
