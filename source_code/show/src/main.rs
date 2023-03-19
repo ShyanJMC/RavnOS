@@ -465,17 +465,6 @@ fn main() {
             let fstring: String;
 
             if !config.which {
-                // Check if file is binary or not
-                let file = fs::File::open(names).expect("Error opening file.");
-                match file.is_binary() {
-                    false => {}
-                    true => {
-                        // Base64 codification for now is only in ASCII or UTF encoding, not binary
-                        eprintln!("File is binary, enabling hexadecimal mode to print and disabling Base64 because right now is only for ASCII, UTF encoding.");
-                        config.hexa = true;
-                        config.base64 = false;
-                    }
-                }
                 fstring = String::from_utf8_lossy(&fs::read(names).unwrap()).to_string();
             } else {
                 let results: Vec<String> = which( (&names).to_string() );
@@ -517,8 +506,8 @@ fn main() {
                 }
 
                 if config.base64 {
-                //    let file = fs::File::open(names).expect("Error opening file.");
-                //    file.encode_base64();
+                let file = fs::File::open(names).expect("Error opening file.");
+                println!("base64 {{ {} }}", file.encode_base64() );
 
                 }
 

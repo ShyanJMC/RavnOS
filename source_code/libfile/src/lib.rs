@@ -30,7 +30,7 @@ pub trait RavnSizeFile {
 
 pub trait RavnFile {
 	fn is_binary(&self) -> bool;
-	//fn encode_base64(&self) -> String;
+	fn encode_base64(&self) -> String;
 }
 
 impl RavnSizeFile for u64 {
@@ -78,23 +78,74 @@ impl RavnFile for File {
 		return false
 	}
 
-	// Working on this
-	//fn encode_base64(&self) -> String {
-		//let mut file = self.clone();
-		//let mut buffer = Vec::new();
-		//file.read(&mut buffer).unwrap();
-	//	let mut file = std::fs::read("/usr/bin/librewolf").unwrap();
 
-	//	for i in &file {
-	//		print!("--- {:b}", i);
-	//	}
+	// Honestly, I needed help with the movement of bits ("<<" ">>") on octets because of that ChatGPT helped me a lot with
+	// the "while" loop.
+	fn encode_base64(&self) -> String {
+		let base64_chars: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".chars().collect();
+		let mut i = 0;
+		let mut input = Vec::new();
+		let mut output = String::new();
 
-	//	"retorno".to_string()
-	//}
+		// Here I use the ownership to use as temporal without the requeriment of keep in memory an unnecessary variable.
+		{
+			let mut file = self.clone();
+			file.read_to_end(&mut input).expect("Error reading file");
+		}
+
+		// In this loop ChatGPT helped me a lot with the movements of bits
+	    while i < input.len() {
+	        let mut octet_a = 0u8;
+	        let mut octet_b = 0u8;
+	        let mut octet_c = 0u8;
+
+	        octet_a = input[i];
+
+	        if i + 1 < input.len() {
+	            octet_b = input[i + 1];
+	        }
+
+	        if i + 2 < input.len() {
+	            octet_c = input[i + 2];
+	        }
+
+	        let mut triple = (u32::from(octet_a) << 16) | (u32::from(octet_b) << 8) | u32::from(octet_c);
+
+	        if i + 2 >= input.len() {
+	            triple <<= 8;
+	        }
+
+	        for j in (0..4).rev() {
+	            let index = (triple >> (6 * j)) & 0x3F;
+	            output.push(base64_chars[index as usize]);
+	        }
+
+	        i += 3;
+	    }
+
+	    let len = output.len();
+
+		// Remember, in Base64 the "=" and "==" are the end in the string.
+		// "=" is called "padding"
+	    match len % 4 {
+	        0 => (),
+	        1 => output.push('='),
+	        2 => output.push_str("=="),
+	        _ => unreachable!(),
+	    }
+
+		// If we not convert in String using UTF-8 as encoding the result will be in u8 only
+	    output = match String::from_utf8(output.into_bytes()) {
+	        Ok(s) => s,
+	        Err(_) => panic!("encode_base64; Error converting to UTF-8"),
+	    };
+
+	    output
+	}
 }
 
 
-// As which detects where in PATH is located the binary
+// As which, detects where in PATH is located the binary
 
 pub fn which(binary: String) -> Vec<String>{
 	let mut results: Vec<String> = Vec::new();
