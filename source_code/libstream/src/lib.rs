@@ -65,7 +65,8 @@ impl Epoch for i64 {
 		let hours: i64;
 		let minutes: i64;
 		let secondss: i64;
-		let mut flag: usize = 0;
+		// is not storing information yet, because of that we can avoidd "mut" keyword
+		let flag: usize;
 
 	    // Calculate total days unix time T
 	    days_till_now = self.clone() / (24 * 60 * 60);
@@ -149,6 +150,7 @@ impl Epoch for i64 {
 }
 
 impl Stream for String {
+
 	/// The self string is the data.
 	/// The return is a HashMap with syntax <key,data>
 	fn readkey(&self) -> HashMap<String,String> {
