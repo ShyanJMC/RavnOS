@@ -46,7 +46,7 @@ extern crate libfile;
 extern crate libstream;
 
 use libconfarg::RavnArguments;
-use libfile::RavnFile;
+use libfile::{RavnSizeFile, RavnFile, which};
 use libstream::{getprocs, Stream, file_filter,Epoch};
 
 fn main() {
@@ -68,10 +68,12 @@ fn main() {
         stdin: false,
         proc: false,
         hexa: false,
+        base64: false,
         words: false,
         env: false,
         date: false,
         diff: false,
+        which: false,
         systeminfo: false,
     };
 
@@ -113,6 +115,10 @@ fn main() {
         	config.diff = true;
         } else if confs == "systeminfo" {
         	config.systeminfo = true;
+        } else if confs == "base64" {
+            config.base64 = true;
+        } else if confs == "which" {
+            config.which = true;
         }
     }
 
@@ -137,7 +143,7 @@ fn main() {
     	// Here I use a lot of shadowing, is just to save a bit of memory
 
     	let mut hmap = HashMap::new();
-    	
+
     	// Check if file exists
     	let fileinfo = if Path::new("/etc/os-release").exists() {
     		"/etc/os-release".to_string()
@@ -159,7 +165,7 @@ fn main() {
 
     	hmap.insert("Hostname",host_name);
 
-    	// boot id 
+    	// boot id
     	let boot_id = if Path::new("/proc/sys/kernel/random/boot_id").exists(){
     		let mut file = File::open("/proc/sys/kernel/random/boot_id").unwrap();
     		let mut buffer = String::new();
@@ -172,13 +178,13 @@ fn main() {
     	};
 
     	hmap.insert("Boot ID", boot_id);
-    	
+
 		// Read file and save it to buffer.
     	let os_name = file_filter( &fileinfo, "NAME".to_string() );
     	let mut os_name = os_name[0].split('=');
     	os_name.next();
     	let os_name = os_name.next().unwrap();
-    	
+
     	let os_pretty = file_filter( &fileinfo, "PRETTY_NAME".to_string() );
     	let mut os_pretty = os_pretty[0].split('=');
     	os_pretty.next();
@@ -186,17 +192,17 @@ fn main() {
 
 		// Insert a String as the key and the data as the hash.
 		hmap.insert("Operative System",format!("{} ( {} )", os_pretty, os_name ) );
-    	
+
     	let os_url = file_filter( &fileinfo, "HOME_URL".to_string() );
     	let mut os_url = os_url[0].split('=');
     	os_url.next();
     	let os_url = os_url.next().unwrap();
-    	
+
     	let os_doc = file_filter( &fileinfo, "DOCUMENTATION_URL".to_string() );
     	let mut os_doc = os_doc[0].split('=');
     	os_doc.next();
     	let os_doc = os_doc.next().unwrap();
-    	
+
     	let os_legal = file_filter( &fileinfo, "PRIVACY_POLICY_URL".to_string() );
     	let mut os_legal = os_legal[0].split('=');
     	os_legal.next();
@@ -251,7 +257,7 @@ fn main() {
 			let mut temp = temp[0].split("       ");
 			temp.next();
 			temp.next().unwrap().to_string()
-			
+
 		} else {
 			"Memory information not available".to_string()
 		};
@@ -276,7 +282,7 @@ fn main() {
 			let mut file = File::open("/proc/version").unwrap();
 			let mut buffer = String::new();
 			file.read_to_string(&mut buffer).expect("Error reading file");
-			let mut buffer = buffer.split(" ");	
+			let mut buffer = buffer.split(" ");
 			let kernel = buffer.next().unwrap();
 			buffer.next();
 			format!("{}: {}", kernel, buffer.next().unwrap() )
@@ -284,26 +290,26 @@ fn main() {
 			String::from("Can not read kernel version.")
 		};
 
-		hmap.insert("Kernel version", kernel_version);		
-		
+		hmap.insert("Kernel version", kernel_version);
+
 		// "K" is the string key.
 		// "V" is the data.
 		// Print each one with the RavnOS [key] { [data]  } format.
 		for (k,v) in hmap {
 			println!("{k} {{ {v} }}\n");
 		}
-    	
+
     }
-	
+
     // Difference
 
-    if config.diff { 
-    	
+    if config.diff {
+
     	// file 1
 		let mut file1: File = File::open(&archives[0]).expect("Error opening file 1.");
     	let mut file1_buffer: String = String::new();
 		file1.read_to_string(&mut file1_buffer).expect("Error reading file 1");
-    	
+
     	// file 2
     	let mut file2: File = File::open(&archives[1]).expect("Error opening file 2.");
     	let mut file2_buffer: String = String::new();
@@ -321,7 +327,7 @@ fn main() {
     		linen1 += 1;
     		hmap1.insert(linen1, ilines);
     	}
-   		
+
     	for ilines2 in file2_buffer.lines() {
     		linen2 += 1;
     		hmap2.insert(linen2, ilines2);
@@ -340,11 +346,11 @@ fn main() {
     		linebuffer += 1;
     	}
 
-    	if linen1 > linen2 {                                                                                                                                       
-    	  	let diff = (linen1 - linen2) + linen2;                                                                                                                 
-			println!("ln {diff} -{{ {} }}", hmap1.get( &diff ).unwrap() );                                                                                           
+    	if linen1 > linen2 {
+    	  	let diff = (linen1 - linen2) + linen2;
+			println!("ln {diff} -{{ {} }}", hmap1.get( &diff ).unwrap() );
     	}
-    	    	
+
     }
 
     // Showing procs
@@ -371,7 +377,11 @@ fn main() {
     // Opening files and showing them
     for names in &archives {
         if !config.env && !config.diff {
-            let meta = fs::metadata(&names).unwrap();
+            if !config.which {
+                let meta = fs::metadata(&names).expect("Error reading file's metadata information.");
+            }
+            let meta = fs::metadata("/dev/zero").unwrap();
+
             // " if X = false " is equal to; " if !X "
             // " if X = true " is equal to; " if X "
             if !config.clean {
@@ -450,22 +460,45 @@ fn main() {
                 }
             }
 
-            // Opening file and reading it as string.
-            let fstring = fs::read_to_string(names).expect("Error reading file.");
+            // to store information
+            // is not storing information yet, because of that we can avoidd "mut" keyword
+            let fstring: String;
+
+            if !config.which {
+                // Check if file is binary or not
+                let file = fs::File::open(names).expect("Error opening file.");
+                match file.is_binary() {
+                    false => {}
+                    true => {
+                        // Base64 codification for now is only in ASCII or UTF encoding, not binary
+                        eprintln!("File is binary, enabling hexadecimal mode to print and disabling Base64 because right now is only for ASCII, UTF encoding.");
+                        config.hexa = true;
+                        config.base64 = false;
+                    }
+                }
+                fstring = String::from_utf8_lossy(&fs::read(names).unwrap()).to_string();
+            } else {
+                let results: Vec<String> = which( (&names).to_string() );
+                for i in results {
+                    println!("location {{ {i} }}");
+                }
+                // Why use process lib and not just "return"? Because this is the proper way to return zero ending the program.
+                process::exit(0);
+            }
+
+
             // Using by reference to not take "len" the ownership of "archives".
 
             if !config.clean && archives.len() > 1 {
                 println!("=================\n");
             }
             if archives.len() > 1 && !config.proc {
-                println!(
-                    "data {{ {} }}\n\n-------------------------------------------------\n",
-                    fstring
-                );
+                    println!("\ndata {{ {} }}\n------------------------------------------------------", fstring);
             } else {
-                if !config.hexa {
+                if !config.hexa && !config.base64 {
                     println!("\ndata {{ {} }}", fstring);
-                } else {
+                }
+                if config.hexa {
                     // Hexa mode
                     // Remember; each char will be stored as hexa.
                     let mut buffer: String = String::new();
@@ -476,12 +509,21 @@ fn main() {
                             // Transform each char in string and then into bytes data
                             for fchar in dchar.to_string().into_bytes() {
                                 // Show each byte char into hexadecimal mode.
-                                buffer += &( fchar.to_string() + " " ).to_string() ;
+                                buffer += &( format!("{:x} ", fchar) ).to_string() ;
                             }
                         }
                     }
                     println!("data {{ {} }}", buffer);
                 }
+
+                if config.base64 {
+                //    let file = fs::File::open(names).expect("Error opening file.");
+                //    file.encode_base64();
+
+                }
+
+
+
             }
         }
     }

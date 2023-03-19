@@ -1,10 +1,10 @@
 //! This file is part of RavnOS.
 //!
-//! RavnOS is free software: 
-//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, 
+//! RavnOS is free software:
+//! you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation,
 //! either version 3 of the License, or (at your option) any later version.
 //!
-//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+//! RavnOS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 //! without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 //!
 //! You should have received a copy of the GNU General Public License along with RavnOS. If not, see <https://www.gnu.org/licenses/>
@@ -32,11 +32,13 @@ pub struct ShowConfiguration {
     pub stdin: bool,
     pub proc: bool,
     pub hexa: bool,
+    pub base64: bool,
     pub words: bool,
     pub env: bool,
     pub date: bool,
     pub diff: bool,
     pub systeminfo: bool,
+    pub which: bool,
 }
 
 /// Ls configuration struct
@@ -70,7 +72,7 @@ impl RavnArguments for Vec<String> {
     /// options is the vec &str wich will contains the options based in the soft name.
     /// soft is the variable with programs name.
     ///
-    /// The returns is a string vector with each argument without the options (that is 
+    /// The returns is a string vector with each argument without the options (that is
     /// stored into config).
     fn check_arguments(&self, soft: &str, options: &mut Vec<&str>) -> Vec<String> {
         let mut arguments = Vec::new();
@@ -117,6 +119,10 @@ impl RavnArguments for Vec<String> {
                     	options.push("diff");
                     } else if indexs == "--info" {
                     	options.push("systeminfo");
+                    } else if indexs == "--base64" {
+                        options.push("base64");
+                    } else if indexs == "--which" {
+                        options.push("which");
                     }
                 }
             },
@@ -152,7 +158,7 @@ impl RavnArguments for Vec<String> {
             		}
             	}
             }
-            
+
             _ => std::process::exit(1),
         }
 
@@ -175,7 +181,7 @@ impl RavnArguments for Vec<String> {
     /// check if some arguments is the help
     fn checkarguments_help(&self, program: &str) -> bool {
         let mut help = false;
-        
+
         for indexs in self {
             if indexs == "-h" || indexs == "--help" {
                 help = true;
@@ -200,10 +206,12 @@ impl RavnArguments for Vec<String> {
             -e      : show ENV environment variable value.
             --proc  : show the system's processes. Only in Unix systems.
             --stdin : read from standard input in addition of 'file n'.
-            --hexa  : show the file's content in hexa.
+            --hexa  : show the file's content in hexa. For binary and text.
+            --base64: show the file's content in base64. Only for text files right now.
             --date  : show current date based in Unix Epoch.
             --diff  : show the differences of second file with respect to first.
             --info  : show basic information about the operative system.
+            --which : show where is located the binary provided as argument
             "
                 .to_string();
                 eprintln!("{}", var1);

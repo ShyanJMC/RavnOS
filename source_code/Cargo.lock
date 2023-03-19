@@ -9,6 +9,9 @@ version = "0.5.2"
 [[package]]
 name = "libfile"
 version = "0.1.0"
+dependencies = [
+ "libstream",
+]
 
 [[package]]
 name = "libstream"
