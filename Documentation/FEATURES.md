@@ -28,6 +28,7 @@ At today, the latest version is; v0.31.0-ALPHA
 - [ ] Add support to render image with ASCII / UTF-8/16
 - [X] Add support to show absolute location as; "which" (-\-which).
 - [X] Add support to show information in BASE64 (-\-base64).
+- [X] Add support to save information from BASE64 to binary in file (-\-from-base64)
 - [X] Add support to identify if file is binary or not and show properly.
 - [ ] Show system's resource like nmon or htop
 
@@ -59,6 +60,8 @@ At today, the latest version is; v0.31.0-ALPHA
 - [X] Search recursively in path.
 - [X] Search in stdin.
 - [X] Extract data from keys
+- [ ] Extract data from keys with many levels of [key] { [data] [sub-key]{...} }
+   - Works by enumeration and position.
 - [ ] Search inside binaries
 
 ## Ls
@@ -117,6 +120,7 @@ At today, the latest version is; v0.31.0-ALPHA
 ## libs / crates
 
 - [X] Adapt them to work with; [key] { [data] } syntax.
+- [ ] Capability to read toml from file.
 
 ## libtui
 

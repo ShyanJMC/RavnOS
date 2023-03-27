@@ -16,27 +16,26 @@
 //! RavnOS's libstream
 //! This file contains some modules to work with stream data like; word_count, readdir, permission_to_human, etc.
 
-
+/// HashMap lib
+use std::collections::HashMap;
 /// Filesystem System lib
 use std::fs::{self, File};
 /// Input Output lib
 use std::io::{self, Read};
 /// Standard path
-use std::path::{PathBuf};
-/// HashMap lib
-use std::collections::HashMap;
+use std::path::PathBuf;
 
 /// Struct for recursive reading
 // With the derive(Clone) we allow it to be cloned
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct DirStructure {
-	pub dbuff: Vec<String>,
-	pub fbuff: Vec<String>,
+    pub dbuff: Vec<String>,
+    pub fbuff: Vec<String>,
 }
 
 /// Outputs
 pub trait Stream {
-	fn readkey(&self) -> HashMap<String,String>;
+    fn readkey(&self) -> HashMap<String, String>;
     fn permission_to_human(&self) -> Vec<&'static str>;
     fn word_count(&self) -> Vec<usize>;
     fn readdir(&self) -> Vec<PathBuf>;
@@ -45,159 +44,157 @@ pub trait Stream {
 
 /// Transform
 pub trait Epoch {
-	fn epoch_to_human(&self) -> String;
+    fn epoch_to_human(&self) -> String;
 }
 
 impl Epoch for i64 {
-	// I based the below code in;
-	// https://www.geeksforgeeks.org/convert-unix-timestamp-to-dd-mm-yyyy-hhmmss-format/
-	// Thanks guys! :D
+    // I based the below code in;
+    // https://www.geeksforgeeks.org/convert-unix-timestamp-to-dd-mm-yyyy-hhmmss-format/
+    // Thanks guys! :D
 
-	fn epoch_to_human(&self) -> String {
-		let daysm = vec![31,28,31,30,31,30,31,31,30,31,30,31];
-		let mut curr_year: i64;
-		let mut days_till_now: i64;
-		let extra_time: i64;
-		let mut extra_days: i64;
-		let mut index: usize = 0;
-		let date: i64;
-		let mut month:usize = 0;
-		let hours: i64;
-		let minutes: i64;
-		let secondss: i64;
-		// is not storing information yet, because of that we can avoidd "mut" keyword
-		let flag: usize;
+    fn epoch_to_human(&self) -> String {
+        let daysm = vec![31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let mut curr_year: i64;
+        let mut days_till_now: i64;
+        let extra_time: i64;
+        let mut extra_days: i64;
+        let mut index: usize = 0;
+        let date: i64;
+        let mut month: usize = 0;
+        let hours: i64;
+        let minutes: i64;
+        let secondss: i64;
+        // is not storing information yet, because of that we can avoidd "mut" keyword
+        let flag: usize;
 
-	    // Calculate total days unix time T
-	    days_till_now = self.clone() / (24 * 60 * 60);
-	    extra_time = ( self.clone() % (24 * 60 * 60) ) as i64;
-	    curr_year = 1970;
+        // Calculate total days unix time T
+        days_till_now = self.clone() / (24 * 60 * 60);
+        extra_time = (self.clone() % (24 * 60 * 60)) as i64;
+        curr_year = 1970;
 
-	    // Calculating current year
-	    loop {
-	        if curr_year % 400 == 0 || (curr_year % 4 == 0 && curr_year % 100 != 0) {
-	            if days_till_now < 366 {
-	                break;
-	            }
-	            days_till_now -= 366;
-	        } else {
-	            if days_till_now < 365 {
-	                break;
-	            }
-	            days_till_now -= 365;
-	        }
-	        curr_year += 1;
-	    }
-	    // Updating extradays because it
-	    // will give days till previous day
-	    // and we have include current day
-	    extra_days = ( days_till_now + 1 ) as i64;
+        // Calculating current year
+        loop {
+            if curr_year % 400 == 0 || (curr_year % 4 == 0 && curr_year % 100 != 0) {
+                if days_till_now < 366 {
+                    break;
+                }
+                days_till_now -= 366;
+            } else {
+                if days_till_now < 365 {
+                    break;
+                }
+                days_till_now -= 365;
+            }
+            curr_year += 1;
+        }
+        // Updating extradays because it
+        // will give days till previous day
+        // and we have include current day
+        extra_days = (days_till_now + 1) as i64;
 
-	    if curr_year % 400 == 0 || (curr_year % 4 == 0 && curr_year % 100 != 0) {
-	        	flag = 1;
-	    } else {
-	    	flag = 0;
-	    }
+        if curr_year % 400 == 0 || (curr_year % 4 == 0 && curr_year % 100 != 0) {
+            flag = 1;
+        } else {
+            flag = 0;
+        }
 
-	    if flag == 1 {
-	        loop {
-	            if index == 1 {
-	                if extra_days - 29 < 0 {
-	                    break;
-	                }
-	                month += 1;
-	                extra_days -= 29;
-	            } else {
-	                if extra_days - daysm[index] < 0 {
-	                    break;
-	                }
-	                month += 1;
-	                extra_days -= daysm[index];
-	            }
-	            index += 1;
-	        }
-	    } else {
-	        loop {
-	            if extra_days - daysm[index] < 0 {
-	                break;
-	            }
-	            month += 1;
-	            extra_days -= daysm[index];
-	            index += 1;
-	        }
-	    }
+        if flag == 1 {
+            loop {
+                if index == 1 {
+                    if extra_days - 29 < 0 {
+                        break;
+                    }
+                    month += 1;
+                    extra_days -= 29;
+                } else {
+                    if extra_days - daysm[index] < 0 {
+                        break;
+                    }
+                    month += 1;
+                    extra_days -= daysm[index];
+                }
+                index += 1;
+            }
+        } else {
+            loop {
+                if extra_days - daysm[index] < 0 {
+                    break;
+                }
+                month += 1;
+                extra_days -= daysm[index];
+                index += 1;
+            }
+        }
 
-	    // Current Month
-	    if extra_days > 0 {
-	        month += 1;
-	        date = extra_days;
-	    } else {
-	        if month == 2 && flag == 1 {
-	            date = 29;
-	        } else {
-	            date = daysm[month - 1];
-	        }
-	    }
+        // Current Month
+        if extra_days > 0 {
+            month += 1;
+            date = extra_days;
+        } else {
+            if month == 2 && flag == 1 {
+                date = 29;
+            } else {
+                date = daysm[month - 1];
+            }
+        }
 
-	    // Calculating HH:MM:YYYY
-	    hours = extra_time / 3600;
-	    minutes = (extra_time % 3600) / 60;
-	    secondss = (extra_time % 3600) % 60;
+        // Calculating HH:MM:YYYY
+        hours = extra_time / 3600;
+        minutes = (extra_time % 3600) / 60;
+        secondss = (extra_time % 3600) % 60;
 
-	    format!("{}/{}/{} {}:{}:{} UTC-0/GMT-0",&date, &month, &curr_year, &hours, &minutes, &secondss)
-
-	}
+        format!(
+            "{}/{}/{} {}:{}:{} UTC-0/GMT-0",
+            &date, &month, &curr_year, &hours, &minutes, &secondss
+        )
+    }
 }
 
 impl Stream for String {
+    /// The self string is the data.
+    /// The return is a HashMap with syntax <key,data>
+    fn readkey(&self) -> HashMap<String, String> {
+        // Split the string into chars slice.
+        // Must be mutable so we can iterate with "next" method.
+        let char_collector = self.chars();
+        let mut str_collector: Vec<String> = Vec::new();
+        let mut keys: Vec<String> = Vec::new();
+        let mut data: Vec<String> = Vec::new();
+        let mut hmap: HashMap<String, String> = HashMap::new();
 
-	/// The self string is the data.
-	/// The return is a HashMap with syntax <key,data>
-	fn readkey(&self) -> HashMap<String,String> {
-		// Split the string into chars slice.
-		// Must be mutable so we can iterate with "next" method.
-		let char_collector = self.chars();
-		let mut str_collector: Vec<String> = Vec::new();
-		let mut keys: Vec<String> = Vec::new();
-		let mut data: Vec<String> = Vec::new();
-		let mut hmap: HashMap<String,String> = HashMap::new();
+        let mut buffer_k: String = String::new();
+        let mut buffer_d: String = String::new();
 
-		let mut buffer_k: String = String::new();
-		let mut buffer_d: String = String::new();
+        for value in char_collector {
+            str_collector.push(value.to_string());
+        }
 
-		for value in char_collector {
-			str_collector.push( value.to_string() );
-		}
+        for value in str_collector {
+            // Check if the value not start with { or }
+            // this is for the key
+            if value != "{" && value != "}" {
+                if data.len() < keys.len() || data.len() == keys.len() {
+                    buffer_d = buffer_d.clone() + &value.to_string();
+                }
+            } else {
+                keys.push(buffer_k.trim().to_string());
+                // Shadowing
+                buffer_k = String::new();
+                data.push(buffer_d.trim().to_string());
+                // Shadowing
+                buffer_d = String::new();
+            }
+        }
 
-		for value in str_collector   {
+        for value in 0..data.len() {
+            // check if position is odd
+            if let 0 = value % 2 {
+                hmap.insert(data[value].clone(), data[value + 1].clone());
+            }
+        }
 
-			// Check if the value not start with { or }
-			// this is for the key
-			if  value != "{" && value != "}"  {
-				if data.len() < keys.len() || data.len() == keys.len(){
-					buffer_d = buffer_d.clone() + &value.to_string();
-				}
-
-			} else {
-				keys.push( buffer_k.trim().to_string() );
-				// Shadowing
-				buffer_k = String::new();
-				data.push( buffer_d.trim().to_string() );
-				// Shadowing
-				buffer_d = String::new();
-			}
-
-		}
-
-		for value in 0..data.len() {
-			// check if position is odd
-			if let 0=value%2 {
-				hmap.insert( data[value].clone() , data[value+1].clone() );
-			}
-		}
-
-		hmap
-	}
+        hmap
+    }
 
     /// Read directories and returns PathBuf with each file and directory.
     fn readdir(&self) -> Vec<PathBuf> {
@@ -216,83 +213,81 @@ impl Stream for String {
     // Read dir recursive
     // Is not stable yet, I must fix first an issue with do not read sub dirs after first round
     fn readdir_recursive(&self) -> DirStructure {
-    	// I must use a closure here to not re write readdir function
-    	let readdir = |path: String| -> Vec<PathBuf> {
-    		// Read the directory
-    		let entries = fs::read_dir(path).unwrap()
-    		// Take the "DirEntry" struct from "read_dir" and returns the full path
-    		.map(|res| res.map(|e| e.path()))
-    		// Here we customice the collect method to returns as Result<V,E>
-    		.collect::<Result<Vec<_>, io::Error>>()
-    		.unwrap();
+        // I must use a closure here to not re write readdir function
+        let readdir = |path: String| -> Vec<PathBuf> {
+            // Read the directory
+            let entries = fs::read_dir(path)
+                .unwrap()
+                // Take the "DirEntry" struct from "read_dir" and returns the full path
+                .map(|res| res.map(|e| e.path()))
+                // Here we customice the collect method to returns as Result<V,E>
+                .collect::<Result<Vec<_>, io::Error>>()
+                .unwrap();
 
-    		entries
-    	};
+            entries
+        };
 
-    	// Path buff
-    	let mut vec: Vec<PathBuf> = readdir( self.clone() );
+        // Path buff
+        let mut vec: Vec<PathBuf> = readdir(self.clone());
 
-		// Structure
-		let mut dstructure_complete = DirStructure {
-			dbuff: Vec::new(),
-			fbuff: Vec::new(),
-		};
+        // Structure
+        let mut dstructure_complete = DirStructure {
+            dbuff: Vec::new(),
+            fbuff: Vec::new(),
+        };
 
-		let mut dstructure: Vec<String> = Vec::new();
-		let mut fstructure: Vec<String> = Vec::new();
+        let mut dstructure: Vec<String> = Vec::new();
+        let mut fstructure: Vec<String> = Vec::new();
 
-		// We must use another variable to use as check
-		// This is becasue we must verify if already readed the directory before.
-		let mut dstructure_check: Vec<String> = Vec::new();
+        // We must use another variable to use as check
+        // This is becasue we must verify if already readed the directory before.
+        let mut dstructure_check: Vec<String> = Vec::new();
 
-    	// Verification variable
-    	// alod = at least one directory
-    	let mut alod = true;
+        // Verification variable
+        // alod = at least one directory
+        let mut alod = true;
 
-    	// While "alod" is true keeps in loop
-    	while alod {
+        // While "alod" is true keeps in loop
+        while alod {
+            // Iterate over each "vec" value.
+            // As then is overwritted we must use it by reference.
+            for entry in &vec {
+                // Check if is dir.
+                let metadata = match fs::metadata(entry) {
+                    Ok(r) => r,
+                    Err(_e) => {
+                        eprintln!("{}; Error reading metadata.", entry.display());
+                        continue;
+                    }
+                };
 
-    	    // Iterate over each "vec" value.
-    	    // As then is overwritted we must use it by reference.
-    		for entry in &vec {
-    			// Check if is dir.
-    			let metadata = match fs::metadata(entry) {
-    				Ok(r) => r,
-    				Err(_e) => {
-    					eprintln!("{}; Error reading metadata.", entry.display());
-    					continue;
-    				},
-    			};
+                if metadata.is_dir() {
+                    if !dstructure.contains(&entry.display().to_string()) {
+                        dstructure.push(entry.clone().display().to_string());
+                    }
+                } else {
+                    // If is file cast it to string and save it in vector.
+                    fstructure.push(entry.display().to_string());
+                }
+            }
 
-				if metadata.is_dir() {
-					if !dstructure.contains(&entry.display().to_string()) {
-						dstructure.push( entry.clone().display().to_string() );
-					}
-    			} else {
-    				// If is file cast it to string and save it in vector.
-    				fstructure.push( entry.display().to_string() );
-    			}
-    		}
+            for entry_n in &dstructure {
+                if !dstructure_check.contains(&entry_n) {
+                    dstructure_check.push(entry_n.to_string());
+                    alod = true;
+                    for ndir in readdir(entry_n.clone()) {
+                        vec.push(ndir);
+                    }
+                } else {
+                    alod = false;
+                }
+            }
+        }
 
-    		for entry_n in &dstructure {
-    			if !dstructure_check.contains(&entry_n) {
-    				dstructure_check.push( entry_n.to_string() );
-    				alod = true;
-    				for ndir in readdir ( entry_n.clone() ) {
-    					vec.push(ndir);
-    				}
-    			} else {
-    				alod = false;
-    			}
-    		}
+        dstructure_complete.dbuff = dstructure.clone();
+        dstructure_complete.fbuff = fstructure.clone();
 
-    	}
-
-		dstructure_complete.dbuff = dstructure.clone();
-		dstructure_complete.fbuff = fstructure.clone();
-
-    	dstructure_complete
-
+        dstructure_complete
     }
 
     /// Count words and letters
@@ -454,14 +449,14 @@ pub fn file_filter(filename: &String, input: String) -> Vec<String> {
 
     // Read file to string and save in buffer1
     match file.read_to_string(&mut buffer1) {
-    	// If provides error
-    	Err(_e) => {
-    		// Show an error about the specific file and cleans the buffer to not break all process.
-    		eprintln!("Error to read file; {filename} do not contains valid UTF-8 data");
-    		buffer1 = String::new();
-    		1
-    	},
-    	Ok(d) => d,
+        // If provides error
+        Err(_e) => {
+            // Show an error about the specific file and cleans the buffer to not break all process.
+            eprintln!("Error to read file; {filename} do not contains valid UTF-8 data");
+            buffer1 = String::new();
+            1
+        }
+        Ok(d) => d,
     };
 
     // Split in lines
@@ -471,9 +466,9 @@ pub fn file_filter(filename: &String, input: String) -> Vec<String> {
     // instead String.
     let mut rstr: Vec<String> = Vec::new();
 
-	// Goes over each line
+    // Goes over each line
     for word in lbuffer {
-    	// Verify if the line contains the word
+        // Verify if the line contains the word
         if word.contains(&input) {
             rstr.push(word.to_string());
         }
@@ -484,7 +479,7 @@ pub fn file_filter(filename: &String, input: String) -> Vec<String> {
 /// Unix.
 /// Get processes and information.
 pub fn getprocs() -> Vec<String> {
-	let mut result: Vec<String> = Vec::new();
+    let mut result: Vec<String> = Vec::new();
     // Read the "/proc" directory.
     let mut entries = fs::read_dir("/proc")
         .unwrap()

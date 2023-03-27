@@ -28,12 +28,12 @@ use std::process::{self, Command};
 
 // RavnOS libraries
 extern crate libconfarg;
-extern crate libstream;
 extern crate libfile;
+extern crate libstream;
 
 use libconfarg::RavnArguments;
-use libstream::{getprocs, Stream, Epoch};
 use libfile::RavnSizeFile;
+use libstream::{getprocs, Epoch, Stream};
 
 fn main() {
     // env::args() takes program's arguments
@@ -63,11 +63,11 @@ fn main() {
     let mut options: Vec<&str> = Vec::new();
     let mut lists: Vec<String> = arguments.check_arguments("ls", &mut options);
 
-    if lists.is_empty(){
-    	lists.push(env::current_dir().unwrap().display().to_string());
+    if lists.is_empty() {
+        lists.push(env::current_dir().unwrap().display().to_string());
     }
 
-	for confs in options {
+    for confs in options {
         if confs == "verbose" {
             config.verbose = true;
         } else if confs == "proc" {
@@ -80,9 +80,9 @@ fn main() {
     }
 
     if config.proc {
-    	let procs: Vec<String> = getprocs();
+        let procs: Vec<String> = getprocs();
         for strings in procs {
-        println!("{strings}");
+            println!("{strings}");
         }
     }
 
@@ -93,21 +93,20 @@ fn main() {
         // Check if arguments is directory.
 
         match Path::new(names).is_dir() {
-        		true => {
-        			entries = names.readdir();
-            		// I must use here and not as "readdir" method because if not the type will be forced to
-            		// "()" (which is more like a unit and at the same time is a type also).
-            		entries.sort();
-            		},
-            	false => {
-            		// Check if arguments is a file.
-            		if Path::new(names).is_file() {
-                		// If is a file, store it in variables.
-                		entries.push(PathBuf::from(names));
-            		}
-            	}
+            true => {
+                entries = names.readdir();
+                // I must use here and not as "readdir" method because if not the type will be forced to
+                // "()" (which is more like a unit and at the same time is a type also).
+                entries.sort();
+            }
+            false => {
+                // Check if arguments is a file.
+                if Path::new(names).is_file() {
+                    // If is a file, store it in variables.
+                    entries.push(PathBuf::from(names));
+                }
+            }
         }
-
 
         if config.lines && !config.clean {
             println!("\nList of elements in {}; {}", names, &entries.len());
@@ -123,18 +122,20 @@ fn main() {
                 // 4: the owner
                 // 5: the size
 
-				// Here "unwrap()" is not a good option because can fail, for example; if some symlink not points properly
-				// because of it I use a check.
+                // Here "unwrap()" is not a good option because can fail, for example; if some symlink not points properly
+                // because of it I use a check.
 
-				if !h.exists() {
-					// eprintln! shows string in stderr
-					eprintln!("{}: File/dir/symlink do not exist, is invalid or is broken.", h.display());
-					// break the loop for current stage
-					continue;
-				}
+                if !h.exists() {
+                    // eprintln! shows string in stderr
+                    eprintln!(
+                        "{}: File/dir/symlink do not exist, is invalid or is broken.",
+                        h.display()
+                    );
+                    // break the loop for current stage
+                    continue;
+                }
 
                 let fmetadata = fs::metadata(h.display().to_string()).unwrap();
-
 
                 // ID numeric to user
                 let ownerout = Command::new("/usr/bin/id")
@@ -150,18 +151,18 @@ fn main() {
                 //    .unwrap();
 
                 let owner = match std::str::from_utf8(&ownerout.stdout) {
-                	Err(_e) => "Error reading owner, check file/dir permissions.",
-                	Ok(d) => match d.strip_suffix('\n') {
-                		Some(d) => d,
-                		None => "Error reading owner, check file/dir permissions.",
-                	},
+                    Err(_e) => "Error reading owner, check file/dir permissions.",
+                    Ok(d) => match d.strip_suffix('\n') {
+                        Some(d) => d,
+                        None => "Error reading owner, check file/dir permissions.",
+                    },
                 };
 
                 buffer.push(format!(
                     "{} {} {:?} {} {}",
                     match &h.is_file() {
-                    	true => format!("f: {}", h.display() ),
-                    	false => format!("d: {}", h.display() ),
+                        true => format!("f: {}", h.display()),
+                        false => format!("d: {}", h.display()),
                     },
                     fmetadata.mtime().epoch_to_human(),
                     // Permissions

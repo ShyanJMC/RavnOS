@@ -17,7 +17,9 @@
 //// Environment lib
 use std::env;
 //// Filesystem lib
-use std::fs::{self,File};
+use std::fs::{self, File};
+use std::io::Write;
+
 //// String slice lib
 // use std::str;
 //// For Unix platform
@@ -46,8 +48,8 @@ extern crate libfile;
 extern crate libstream;
 
 use libconfarg::RavnArguments;
-use libfile::{RavnSizeFile, RavnFile, which};
-use libstream::{getprocs, Stream, file_filter,Epoch};
+use libfile::{which, decode_base64, RavnFile, RavnSizeFile};
+use libstream::{file_filter, getprocs, Epoch, Stream};
 
 fn main() {
     // env::args() takes program's arguments (the first is always the self binary).
@@ -69,6 +71,7 @@ fn main() {
         proc: false,
         hexa: false,
         base64: false,
+        fbase64: false,
         words: false,
         env: false,
         date: false,
@@ -110,15 +113,17 @@ fn main() {
         } else if confs == "environment" {
             config.env = true;
         } else if confs == "date" {
-        	config.date = true;
+            config.date = true;
         } else if confs == "diff" {
-        	config.diff = true;
+            config.diff = true;
         } else if confs == "systeminfo" {
-        	config.systeminfo = true;
+            config.systeminfo = true;
         } else if confs == "base64" {
             config.base64 = true;
         } else if confs == "which" {
             config.which = true;
+        } else if confs == "from_base64" {
+            config.fbase64 = true;
         }
     }
 
@@ -136,221 +141,255 @@ fn main() {
         }
     }
 
+    // To binary from base64
+    if config.fbase64 {
+
+        if archives.len() < 2 {
+            eprintln!("Few arguments; --from-base64 [base64] [file_target]");
+            process::exit(1);
+        }
+
+        let buffer = archives.get(0).expect("Error reading base64 stdin arguments");
+        let mut file = File::create( archives.get(1).expect("Error reading file argument") ).expect("Error creating file");
+
+        let output = decode_base64(&buffer).expect("Error converting base64 to binary");
+        match file.write_all(&output) {
+            Ok(_d) => println!("{:?}: Saved correctly", archives.get(1)),
+            Err(e) => println!("{e}"),
+        }
+
+        process::exit(0);
+
+    }
+
     // Systen imformation
 
     if config.systeminfo {
+        // Here I use a lot of shadowing, is just to save a bit of memory
 
-    	// Here I use a lot of shadowing, is just to save a bit of memory
+        let mut hmap = HashMap::new();
 
-    	let mut hmap = HashMap::new();
+        // Check if file exists
+        let fileinfo = if Path::new("/etc/os-release").exists() {
+            "/etc/os-release".to_string()
+        } else {
+            "/var/lib/os-release".to_string()
+        };
 
-    	// Check if file exists
-    	let fileinfo = if Path::new("/etc/os-release").exists() {
-    		"/etc/os-release".to_string()
-    	} else {
-    		"/var/lib/os-release".to_string()
-    	};
+        // Check if file exists
+        let host_name = if Path::new("/etc/hostname").exists() {
+            let mut file = File::open("/etc/hostname").unwrap();
+            let mut buffer = String::new();
+            file.read_to_string(&mut buffer)
+                .expect("Error reading file.");
+            // When is moved to heap memory deletes the \n and \r
+            buffer.pop();
+            buffer
+        } else {
+            "File /etc/hostname doesn't exists.".to_string()
+        };
 
-    	// Check if file exists
-    	let host_name = if Path::new("/etc/hostname").exists() {
-    		let mut file = File::open("/etc/hostname").unwrap();
-    		let mut buffer = String::new();
-    		file.read_to_string(&mut buffer).expect("Error reading file.");
-    		// When is moved to heap memory deletes the \n and \r
-    		buffer.pop();
-    		buffer
-    	} else {
-    		"File /etc/hostname doesn't exists.".to_string()
-    	};
+        hmap.insert("Hostname", host_name);
 
-    	hmap.insert("Hostname",host_name);
+        // boot id
+        let boot_id = if Path::new("/proc/sys/kernel/random/boot_id").exists() {
+            let mut file = File::open("/proc/sys/kernel/random/boot_id").unwrap();
+            let mut buffer = String::new();
+            file.read_to_string(&mut buffer)
+                .expect("Error reading file");
+            // When is moved to heap memory deletes the \n and \r
+            buffer.pop();
+            buffer
+        } else {
+            String::from("File /proc/sys/kernel/random/boot_id doesn't exist.")
+        };
 
-    	// boot id
-    	let boot_id = if Path::new("/proc/sys/kernel/random/boot_id").exists(){
-    		let mut file = File::open("/proc/sys/kernel/random/boot_id").unwrap();
-    		let mut buffer = String::new();
-    		file.read_to_string(&mut buffer).expect("Error reading file");
-    		// When is moved to heap memory deletes the \n and \r
-    		buffer.pop();
-    		buffer
-    	} else {
-    		String::from("File /proc/sys/kernel/random/boot_id doesn't exist.")
-    	};
+        hmap.insert("Boot ID", boot_id);
 
-    	hmap.insert("Boot ID", boot_id);
+        // Read file and save it to buffer.
+        let os_name = file_filter(&fileinfo, "NAME".to_string());
+        let mut os_name = os_name[0].split('=');
+        os_name.next();
+        let os_name = os_name.next().unwrap();
 
-		// Read file and save it to buffer.
-    	let os_name = file_filter( &fileinfo, "NAME".to_string() );
-    	let mut os_name = os_name[0].split('=');
-    	os_name.next();
-    	let os_name = os_name.next().unwrap();
+        let os_pretty = file_filter(&fileinfo, "PRETTY_NAME".to_string());
+        let mut os_pretty = os_pretty[0].split('=');
+        os_pretty.next();
+        let os_pretty = os_pretty.next().unwrap();
 
-    	let os_pretty = file_filter( &fileinfo, "PRETTY_NAME".to_string() );
-    	let mut os_pretty = os_pretty[0].split('=');
-    	os_pretty.next();
-    	let os_pretty = os_pretty.next().unwrap();
+        // Insert a String as the key and the data as the hash.
+        hmap.insert("Operative System", format!("{} ( {} )", os_pretty, os_name));
 
-		// Insert a String as the key and the data as the hash.
-		hmap.insert("Operative System",format!("{} ( {} )", os_pretty, os_name ) );
+        let os_url = file_filter(&fileinfo, "HOME_URL".to_string());
+        let mut os_url = os_url[0].split('=');
+        os_url.next();
+        let os_url = os_url.next().unwrap();
 
-    	let os_url = file_filter( &fileinfo, "HOME_URL".to_string() );
-    	let mut os_url = os_url[0].split('=');
-    	os_url.next();
-    	let os_url = os_url.next().unwrap();
+        let os_doc = file_filter(&fileinfo, "DOCUMENTATION_URL".to_string());
+        let mut os_doc = os_doc[0].split('=');
+        os_doc.next();
+        let os_doc = os_doc.next().unwrap();
 
-    	let os_doc = file_filter( &fileinfo, "DOCUMENTATION_URL".to_string() );
-    	let mut os_doc = os_doc[0].split('=');
-    	os_doc.next();
-    	let os_doc = os_doc.next().unwrap();
+        let os_legal = file_filter(&fileinfo, "PRIVACY_POLICY_URL".to_string());
+        let mut os_legal = os_legal[0].split('=');
+        os_legal.next();
+        let os_legal = os_legal.next().unwrap();
 
-    	let os_legal = file_filter( &fileinfo, "PRIVACY_POLICY_URL".to_string() );
-    	let mut os_legal = os_legal[0].split('=');
-    	os_legal.next();
-    	let os_legal = os_legal.next().unwrap();
+        hmap.insert(
+            "Operative System information",
+            format!(
+                "\n\tdocumentation: {}\n\turl: {}\n\tlegal: {}",
+                os_doc, os_url, os_legal
+            ),
+        );
 
-		hmap.insert("Operative System information", format!("\n\tdocumentation: {}\n\turl: {}\n\tlegal: {}", os_doc, os_url, os_legal) );
+        let machine_id = if Path::new("/etc/machine-id").exists() {
+            let mut file = File::open("/etc/machine-id").unwrap();
+            let mut buffer = String::new();
+            file.read_to_string(&mut buffer)
+                .expect("Error reading file");
+            buffer.pop();
+            buffer
+        } else {
+            String::from("File /etc/machine-id doesn't exist.")
+        };
 
-		let machine_id = if Path::new("/etc/machine-id").exists() {
-			let mut file = File::open("/etc/machine-id").unwrap();
-			let mut buffer = String::new();
-			file.read_to_string(&mut buffer).expect("Error reading file");
-			buffer.pop();
-			buffer
-		} else {
-			String::from("File /etc/machine-id doesn't exist.")
-		};
+        hmap.insert("Machine ID", machine_id);
 
-		hmap.insert("Machine ID", machine_id);
+        // Take CPU information from /proc/cpuinfo
+        let cpuinfo = Path::new("/proc/cpuinfo").exists();
 
-		// Take CPU information from /proc/cpuinfo
-		let cpuinfo = Path::new("/proc/cpuinfo").exists();
+        // Message in case /proc/cpuinfo doesn't exists
+        let cpuinfo_error = "The /proc/cpuinfo file doesn't exists. CPU information unavailable.";
 
-		// Message in case /proc/cpuinfo doesn't exists
-		let cpuinfo_error = "The /proc/cpuinfo file doesn't exists. CPU information unavailable.";
+        // Take the CPU model
+        let cpu: Vec<String> = if cpuinfo {
+            file_filter(&"/proc/cpuinfo".to_string(), "model name".to_string())
+        } else {
+            cpuinfo_error
+                .chars()
+                .map(|e| e.to_string())
+                .collect::<Vec<String>>()
+        };
+        let cpu = cpu[0].clone();
 
-		// Take the CPU model
-    	let cpu: Vec<String> = if cpuinfo {
-    		file_filter( &"/proc/cpuinfo".to_string(), "model name".to_string() )
-    	} else {
-    		cpuinfo_error.chars().map(|e| e.to_string() ).collect::<Vec<String>>()
-    	};
-    	let cpu = cpu[0].clone();
+        // Take the CPU threads number
+        // if the return is zero, means an error
+        let cputhread = if cpuinfo {
+            file_filter(&"/proc/cpuinfo".to_string(), "processor".to_string()).len()
+        } else {
+            0
+        };
 
-    	// Take the CPU threads number
-    	// if the return is zero, means an error
-    	let cputhread = if cpuinfo {
-    		file_filter ( &"/proc/cpuinfo".to_string(), "processor".to_string() ).len()
-    	} else {
-    		0
-    	};
+        hmap.insert("CPU Model", cpu);
+        hmap.insert("CPU Threads", format!("{cputhread}"));
 
-    	hmap.insert("CPU Model", cpu);
-    	hmap.insert("CPU Threads", format!("{cputhread}"));
+        // Take information about memory from /proc/meminfo
+        let meminfo = Path::new("/proc/meminfo").exists();
 
-    	// Take information about memory from /proc/meminfo
-		let meminfo = Path::new("/proc/meminfo").exists();
+        // As the information is stored in kB to transform into GB is needed
+        // devide it.
+        let memtotal = if meminfo {
+            let temp = file_filter(&"/proc/meminfo".to_string(), "MemTotal".to_string());
+            let mut temp = temp[0].split("       ");
+            temp.next();
+            temp.next().unwrap().to_string()
+        } else {
+            "Memory information not available".to_string()
+        };
 
-		// As the information is stored in kB to transform into GB is needed
-		// devide it.
-		let memtotal = if meminfo {
-			let temp = file_filter ( &"/proc/meminfo".to_string(), "MemTotal".to_string() );
-			let mut temp = temp[0].split("       ");
-			temp.next();
-			temp.next().unwrap().to_string()
+        hmap.insert("Memory", memtotal);
 
-		} else {
-			"Memory information not available".to_string()
-		};
+        // Kernel CMD Line
+        // Check if file exists
+        let cmdline = Path::new("/proc/cmdline").exists();
 
-		hmap.insert("Memory", memtotal);
+        // If exists read the file
+        let kernelcmd = if cmdline {
+            String::from_utf8(fs::read("/proc/cmdline").unwrap()).unwrap()
+        } else {
+            String::from("Kernel cmdline not available")
+        };
 
-		// Kernel CMD Line
-		// Check if file exists
-		let cmdline = Path::new("/proc/cmdline").exists();
+        hmap.insert("Kernel CMD", kernelcmd);
 
-		// If exists read the file
-		let kernelcmd = if cmdline {
-			String::from_utf8(fs::read("/proc/cmdline").unwrap()).unwrap()
-		} else {
-			String::from("Kernel cmdline not available")
-		};
+        // Kernel version
+        let kernel_version = if Path::new("/proc/version").exists() {
+            let mut file = File::open("/proc/version").unwrap();
+            let mut buffer = String::new();
+            file.read_to_string(&mut buffer)
+                .expect("Error reading file");
+            let mut buffer = buffer.split(" ");
+            let kernel = buffer.next().unwrap();
+            buffer.next();
+            format!("{}: {}", kernel, buffer.next().unwrap())
+        } else {
+            String::from("Can not read kernel version.")
+        };
 
-		hmap.insert("Kernel CMD", kernelcmd);
+        hmap.insert("Kernel version", kernel_version);
 
-		// Kernel version
-		let kernel_version = if Path::new("/proc/version").exists() {
-			let mut file = File::open("/proc/version").unwrap();
-			let mut buffer = String::new();
-			file.read_to_string(&mut buffer).expect("Error reading file");
-			let mut buffer = buffer.split(" ");
-			let kernel = buffer.next().unwrap();
-			buffer.next();
-			format!("{}: {}", kernel, buffer.next().unwrap() )
-		} else {
-			String::from("Can not read kernel version.")
-		};
-
-		hmap.insert("Kernel version", kernel_version);
-
-		// "K" is the string key.
-		// "V" is the data.
-		// Print each one with the RavnOS [key] { [data]  } format.
-		for (k,v) in hmap {
-			println!("{k} {{ {v} }}\n");
-		}
-
+        // "K" is the string key.
+        // "V" is the data.
+        // Print each one with the RavnOS [key] { [data]  } format.
+        for (k, v) in hmap {
+            println!("{k} {{ {v} }}\n");
+        }
     }
 
     // Difference
 
     if config.diff {
+        // file 1
+        let mut file1: File = File::open(&archives[0]).expect("Error opening file 1.");
+        let mut file1_buffer: String = String::new();
+        file1
+            .read_to_string(&mut file1_buffer)
+            .expect("Error reading file 1");
 
-    	// file 1
-		let mut file1: File = File::open(&archives[0]).expect("Error opening file 1.");
-    	let mut file1_buffer: String = String::new();
-		file1.read_to_string(&mut file1_buffer).expect("Error reading file 1");
+        // file 2
+        let mut file2: File = File::open(&archives[1]).expect("Error opening file 2.");
+        let mut file2_buffer: String = String::new();
+        file2
+            .read_to_string(&mut file2_buffer)
+            .expect("Error reading file 2.");
 
-    	// file 2
-    	let mut file2: File = File::open(&archives[1]).expect("Error opening file 2.");
-    	let mut file2_buffer: String = String::new();
-    	file2.read_to_string(&mut file2_buffer).expect("Error reading file 2.");
+        let mut linen1: u64 = 0;
+        let mut linen2: u64 = 0;
+        let mut linebuffer = 1;
 
-		let mut linen1: u64 = 0;
-		let mut linen2: u64 = 0;
-		let mut linebuffer = 1;
+        let mut hmap1 = HashMap::new();
+        let mut hmap2 = HashMap::new();
 
+        for ilines in file1_buffer.lines() {
+            linen1 += 1;
+            hmap1.insert(linen1, ilines);
+        }
 
-		let mut hmap1 = HashMap::new();
-		let mut hmap2 = HashMap::new();
+        for ilines2 in file2_buffer.lines() {
+            linen2 += 1;
+            hmap2.insert(linen2, ilines2);
+        }
 
-    	for ilines in file1_buffer.lines() {
-    		linen1 += 1;
-    		hmap1.insert(linen1, ilines);
-    	}
+        while linebuffer <= linen2 {
+            if !hmap1.contains_key(&linebuffer) {
+                println!("ln {linebuffer} +{{ {} }}", hmap2.get(&linebuffer).unwrap());
+            } else {
+                if hmap1.get(&linebuffer) != hmap2.get(&linebuffer) {
+                    println!(
+                        "ln {linebuffer} {{ {} }}\n",
+                        hmap2.get(&linebuffer).unwrap()
+                    );
+                }
+            }
 
-    	for ilines2 in file2_buffer.lines() {
-    		linen2 += 1;
-    		hmap2.insert(linen2, ilines2);
-    	}
+            linebuffer += 1;
+        }
 
-    	while linebuffer <= linen2 {
-
-    		if !hmap1.contains_key( &linebuffer ) {
-    			println!("ln {linebuffer} +{{ {} }}", hmap2.get(&linebuffer).unwrap() );
-    		} else {
-    			if hmap1.get(&linebuffer) != hmap2.get(&linebuffer) {
-    				println!("ln {linebuffer} {{ {} }}\n", hmap2.get(&linebuffer).unwrap());
-    			}
-    		}
-
-    		linebuffer += 1;
-    	}
-
-    	if linen1 > linen2 {
-    	  	let diff = (linen1 - linen2) + linen2;
-			println!("ln {diff} -{{ {} }}", hmap1.get( &diff ).unwrap() );
-    	}
-
+        if linen1 > linen2 {
+            let diff = (linen1 - linen2) + linen2;
+            println!("ln {diff} -{{ {} }}", hmap1.get(&diff).unwrap());
+        }
     }
 
     // Showing procs
@@ -369,17 +408,19 @@ fn main() {
 
     // Date
     if config.date {
-    	let systime = SystemTime::now();
-    	let diff = systime.duration_since(SystemTime::UNIX_EPOCH);
-    	println!("{}", (diff.unwrap().as_secs() as i64).epoch_to_human() );
+        let systime = SystemTime::now();
+        let diff = systime.duration_since(SystemTime::UNIX_EPOCH);
+        println!("{}", (diff.unwrap().as_secs() as i64).epoch_to_human());
     }
 
     // Opening files and showing them
     for names in &archives {
-        if !config.env && !config.diff {
+        if !config.env && !config.diff && !config.fbase64 {
+
             if !config.which {
                 let meta = fs::metadata(&names).expect("Error reading file's metadata information.");
             }
+
             let meta = fs::metadata("/dev/zero").unwrap();
 
             // " if X = false " is equal to; " if !X "
@@ -444,7 +485,9 @@ fn main() {
                                 .unwrap()
                         );
                     } else {
-                        println!("Owner {{ Not supported because platform is not detected as Unix. }}");
+                        println!(
+                            "Owner {{ Not supported because platform is not detected as Unix. }}"
+                        );
                     }
                 }
 
@@ -467,7 +510,7 @@ fn main() {
             if !config.which {
                 fstring = String::from_utf8_lossy(&fs::read(names).unwrap()).to_string();
             } else {
-                let results: Vec<String> = which( (&names).to_string() );
+                let results: Vec<String> = which((&names).to_string());
                 for i in results {
                     println!("location {{ {i} }}");
                 }
@@ -475,14 +518,16 @@ fn main() {
                 process::exit(0);
             }
 
-
             // Using by reference to not take "len" the ownership of "archives".
 
             if !config.clean && archives.len() > 1 {
                 println!("=================\n");
             }
             if archives.len() > 1 && !config.proc {
-                    println!("\ndata {{ {} }}\n------------------------------------------------------", fstring);
+                println!(
+                    "\ndata {{ {} }}\n------------------------------------------------------",
+                    fstring
+                );
             } else {
                 if !config.hexa && !config.base64 {
                     println!("\ndata {{ {} }}", fstring);
@@ -498,21 +543,21 @@ fn main() {
                             // Transform each char in string and then into bytes data
                             for fchar in dchar.to_string().into_bytes() {
                                 // Show each byte char into hexadecimal mode.
-                                buffer += &( format!("{:x} ", fchar) ).to_string() ;
+                                buffer += &(format!("{:x} ", fchar)).to_string();
                             }
                         }
                     }
                     println!("data {{ {} }}", buffer);
                 }
 
-                if config.base64 {
-                let file = fs::File::open(names).expect("Error opening file.");
-                println!("base64 {{ {} }}", file.encode_base64() );
-
+                if config.base64 && !config.fbase64 {
+                    let file = fs::File::open(names).expect("Error opening file.");
+                    if archives.len() > 1 && !config.proc {
+                        println!("filename {names} base64 {{ {} }}", file.encode_base64());
+                    } else {
+                        println!("base64 {{ {} }}", file.encode_base64() );
+                    }
                 }
-
-
-
             }
         }
     }

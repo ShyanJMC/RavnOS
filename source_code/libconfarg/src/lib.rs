@@ -18,7 +18,6 @@
 
 //! This lib contains the methods to check RavnOS's arguments in each program
 
-
 /// Configuration struct
 /// Each field determine if option is enabled or not.
 /// Show configuration struct
@@ -33,6 +32,7 @@ pub struct ShowConfiguration {
     pub proc: bool,
     pub hexa: bool,
     pub base64: bool,
+    pub fbase64: bool,
     pub words: bool,
     pub env: bool,
     pub date: bool,
@@ -62,7 +62,7 @@ pub struct SearchConfiguration {
 
 /// Trait for checkarguments and returns files names or show help
 pub trait RavnArguments {
-    fn check_arguments(&self, soft: &str, options: &mut Vec<&str> ) -> Vec<String>;
+    fn check_arguments(&self, soft: &str, options: &mut Vec<&str>) -> Vec<String>;
     fn checkarguments_help(&self, program: &str) -> bool;
 }
 
@@ -87,7 +87,7 @@ impl RavnArguments for Vec<String> {
                         options.push("stdin");
                     }
                 }
-            },
+            }
 
             "show" => {
                 for indexs in self {
@@ -112,20 +112,22 @@ impl RavnArguments for Vec<String> {
                     } else if indexs == "--hexa" {
                         options.push("hexa");
                     } else if indexs == "-e" {
-                    	options.push("environment");
+                        options.push("environment");
                     } else if indexs == "--date" {
-                    	options.push("date");
+                        options.push("date");
                     } else if indexs == "--diff" {
-                    	options.push("diff");
+                        options.push("diff");
                     } else if indexs == "--info" {
-                    	options.push("systeminfo");
+                        options.push("systeminfo");
                     } else if indexs == "--base64" {
                         options.push("base64");
                     } else if indexs == "--which" {
                         options.push("which");
+                    } else if indexs == "--from-base64" {
+                        options.push("from_base64");
                     }
                 }
-            },
+            }
             "ls" => {
                 for indexs in self {
                     if indexs == "-v" {
@@ -138,25 +140,25 @@ impl RavnArguments for Vec<String> {
                         options.push("clean");
                     }
                 }
-            },
+            }
             "search" => {
-            	for indexs in self {
-            		if indexs == "-f" {
-            			options.push("file");
-            		} else if indexs == "-d" {
-            			options.push("directory");
-            		} else if indexs == "-e" {
-            			options.push("environment");
-            		} else if indexs == "-p" {
-            			options.push("proc");
-            		} else if indexs == "-r" {
-            			options.push("recursive");
-            		} else if indexs == "-s" {
-            			options.push("input");
-            		} else if indexs == "-rk" {
-            			options.push("ravnkey");
-            		}
-            	}
+                for indexs in self {
+                    if indexs == "-f" {
+                        options.push("file");
+                    } else if indexs == "-d" {
+                        options.push("directory");
+                    } else if indexs == "-e" {
+                        options.push("environment");
+                    } else if indexs == "-p" {
+                        options.push("proc");
+                    } else if indexs == "-r" {
+                        options.push("recursive");
+                    } else if indexs == "-s" {
+                        options.push("input");
+                    } else if indexs == "-rk" {
+                        options.push("ravnkey");
+                    }
+                }
             }
 
             _ => std::process::exit(1),
@@ -212,6 +214,7 @@ impl RavnArguments for Vec<String> {
             --diff  : show the differences of second file with respect to first.
             --info  : show basic information about the operative system.
             --which : show where is located the binary provided as argument
+            --from-base64 [stdin] [file] : convert base64 encoding to binary, saving to file
             "
                 .to_string();
                 eprintln!("{}", var1);
@@ -256,8 +259,9 @@ impl RavnArguments for Vec<String> {
             -r      : search recursively the string in directories' name and file's data.
             -s      : search the string in stdin
             -rk		: search the data from key. Take the data and key with sintax; [key] { [data] }
-            ".to_string();
-            eprintln!("{}", var1);
+            "
+                .to_string();
+                eprintln!("{}", var1);
             }
             help
         } else {
