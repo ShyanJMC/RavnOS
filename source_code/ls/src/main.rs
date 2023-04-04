@@ -145,16 +145,16 @@ fn main() {
                 // When you use "output" method, the stdout of command will be stored in
                 // "stdout" field. But, is stored as u8, and needs to be processed as utf8.
 
-                //let owner = std::str::from_utf8(&ownerout.stdout)
-                //    .unwrap()
-                //    .strip_suffix("\n")
-                //    .unwrap();
-
                 let owner = match std::str::from_utf8(&ownerout.stdout) {
-                    Err(_e) => "Error reading owner, check file/dir permissions.",
+                    Err(_e) => String::from("Error reading owner, check file/dir permissions."),
                     Ok(d) => match d.strip_suffix('\n') {
-                        Some(d) => d,
-                        None => "Error reading owner, check file/dir permissions.",
+                        Some(d) => {
+                            let buffer = d.clone();
+                            let buffer2 = buffer.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+                            drop(buffer);
+                            format!("{} {}", buffer2[0], buffer2[1])
+                        },
+                        None => String::from("Error reading owner, check file/dir permissions."),
                     },
                 };
 
