@@ -42,7 +42,7 @@ Will have absolute priority the stability and security of the system over X feat
 
 Each part of system must be portable over Rust supported platforms.
 
-Each part of system must be self hosted, no external crates (over internee) are allowed. All must be local, how can you be sure that the remote dependency is secure? how can you be sure that the remote dependency will be developed to the end of times? how can you be sure that the remote dependency will not break the compatibility?
+Each part of system must be self hosted, no external crates (over internet) are allowed. All must be local, how can you be sure that the remote dependency is secure? how can you be sure that the remote dependency will be developed to the end of times? how can you be sure that the remote dependency will not break the compatibility?
 
 Each part of system distributed in binary form must be done as static, at 2022 the best way for this is use MUSL standard C library.
 
@@ -68,11 +68,11 @@ is used trough containers schema.
 - A terminal
 - Cargo with the target toolchain you want/need:
 
- This is not mandatory but will help you to build with one just command.
+   This is not mandatory but will help you to build with one just command.
 
 - Musl target:
 
-This is not mandatory, but I recommend it to build as static.
+   This is not mandatory, but I recommend it to build as static.
 
 ## Versioning
 
@@ -119,20 +119,29 @@ There are two ways for build RavnOS. ;
 
 - Cargo
 
+Remember replace; [x86_64/aarch64] for your case.
+
 I recommend use this configuration inside "~/.cargo/.config";
 
 ```rust
 [build]
-target= "x86_64-unknown-linux-musl"
+target= "[x86_64/aarch64]-unknown-linux-musl"
 jobs=20
 rustflags = ["-C","opt-level=2","-C","debuginfo=0","-C", "target-feature=+crt-static","-C","target-cpu=native"]
+```
+
+Add the target built with musl;
+
+```rust
+rustup toolchain add --force-non-host stable-x86_64-unknown-linux-musl && rustup target add [x86_64/aarch64]-unknown-linux-musl
 ```
 
 To build;
 
 ```rust
-cargo build --release --target [x86_64/arm64/etc]-unknown-[linux/windows/etc]-musl
+cargo build --release --target [x86_64/aarch64]-unknown-linux-musl
 ```
+
 
 All binaries will be in "target/\[TARGET]/release".
 
@@ -151,7 +160,7 @@ rustc --crate-type=rlib --crate-name libfile [PATH_TO_LIBFILE]/src/lib.rs -o lib
 Then you can link into the binary build;
 
 ```rust
-rustc --target=[x86_64/arm64/etc]-unknown-[linux/windows/etc]-musl -C opt-level=2 -C target-feature=+crt-static --extern libconfarg=libconfarg.rlib --extern libfile=libfile.rlib --extern libstream=libstream.rlib [COMPONENT]/src/main.rs -o [final_name]
+rustc --target=[x86_64/aarm64/etc]-unknown-linux-musl -C opt-level=2 -C target-feature=+crt-static --extern libconfarg=libconfarg.rlib --extern libfile=libfile.rlib --extern libstream=libstream.rlib [COMPONENT]/src/main.rs -o [final_name]
 ```
 
 with above command, you will the final binary of [COMPONENT] in static final form (aka; statically linked) with optimization level 2 and specific libs (crates).
@@ -177,8 +186,10 @@ The strip command clean the debug symbols, which are the 94.49869791666667% of s
 I, Joaquin Manuel 'ShyanJMC' Crespo, am the main developer and creator of this project.
 
 - 2023-02-13; I have the signed copyright disclaimer agreement with my employer in which they (the company) waive the copyright on this.
-- 2023-02-13; I am in the process of registering the software at my name in República Argentina.
 
+
+- 2023-02-13; I am in the process of registering the software at my name in República Argentina.
+- 2023-03-13; This project is registered in República Argentina at my name.
 
 ## License
 
