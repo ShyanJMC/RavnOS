@@ -24,6 +24,7 @@ use std::fs::{self, File};
 use std::io::{self, Read};
 /// Standard path
 use std::path::PathBuf;
+use std::path::Path;
 
 /// Struct for recursive reading
 // With the derive(Clone) we allow it to be cloned
@@ -550,4 +551,36 @@ pub fn getprocs() -> Vec<String> {
         }
     }
     result
+}
+
+// Binary search
+pub fn binary_search<'a>(filename: &String, mut file: File, ssearch: String) -> Result<(), &'a str> {
+    if Path::new(filename).is_file() {
+            let mut buffer_file: Vec<u8> = Vec::new();
+            file.read_to_end(&mut buffer_file).expect("Fail reading file; filename}");
+            // Drop from memory the file opened since the data is in buffer_file now
+            drop(file);
+            // TRansform the string ssearch to bytes (binary)
+            let dtsearch = ssearch.as_bytes();
+            let mut j = 0;
+            // i itertare over all buffer_file bytes, remember "len" calculate the size in bytes
+            for i in 0..buffer_file.len() {
+                // If the "i" byte of buffer match with "j" byte in dtsearch, add 1 to j for next and
+                // then check if "j" is the end of dtsearch
+                // And so on in which this iterate over each
+                if buffer_file[i] == dtsearch[j] {
+                    j += 1;
+
+                    if j == dtsearch.len() {
+                        return Ok(());
+                    }
+                } else {
+                    j = 0;
+                }
+            }
+            Err("Not found in binary")
+
+    } else {
+        Err("Is not a file")
+    }
 }

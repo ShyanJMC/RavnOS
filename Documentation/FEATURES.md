@@ -31,6 +31,7 @@ At today, the latest version is; v0.31.0-ALPHA
 - [X] Add support to save information from BASE64 to binary in file (-\-from-base64)
 - [X] Add support to identify if file is binary or not and show properly.
 - [ ] Show system's resource like nmon or htop
+- [ ] Add support to get specific line number of file
 
 ## Microhttp
 
@@ -60,9 +61,7 @@ At today, the latest version is; v0.31.0-ALPHA
 - [X] Search recursively in path.
 - [X] Search in stdin.
 - [X] Extract data from keys
-- [ ] Extract data from keys with many levels of [key] { [data] [sub-key]{...} }
-   - Works by enumeration and position.
-- [ ] Search inside binaries
+- [X] Search inside binaries
 
 ## Ls
 

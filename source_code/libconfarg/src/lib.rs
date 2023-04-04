@@ -52,6 +52,7 @@ pub struct LsConfiguration {
 /// Search configuration struct
 pub struct SearchConfiguration {
     pub file: bool,
+    pub binary: bool,
     pub directory: bool,
     pub environment: bool,
     pub processes: bool,
@@ -157,6 +158,8 @@ impl RavnArguments for Vec<String> {
                         options.push("input");
                     } else if indexs == "-rk" {
                         options.push("ravnkey");
+                    } else if indexs == "-b" {
+                        options.push("binary");
                     }
                 }
             }
@@ -252,9 +255,10 @@ impl RavnArguments for Vec<String> {
 
             Options:
             --------
-            -f      : search the string inside file.
+            -b      : search inside binary.
             -d      : search the string in directories' name.
             -e      : search the string in environment variables data.
+            -f      : search the string inside file.
             -p      : search the string in system processes.
             -r      : search recursively the string in directories' name and file's data.
             -s      : search the string in stdin

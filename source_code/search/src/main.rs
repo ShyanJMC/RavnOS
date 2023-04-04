@@ -22,12 +22,15 @@ use std::process;
 // Stdinput and stdoutput read
 use std::io::Read;
 
+// File lib
+use std::fs::File;
+
 // RavnOS libraries
 extern crate libconfarg;
 extern crate libstream;
 
 use libconfarg::RavnArguments;
-use libstream::{file_filter, getprocs, Stream};
+use libstream::{file_filter, getprocs, binary_search, Stream};
 
 fn main() {
     // env::args() takes program's arguments (the first is always the self binary).
@@ -45,6 +48,7 @@ fn main() {
     // Configuration struct
     let mut inst1 = libconfarg::SearchConfiguration {
         file: false,
+        binary: false,
         directory: false,
         environment: false,
         processes: false,
@@ -80,7 +84,21 @@ fn main() {
             inst1.input = true;
         } else if confs == "ravnkey" {
             inst1.ravnkey = true;
+        } else if confs == "binary" {
+            inst1.binary = true;
         }
+    }
+
+    // Search inside bynary
+    if inst1.binary {
+        for ffiles in &inputs {
+            let mut file = File::open(ffiles.clone()).expect("Fail opening file; {filename}");
+            match binary_search( &ffiles, file, ssearch.clone()) {
+                Ok(d) => println!("{}; matches", ffiles),
+                Err(e) => println!("{}; {e}",ffiles),
+            }
+        }
+
     }
 
     // Search for [key] and extract [data]
