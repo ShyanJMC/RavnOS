@@ -145,7 +145,7 @@ impl Epoch for i64 {
         secondss = (extra_time % 3600) % 60;
 
         format!(
-            "{}/{}/{} {}:{}:{} UTC-0/GMT-0",
+            "{}/{}/{} {}:{}:{} UTC-0",
             &date, &month, &curr_year, &hours, &minutes, &secondss
         )
     }
@@ -199,32 +199,59 @@ impl Stream for String {
 
     /// Read directories and returns PathBuf with each file and directory.
     fn readdir(&self) -> Vec<PathBuf> {
+        let pathname = &(self.to_string());
         // Read the directory
-        let entries = fs::read_dir(&self)
-            .unwrap()
-            // Take the "DirEntry" struct from "read_dir" and returns the full path
-            .map(|res| res.map(|e| e.path()))
-            // Here we customice the collect method to returns as Result<V,E>
-            .collect::<Result<Vec<_>, io::Error>>()
-            .unwrap();
-
-        entries
-    }
-
-    // Read dir recursive
-    // Is not stable yet, I must fix first an issue with do not read sub dirs after first round
-    fn readdir_recursive(&self) -> DirStructure {
-        // I must use a closure here to not re write readdir function
-        let readdir = |path: String| -> Vec<PathBuf> {
-            // Read the directory
-            let entries = fs::read_dir(path)
-                .unwrap()
-                // Take the "DirEntry" struct from "read_dir" and returns the full path
-                .map(|res| res.map(|e| e.path()))
+        let entries: Vec<PathBuf> = match fs::read_dir(&self) {
+            Err(_e) => {
+                eprintln!("Fail/Error reading path; {}", &pathname);
+                // Create a temp dir just for read something empty
+                std::fs::create_dir("/tmp/.temp_dir_err_readdir_recursive").unwrap();
+                let temp = fs::read_dir("/tmp/.temp_dir_err_readdir_recursive").unwrap().map(|res| res.map(|e| e.path()))
                 // Here we customice the collect method to returns as Result<V,E>
                 .collect::<Result<Vec<_>, io::Error>>()
                 .unwrap();
 
+                // Remove the temp dir to clean
+                std::fs::remove_dir("/tmp/.temp_dir_err_readdir_recursive").unwrap();
+                temp
+            },
+            Ok(d) => {
+                d.map(|res| res.map(|e| e.path()))
+                // Here we customice the collect method to returns as Result<V,E>
+                .collect::<Result<Vec<_>, io::Error>>()
+                .unwrap()
+            }
+        };
+        entries
+    }
+
+    // Read dir recursive
+    fn readdir_recursive(&self) -> DirStructure {
+        // I must use a closure here to not re write readdir function
+        let readdir = |path: String| -> Vec<PathBuf> {
+            let pathname = &(path.to_string());
+            // Read the directory
+            let entries: Vec<PathBuf> = match fs::read_dir(path) {
+                Err(_e) => {
+                    eprintln!("Fail/Error reading path; {}", &pathname);
+                    // Create a temp dir just for read something empty
+                    std::fs::create_dir("/tmp/.temp_dir_err_readdir_recursive").unwrap();
+                    let temp = fs::read_dir("/tmp/.temp_dir_err_readdir_recursive").unwrap().map(|res| res.map(|e| e.path()))
+                    // Here we customice the collect method to returns as Result<V,E>
+                    .collect::<Result<Vec<_>, io::Error>>()
+                    .unwrap();
+
+                    // Remove the temp dir to clean
+                    std::fs::remove_dir("/tmp/.temp_dir_err_readdir_recursive").unwrap();
+                    temp
+                },
+                Ok(d) => {
+                    d.map(|res| res.map(|e| e.path()))
+                    // Here we customice the collect method to returns as Result<V,E>
+                    .collect::<Result<Vec<_>, io::Error>>()
+                    .unwrap()
+                }
+            };
             entries
         };
 
