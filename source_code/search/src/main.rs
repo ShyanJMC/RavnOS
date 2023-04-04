@@ -206,8 +206,7 @@ fn main() {
         }
     }
 
-    // I know, is not a fully recursive, will be a future for the
-    // release stable version
+    
     if inst1.directory {
         for files in &inputs {
             let mut output = files.readdir_recursive();
