@@ -92,6 +92,7 @@ At today, the latest version is; v0.31.0-ALPHA
 - [ ] Read configuration files.
 - [ ] Install, uninstall packages with and without root access.
 - [ ] Install pre-build binary or build from source.
+- [ ] Support for read PKGBUILD and APKBUILD files.
 
 ## Rune (shell)
 
