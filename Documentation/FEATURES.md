@@ -97,6 +97,7 @@ At today, the latest version is; v0.31.0-ALPHA
 ## Rune (shell)
 
 - [ ] Read configuration file.
+- [X] Support for bultins called with "_X". Use "_list" to list them.
 - [ ] Support for pipelines ("|") and redirections (<, >).
 - [ ] Support for create files and directories (show information from Cargo.toml file inside directory)
 - [ ] Support for read git information.
