@@ -174,7 +174,10 @@ impl RavnArguments for Vec<String> {
             //  Also I added for paths ( / ).
             //  Remember "unwrap" method extract X from Some(X) or Err(X) and/or from "Option<X>"
             //  also.
-            let pzero = indexs.chars().next().unwrap();
+            let pzero = match indexs.chars().next() {
+                Some(d) => d,
+                None => ' ',
+            };
             if pzero.to_string() != *"-".to_string() {
                 arguments.push(indexs.clone());
             }
