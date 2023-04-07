@@ -27,6 +27,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rune"
+version = "0.1.0"
+
+[[package]]
 name = "search"
 version = "0.6.1"
 dependencies = [

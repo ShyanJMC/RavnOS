@@ -7,4 +7,5 @@ members = [
 	"libstream",
 	"libfile",
 	"search",
+	"rune",
 	]
