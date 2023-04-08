@@ -12,11 +12,13 @@
 //!
 //! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023
 
+use std::fs::{self, File};
+use std::io::Read;
 
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 4] = ["info", "env", "list", "$?"];
+const LBUILTINS: [&str; 5] = ["clear", "env", "info", "list", "$?"];
 const RUNE_VERSION: &str = "v0.1.0";
 
 // Builtins
@@ -66,6 +68,20 @@ fn environmentvar() -> String {
     buffer2
 }
 
+fn clear() {
+    // \x1B[ : ASCII scape character and start control secuence
+    // \x1B[2J: Clears the entire screen
+    // \x1B[<n>;<m>H: Moves the cursor to row <n> and column <m>
+    // \x1B[<n>A: Moves the cursor <n> lines up
+    // \x1B[<n>B: Moves the cursor <n> lines down
+    // \x1B[<n>C: Moves the cursor <n> columns right
+    // \x1B[<n>D: Moves the cursor <n> columns left
+    // \x1B[K: Clears from the cursor position to the end of the line
+    // \x1B[<n>J: Clears the screen from the cursor position to the end of the screen if <n> is 0, from the beginning of the screen to the cursor position if <n> is 1, and clears the entire screen if <n> is 2
+    // \x1B[<n>m: Sets the text style. <n> can be 0 (sets style to normal), 1 (sets style to bold), 2 (sets style to dim), 3 (sets style to italic), 4 (sets style to underline), 5 (sets style to blinking), 7 (inverts the foreground and background colors), 8 (hides the text), 22 (disables bold or dim style), 23 (disables italic style), 24 (disables underline style), 25 (disables blinking style), 27 (disables color inversion) and 28 (shows hidden text).
+    // \x07: Emits a beep or alert sound
+    print!("\x1B[1;1H\x1B[2J");
+}
 
 
 ////////////////
@@ -89,6 +105,9 @@ pub fn rbuiltins(command: &str) -> Result<String,String> {
         } else if command == "list" {
             result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}", LBUILTINS);
             Ok(result)
+        } else if command == "clear" {
+            self::clear();
+            Ok( " ".to_string() )
         } else {
             Err( "builtin not recognized".to_string() )
         }
