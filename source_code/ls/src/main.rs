@@ -158,11 +158,14 @@ fn main() {
                     },
                 };
 
+                // We convert "h" to Path type, we get the last file/dir name and we convert it to static str.
+                let df_name = Path::new(h).file_name().expect("Fail getting path's filename").to_str().expect("Fail getting path's filename");
+
                 buffer.push(format!(
-                    "{} {} {:?} {} {}",
+                    "{} \t[{}]\t{:?}\t[{}] {}",
                     match &h.is_file() {
-                        true => format!("f: {}", h.display()),
-                        false => format!("d: {}", h.display()),
+                        true => format!("f: {df_name}"),
+                        false => format!("d: {df_name}/"),
                     },
                     fmetadata.mtime().epoch_to_human(),
                     // Permissions
