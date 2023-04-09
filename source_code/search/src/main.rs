@@ -92,9 +92,9 @@ fn main() {
     // Search inside bynary
     if inst1.binary {
         for ffiles in &inputs {
-            let mut file = File::open(ffiles.clone()).expect("Fail opening file; {filename}");
+            let file = File::open(ffiles.clone()).expect("Fail opening file; {filename}");
             match binary_search( &ffiles, file, ssearch.clone()) {
-                Ok(d) => println!("{}; matches", ffiles),
+                Ok(_d) => println!("{}; matches", ffiles),
                 Err(e) => println!("{}; {e}",ffiles),
             }
         }
@@ -206,10 +206,10 @@ fn main() {
         }
     }
 
-    
+
     if inst1.directory {
         for files in &inputs {
-            let mut output = files.readdir_recursive();
+            let output = files.readdir_recursive();
             //output.sort();
             for archives in output.dbuff {
                 if archives.as_str().contains(&ssearch) {
