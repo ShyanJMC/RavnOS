@@ -12,14 +12,14 @@
 //!
 //! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023
 
-use std::fs::{self, File};
-use std::io::Read;
+use std::env;
+use std::path::Path;
 
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 5] = ["clear", "env", "info", "list", "$?"];
-const RUNE_VERSION: &str = "v0.1.0";
+const LBUILTINS: [&str; 9] = ["cd", "clear", "env", "exit", "history", "home", "info", "list", "$?"];
+const RUNE_VERSION: &str = "v0.9.0";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -68,6 +68,12 @@ fn environmentvar() -> String {
     buffer2
 }
 
+fn cd(path: String) -> () {
+    let buff = path.trim();
+    let npath = Path::new( &buff );
+    env::set_current_dir(&npath).expect("Failing setting the new working path");
+}
+
 fn clear() {
     // \x1B[ : ASCII scape character and start control secuence
     // \x1B[2J: Clears the entire screen
@@ -89,8 +95,8 @@ fn clear() {
 // Check the builtin executing it
 // The first argument is the command, the second the lbuilts list
 // Returns Ok(d) with the stdout of builtin or Err(e) if doesn't match
-pub fn rbuiltins(command: &str) -> Result<String,String> {
-    let mut result = String::new();
+pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&'static str> {
+    let result: String;
     // We MUST use trim() because always there are some unwelcomme characters at the start/end
     let command = command.trim();
 
@@ -99,6 +105,9 @@ pub fn rbuiltins(command: &str) -> Result<String,String> {
             // "self" is needed because this is a module, not a binary
             result = self::info();
             Ok(result)
+        } else if command == "cd" {
+            self::cd(b_arguments);
+            Ok(" ".to_string())
         } else if command == "env" {
             result = environmentvar();
             Ok(result)
@@ -109,9 +118,9 @@ pub fn rbuiltins(command: &str) -> Result<String,String> {
             self::clear();
             Ok( " ".to_string() )
         } else {
-            Err( "builtin not recognized".to_string() )
+            Err( "builtin not recognized" )
         }
     } else {
-        Err( "not builtin found".to_string() )
+        Err( "not builtin found" )
     }
 }
