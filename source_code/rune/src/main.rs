@@ -18,8 +18,8 @@ use std::process::ExitStatus;
 use std::process::Stdio;
 // I/O crate
 // Buffer reading crate
-use std::io::{self, BufRead, Write, Result, prelude::*};
-use std::fs::{self,OpenOptions, File};
+use std::io::{self, BufRead, Write};
+use std::fs::OpenOptions;
 
 // Import the files inside scope
 mod builtins;
