@@ -188,16 +188,18 @@ As with cargo, I recommend do "strip" to the final binaries to delete debug symb
 ### Before - After strip binary
 
 Before strip;
+
 ```bash
--rwxr-xr-x 2 shyanjmc shyanjmc 9.0M Oct 23 04:31 ls
+f: ls 	[10/4/2023 10:44:0 UTC-0]	["sticky bit", "rwx", "r-x", "r-x"]	[uid=1000(shyanjmc) gid=1000(shyanjmc)] 4M
 ```
 
 After strip;
+
 ```bash
--rwxr-xr-x 2 shyanjmc shyanjmc 507K Oct 23 04:32 ls
+f: ls 	[10/4/2023 10:49:11 UTC-0]	["sticky bit", "rwx", "r-x", "r-x"]	[uid=1000(shyanjmc) gid=1000(shyanjmc)] 542K
 ```
 
-The strip command clean the debug symbols, which are the 94.49869791666667% of space.
+The strip command clean the debug symbols, which are the 86.45% of space.
 
 ## Coypright
 
@@ -218,9 +220,9 @@ If you want contact me, you can do it trough:
 
 Email:
 
-- shyanjmc@proton.me
-- shyanjmc@protonmail.com
-- joaquincrespo96@gmail.com
+   - shyanjmc@proton.me
+   - shyanjmc@protonmail.com
+   - joaquincrespo96@gmail.com
 
 Linkedin:
 
@@ -234,25 +236,24 @@ If you want support this project you can;
 
 Join my patreon;
 
-- https://patreon.com/shyanjmc
+   - https://patreon.com/shyanjmc
 
 Donate me crypto;
 
 - DAI (ERC-20) - The preferred stablecoin;
 
- 0x27219354cC70dE84e7fae0B71E9e2605026b10B2
+   0x27219354cC70dE84e7fae0B71E9e2605026b10B2
 
 - Bitcoin (BTC);
 
-16n6GP4XkZiyoGCZei6uxdpohCkPm7eQ7L
+   16n6GP4XkZiyoGCZei6uxdpohCkPm7eQ7L
 
 - Ethereum (ETH);
 
-0x27219354cC70dE84e7fae0B71E9e2605026b10B2
-
+   0x27219354cC70dE84e7fae0B71E9e2605026b10B2
 
 Also you can donate trough crypto-coffee.xyz;
 
-- https://crypto-coffee.xyz/donate/shyanjmc
+   - https://crypto-coffee.xyz/donate/shyanjmc
 
 And if you know me personally, let me know that you have donated, since that moment we will share a beer (or mead if you are man/women of honor).
