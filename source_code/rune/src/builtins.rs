@@ -18,27 +18,25 @@ use std::path::Path;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 9] = ["cd", "clear", "env", "exit", "history", "home", "info", "list", "$?"];
-const RUNE_VERSION: &str = "v0.9.0";
+const LBUILTINS: [&str; 11] = ["cd", "clear", "env", "exit", "history", "home", "info", "mkdir", "list", "rm", "$?"];
+const RUNE_VERSION: &str = "v0.11.2";
 
 // Builtins
 // Are private for only be executed by rbuiltins
 
 fn info() -> String {
-    let os = {
-        if cfg!(linux) {
-            "Linux"
-        } else if cfg!(freebsd){
-            "FreeBSD"
-        } else if cfg!(dragonfly) {
-            "DragonFLY BSD"
-        } else if cfg!(openbsd) {
-            "OpenBSD"
-        } else if cfg!(netbsd) {
-            "NetBSD"
-        } else {
-            "Unknown"
-        }
+    let os: &str = if cfg!(target_os = "linux") {
+        "Linux"
+    } else if cfg!(target_os = "freebsd") {
+        "FreeBSD"
+    } else if cfg!(target_os = "dragonfly") {
+        "DragonFly BSD"
+    } else if cfg!(target_os = "openbsd") {
+        "OpenBSD"
+    } else if cfg!(target_os = "netbsd") {
+        "NetBSD"
+    } else {
+        "Unknown"
     };
 
     let user = {
@@ -69,9 +67,13 @@ fn environmentvar() -> String {
 }
 
 fn cd(path: String) -> () {
-    let buff = path.trim();
-    let npath = Path::new( &buff );
-    env::set_current_dir(&npath).expect("Failing setting the new working path");
+    if path.is_empty(){
+        eprintln!("Help;\n cd [PATH]");
+    } else {
+        let buff = path.trim();
+        let npath = Path::new( &buff );
+        env::set_current_dir(&npath).expect("Failing setting the new working path");
+    }
 }
 
 fn clear() {
@@ -89,13 +91,84 @@ fn clear() {
     print!("\x1B[1;1H\x1B[2J");
 }
 
+// Create a directory recusively
+// We use "Path" type because it returns absolute path
+fn mkdir_r(path: &Path) -> Result<u64,String> {
+    if path.display().to_string().is_empty(){
+        Err("Help;\n mkdir [directory]".to_string())
+    } else {
+        match std::fs::create_dir_all(path.display().to_string()){
+            Ok(_d) => Ok(0),
+            Err(e) =>  return Err( e.to_string() ),
+        }
+    }
+}
+
+fn remove_f_d(arguments: String) -> Result<(),String> {
+    // Split_whitespace do what name says
+    let mut b_arguments: Vec<&str> = arguments.split_whitespace().collect();
+    // Buff to store the position of argument for recursive
+    let mut b_argspo = 2023;
+
+    // As is a Vec<str> check if some of they is "-r"
+
+    let recursive: bool = if b_arguments.contains(&"-r") {
+            // iterate over the vector and position method returns the position of
+            // element if match internal condition
+            b_argspo = b_arguments.iter().position(|e| e == &"-r").unwrap();
+            true
+        } else {
+            false
+        };
+
+    if b_argspo != 2023 {
+        b_arguments.remove( b_argspo );
+    }
+    drop(b_argspo);
+
+    let mut a_files: Vec<&str> = Vec::new();
+    let mut a_dirs: Vec<&str> = Vec::new();
+
+    for i in &b_arguments {
+        if Path::new(i).is_dir() {
+            a_dirs.push(i);
+        } else {
+            a_files.push(i);
+        }
+    }
+
+    if recursive {
+        for d in a_dirs {
+            match std::fs::remove_dir_all(d) {
+                Ok(_d) => (),
+                Err(_e) => eprintln!("Error deleting directory; {}, verify if exists and if you have right permissions.", d),
+            }
+        }
+    } else {
+        for d in a_dirs {
+            match std::fs::remove_dir(d) {
+                Ok(_d) => (),
+                Err(_e) => eprintln!("Error deleting directory; {}, verify if exists, if you have right permissions and if is not empty (in which you need use -r for it)", d),
+            }
+        }
+        for d in a_files {
+            match std::fs::remove_file(d) {
+                Ok(_d) => (),
+                Err(_e) => eprintln!("Error deleting file; {}, verify if exists, if you have right permissions", d),
+            }
+        }
+    }
+    Ok(())
+}
 
 ////////////////
 
 // Check the builtin executing it
 // The first argument is the command, the second the lbuilts list
 // Returns Ok(d) with the stdout of builtin or Err(e) if doesn't match
-pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&'static str> {
+pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
+    use self::*;
+
     let result: String;
     // We MUST use trim() because always there are some unwelcomme characters at the start/end
     let command = command.trim();
@@ -105,6 +178,23 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&'static s
             // "self" is needed because this is a module, not a binary
             result = self::info();
             Ok(result)
+        } else if command == "mkdir" {
+            match mkdir_r( Path::new( &b_arguments ) ) {
+                Ok(_d) => Ok( "".to_string() ),
+                Err(_e) => {
+                    if _e == "Help;\n mkdir [directory]" {
+                        let error = "Help;\n mkdir [directory]";
+                        Err(error)
+                    } else {
+                        Err("Error creating directory")
+                    }
+                },
+            }
+        } else if command == "rm" {
+            match remove_f_d(b_arguments) {
+                Ok(()) => Ok( "".to_string() ),
+                Err(_e) => Err("Error deleting object"),
+            }
         } else if command == "cd" {
             self::cd(b_arguments);
             Ok(" ".to_string())
