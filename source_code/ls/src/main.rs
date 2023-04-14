@@ -184,9 +184,9 @@ fn main() {
             }
         } else {
             if !config.clean && lists.len() > 1 {
-                println!("{names};\n{:?}", &entries);
+                println!("{names} {{\n{}\n}}", &entries.iter().map(|e| e.display().to_string() + "\n").collect::<String>().trim());
             } else {
-                println!("{:?}", &entries);
+                println!("{names} {{ \n{}\n }}", &entries.iter().map(|e| e.display().to_string() + "\n").collect::<String>().trim());
             }
         }
 
