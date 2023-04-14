@@ -96,12 +96,15 @@ At today, the latest version is; v0.31.0-ALPHA
 
 ## Rune (shell)
 
+- [ ] Integrate as builtins all coreutils binaries.
 - [ ] Read configuration file.
-- [X] Support for bultins called with "_X". Use "_list" to list them.
+- [X] Support for builtins called with "_X". Use "_list" to list them.
 - [X] Support for read/show the last signal returned by command ($?).
 - [X] Support for history (_history).
 - [ ] Support for pipelines ("|") and redirections (<, >).
-- [ ] Support for create files and directories (show information from Cargo.toml file inside directory)
+- [X] Support for create files and directories.
+- [X] Support for delete files and directories.
+- [ ] Support for show information from Cargo.toml file inside directory.
 - [ ] Support for read git information.
 - [ ] Support to save some process's stdout into image (PNG and JPEG).
 
