@@ -123,6 +123,7 @@ fn main(){
 			enabled_history = true;
 		// To avoid that the shell execute a space or a new line
 		} else if command == " " || command == "\n" || command == "" {
+			// Do not misunderstand, "continue" breaks the actual loop to start again
 			continue;
 		} else if command == "_home".to_string() {
 			print!("{home}");
