@@ -25,6 +25,11 @@ use std::fs::OpenOptions;
 mod builtins;
 mod io_mods;
 
+// For epoch_to_human()
+use libstream::Epoch;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
+
 fn main(){
 
 	// Why do this instead directly store in "home"?
@@ -34,6 +39,9 @@ fn main(){
 	let binding = io_mods::get_user_home();
 	let home: &str = binding.as_str().clone();
 	let mut rune_history = OpenOptions::new().create(true).append(true).open( home.clone().to_owned() + "/.ravnos/rune_history" ).unwrap();
+
+	// Enabled or not history
+	let mut enabled_history: bool = true;
 
 	// The fields of ExitStatus are private, because of that
 	// I must use Rune itself to generate the struct exiting directly.
@@ -52,13 +60,9 @@ fn main(){
 	////////////////////////////////
 
 	loop {
-		// Temporal memory for history
-		// Must be string because we do not know how much large are the commands
-		let vhistory: Vec<String> = match io_mods::get_history(){
-			Ok(d) => d,
-			Err(_e) => Vec::new(),
-		};
-
+		// String vector
+		let mut vhistory: Vec<String> = Vec::new();
+		
 		// Prompt
 		print!("\n> ");
 		// Clean the stdout buffer to print the above line before takes the input
@@ -78,10 +82,27 @@ fn main(){
 		// I directly do here the trim to avoid the same operation in the rest of code so many times
 		let command = command.trim();
 
-		// Save the command var after cleaning spaces and tabulations at beggining and
-		// end of string.
-		rune_history.write_all(command.as_bytes()).expect("Fail saving history");
-		rune_history.write_all(b"\n").expect("Fail saving history");
+		if enabled_history {
+			// Temporal memory for history
+			// Must be string because we do not know how much large are the commands
+			vhistory = match io_mods::get_history(){
+				Ok(d) => d,
+				Err(_e) => Vec::new(),
+			};
+
+			let hist_command = {
+				let unix_date = SystemTime::now().duration_since(UNIX_EPOCH).expect("Error getting Unix Epoch Time").as_secs();
+				// Shadowing
+				let unix_date: i64 = unix_date as i64;
+				let hist_date = unix_date.epoch_to_human();
+				format!("[ {hist_date} ] : {command}")
+			};
+
+			// Save the command var after cleaning spaces and tabulations at beggining and
+			// end of string.
+			rune_history.write_all(hist_command.as_bytes()).expect("Fail saving history");
+			rune_history.write_all(b"\n").expect("Fail saving history");
+		}
 
 		// Trim it again and compare with exit string
 		if command == "_exit".to_string() {
@@ -89,12 +110,17 @@ fn main(){
 		} else if command == "_$?".to_string() {
 			print!("{}\n", coreturn);
 			// Check if start with "_" which means is a builtin
-		} else if command == "_history".to_string() {
+		} else if command == "_history".to_string() && enabled_history {
 			let mut num = 0;
 			for i in &vhistory {
 				println!("{num} {i}");
 				num +=1;
 			}
+		} else if command == "_disable_history" { 
+			enabled_history = false;
+			vhistory.clear();
+		} else if command == "_enable_history" { 
+			enabled_history = true;
 		} else if command == "_home".to_string() {
 			print!("{home}");
 		} else if command.chars().next().unwrap() == '_' {
