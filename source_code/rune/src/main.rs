@@ -121,6 +121,9 @@ fn main(){
 			vhistory.clear();
 		} else if command == "_enable_history" { 
 			enabled_history = true;
+		// To avoid that the shell execute a space or a new line
+		} else if command == " " || command == "\n" || command == "" {
+			continue;
 		} else if command == "_home".to_string() {
 			print!("{home}");
 		} else if command.chars().next().unwrap() == '_' {
@@ -192,10 +195,6 @@ fn main(){
 
 				coreturn = output.status;
 
-
-			// To avoid that the shell execute a space or a new line
-			} else if command == " " || command == "\n" {
-				continue;
 
 			} else {
 				let proc = process::Command::new( command.clone() )
