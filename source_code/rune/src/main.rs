@@ -18,7 +18,7 @@ use std::process::ExitStatus;
 use std::process::Stdio;
 // I/O crate
 // Buffer reading crate
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, Write, Read};
 use std::fs::OpenOptions;
 
 // Import the files inside scope
@@ -60,18 +60,21 @@ fn main(){
 	////////////////////////////////
 
 	loop {
-		// String vector
+		// String vector for history
 		let mut vhistory: Vec<String> = Vec::new();
-		
+		let mut vhistory_position = vhistory.len();
+
+		// Saves the input
+		// in each loop is shadowed
+		let mut command = String::new();
+
 		// Prompt
 		print!("\n> ");
 		// Clean the stdout buffer to print the above line before takes the input
 		// if not will print first the stdin and then the prompt
 		std::io::stdout().flush().expect("Error cleaning stdout buffer");
 
-		// Saves the input
-		// in each loop is shadowed
-		let mut command = String::new();
+
 
 		// Lock or not the stdin controlling it
 		let mut handle = io::stdin().lock();
@@ -116,10 +119,10 @@ fn main(){
 				println!("{num} {i}");
 				num +=1;
 			}
-		} else if command == "_disable_history" { 
+		} else if command == "_disable_history" {
 			enabled_history = false;
 			vhistory.clear();
-		} else if command == "_enable_history" { 
+		} else if command == "_enable_history" {
 			enabled_history = true;
 		// To avoid that the shell execute a space or a new line
 		} else if command == " " || command == "\n" || command == "" {
