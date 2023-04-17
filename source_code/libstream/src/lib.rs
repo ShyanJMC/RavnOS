@@ -611,3 +611,20 @@ pub fn binary_search<'a>(filename: &String, mut file: File, ssearch: String) -> 
         Err("Is not a file")
     }
 }
+
+// Search and replace a string
+// input is the string
+// maatch is the word to match in search and replace with "replacement"
+// the return is the new string
+pub fn search_replace_string<'a>(input: &String, maatch: &String, replacement: &String) -> Result<String,&'a str> {
+    if input.contains(maatch){
+        
+        // Takes the "input" data, and replace maatch's  data with replacement's data
+        // Save the return (the new str) in "b_input"
+        let b_new = input.replace( maatch.as_str(), replacement.as_str() );
+        Ok(b_new)
+    } else {
+        return Err("Not matching found");
+    }
+
+}
