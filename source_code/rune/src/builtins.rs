@@ -12,14 +12,27 @@
 //!
 //! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023
 
+// Environment lib
 use std::env;
+
+// Path lib
 use std::path::Path;
+
+
+// Filesystem lib
+use std::fs::{self,File};
+
+// Read lib
+use std::io::Read;
+
+use libstream::Stream;
+use libstream::search_replace_string;
 
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 11] = ["cd", "clear", "env", "exit", "history", "home", "info", "mkdir", "list", "rm", "$?"];
-const RUNE_VERSION: &str = "v0.11.2";
+const LBUILTINS: [&str; 16] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "history", "home", "info", "mkdir", "mkfile", "list", "pwd", "rm", "$?"];
+const RUNE_VERSION: &str = "v0.15.3";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -50,7 +63,7 @@ fn info() -> String {
         varvalue
     };
 
-    format!(" Rune Shell version; {RUNE_VERSION}\n OS: {}\n User: {} ",os, user)
+    format!(" RavnOS's Shell\n Copyright 2023 Joaquin 'ShyanJMC' Crespo\n Rune Shell version; {RUNE_VERSION}\n OS: {}\n User: {} ",os, user)
 }
 
 fn environmentvar() -> String {
@@ -91,6 +104,195 @@ fn clear() {
     print!("\x1B[1;1H\x1B[2J");
 }
 
+// This function not copy directly using the kernel's filesystem
+// to avoid any possible issue we copy bit a bit directly.
+fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
+    if dest.exists() {
+        let str: &str = "Destination already exists";
+        Err(str)
+    } else {
+
+        // With the variables "sd" and "dd" we take the complete path,
+        // we split them and then we take the last directory
+
+        // Source directory
+        let sd: String = {
+            // For relative path
+            if source.display().to_string().len() != 1 {
+                //let temp = source.display().to_string();
+                //let buffer: Vec<&str> = temp.split('/').collect();
+
+                //let mut temp = buffer.clone();
+                //temp.remove( (temp.len()-1) );
+                //drop(buffer);
+
+                // We just not take the last
+                //temp.iter().map(|e| e.to_string() + &"/".to_string() ).collect()
+                source.display().to_string().trim().to_string()
+
+            } else {
+
+                match env::current_dir(){
+            		Ok(d) => format!("{}/{}",d.display().to_string(),source.display().to_string()),
+            		Err(e) => {
+            			eprintln!("{e}");
+            			return Err("Error getting current dir for source");
+            		},
+            	}
+
+            }
+        };
+
+        println!("sd; {sd}");
+
+        // Destionation directory
+        let dd: String = {
+            let temp = dest.display().to_string();
+            let buffer: Vec<&str> = temp.split('/').collect();
+            // For absolute path
+            if buffer.len() > 1 {
+            	format!("{}", &buffer[buffer.len()-1] )
+            }
+            // For relative path
+            else {
+            	match env::current_dir(){
+            		Ok(d) => format!("{}/{}",d.display().to_string(),buffer[0]),
+            		Err(e) => {
+            			eprintln!("{e}");
+            			return Err("Error getting current dir for destionation");
+            		},
+            	}
+           }
+        };
+
+        println!("dd; {dd}");
+
+
+        // To detect if "source" is a file
+        if source.is_file(){
+
+            // Open file
+            let mut b_file = match File::open(source.display().to_string()) {
+                Ok(d) => d,
+                Err(_e) => {
+                    let str: &str = "Fail opening source file/dir";
+                    return Err(str);
+                }
+            };
+
+            // Read it saving to b_reader
+            let mut b_reader = Vec::new();
+            match b_file.read_to_end(&mut b_reader) {
+                Ok(_d) => {},
+                Err(_e) => {
+                    let str: &str = "Error reading source file, check permissions.";
+                    return Err(str);
+                }
+            };
+
+            // Create the file
+            match File::create(dest.display().to_string()) {
+                Ok(_d) => {},
+                Err(_e) => {
+                    print!("{_e}; {}",dest.display());
+                    let str: &str = "Error creating destination";
+                    return Err(str);
+                }
+            }
+
+            // Write, as b_reader now has bytes, will save it in the same way avoiding possible issues
+            match fs::write(dest, b_reader) {
+                Ok(d) => d,
+                Err(_e) => {
+                    let str: &str = "Error writting buffer to destination file, check permissions.";
+                    return Err(str);
+                }
+            }
+
+            // If is not, is a directory
+        } else if source.is_dir() {
+
+            let entries = source.display().to_string().readdir_recursive();
+
+            for d in &entries.dbuff {
+
+
+                // Takes the absolute path of directory in variable "d", search the directories
+                // of old path unless that last (which is the directory to copy) and replace it with
+                // the absolute path of new path with variable "dd"
+            	let ddir = match search_replace_string(&d, &sd, &dd) {
+                    Ok(d) => d,
+                    Err(_e) => {
+                        eprintln!("{_e}");
+                        continue;
+                    }
+                };
+
+                drop(source);
+
+                match mkdir_r( Path::new(&ddir) ){
+                	Ok(_d) => {},
+                	Err(e) => eprintln!("{e}"),
+                }
+            }
+
+            for d in &entries.fbuff {
+                let npath: String = match search_replace_string(&d, &sd, &dd) {
+                    Ok(d) => d,
+                    Err(_e) => {
+                        eprintln!("{_e}");
+                        continue;
+                    }
+                };
+
+                println!("npath file; {:?}",npath);
+
+                // Open file
+                let mut b_file = match File::open(d) {
+                    Ok(d) => d,
+                    Err(_e) => {
+                        let str: &str = "Fail opening source file/dir";
+                        return Err(str);
+                    }
+                };
+
+                // Read it saving to b_reader
+                let mut b_reader = Vec::new();
+                match b_file.read_to_end(&mut b_reader) {
+                    Ok(_d) => {},
+                    Err(_e) => {
+                        let str: &str = "Error reading source file, check permissions.";
+                        return Err(str);
+                    }
+                };
+
+                // Create the file
+                match File::create(npath.clone()) {
+                    Ok(_d) => {},
+                    Err(_e) => {
+                        println!("{npath} {{ {_e} }}");
+                        let str: &str = "Error creating destination";
+                        return Err(str);
+                    }
+                }
+
+                // Write, as b_reader now has bytes, will save it in the same way avoiding possible issues
+                match fs::write(npath.clone(), b_reader) {
+                    Ok(d) => d,
+                    Err(_e) => {
+                        let str: &str = "Error writting buffer to destination file, check permissions.";
+                        return Err(str);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+
+
+    }
+}
+
 // Create a directory recusively
 // We use "Path" type because it returns absolute path
 fn mkdir_r(path: &Path) -> Result<u64,String> {
@@ -102,6 +304,24 @@ fn mkdir_r(path: &Path) -> Result<u64,String> {
             Err(e) =>  return Err( e.to_string() ),
         }
     }
+}
+
+fn mkfile(path: &Path) -> Result<(),&str> {
+    if !path.exists() {
+        match std::fs::File::create( path.display().to_string() ) {
+            Ok(_d) => return Ok(()),
+            Err(_e) => return Err ("Fail to create file, verify if path exists and if you have the right permissions."),
+        }
+    } else {
+        Err("File already exists.")
+    }
+}
+
+fn pwd() -> Result<String, String> {
+	match env::current_dir() {
+		Ok(d) => Ok( d.display().to_string() ),
+		Err(e) => Err(e.to_string()),
+	}
 }
 
 fn remove_f_d(arguments: String) -> Result<(),String> {
@@ -144,6 +364,12 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
                 Err(_e) => eprintln!("Error deleting directory; {}, verify if exists and if you have right permissions.", d),
             }
         }
+        for d in a_files {
+            match std::fs::remove_file(d) {
+                Ok(_d) => (),
+                Err(_e) => eprintln!("Error deleting file; {}, verify if exists, if you have right permissions", d),
+            }
+        }
     } else {
         for d in a_dirs {
             match std::fs::remove_dir(d) {
@@ -176,7 +402,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
     if LBUILTINS.contains( &command ){
         if command == "info" {
             // "self" is needed because this is a module, not a binary
-            result = self::info();
+            result = info();
             Ok(result)
         } else if command == "mkdir" {
             match mkdir_r( Path::new( &b_arguments ) ) {
@@ -190,14 +416,46 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                     }
                 },
             }
+        } else if command == "mkfile" {
+            match mkfile ( Path::new( &b_arguments ) ){
+                Ok(_d) => Ok( "".to_string() ),
+                Err(e) => {
+                    if e == "Fail to create file, verify if path exists and if you have the right permissions." {
+                        Err("Fail to create file, verify if path exists and if you have the right permissions.")
+                    } else {
+                        Err("File already exists.")
+                    }
+                },
+            }
         } else if command == "rm" {
             match remove_f_d(b_arguments) {
                 Ok(()) => Ok( "".to_string() ),
                 Err(_e) => Err("Error deleting object"),
             }
+        } else if command == "pwd" {
+        	match pwd(){
+        		Ok(d) => Ok(d),
+        		Err(_e) => Err("Error getting actual working directory")
+        	}
         } else if command == "cd" {
-            self::cd(b_arguments);
+            cd(b_arguments);
             Ok(" ".to_string())
+        } else if command == "cp" {
+            let buff = b_arguments.split(' ').collect::<Vec<&str>>();
+            if buff.len() < 2 {
+                let str: &str = "Very few arguments; [SOURCE] [DESTINATION]";
+                return Err(str);
+            }
+
+            let source = buff[0];
+            let destination = buff[1];
+
+            drop(buff);
+            match copy( Path::new(source), Path::new(destination) ) {
+                Ok(_d) => Ok( "".to_string() ),
+                Err(e) => Err(e),
+            }
+
         } else if command == "env" {
             result = environmentvar();
             Ok(result)
@@ -205,7 +463,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}", LBUILTINS);
             Ok(result)
         } else if command == "clear" {
-            self::clear();
+            clear();
             Ok( " ".to_string() )
         } else {
             Err( "builtin not recognized" )
