@@ -28,11 +28,37 @@ use std::io::Read;
 use libstream::Stream;
 use libstream::search_replace_string;
 
+
+
+// Because this file is not a binary or lib, is just another module, to import
+// under score another module we must use "crate"
+use crate::io_mods::get_user_home;
+
+
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
 const LBUILTINS: [&str; 16] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "history", "home", "info", "mkdir", "mkfile", "list", "pwd", "rm", "$?"];
-const RUNE_VERSION: &str = "v0.15.3";
+
+const HBUILTINS: &str = "Help;
+_cd [PATH]: If path do not exist, goes to user home directory
+_clear: Clean the screen
+_cp [source] [destination]: copy file or directory from [source] to [destination]
+_disable_history: disable save commands to history without truncate the file
+_enable_history: enable save commands to history
+_env: show environment variables
+_exit: exit the shell properly
+_history: show the history commands with date and time
+_home: returns the current user's home directory
+_info: show system's information
+_mkdir [dest] : create directory if it has more subdirectories it will create them recursively
+_mkfile [file]: create empty file
+_list: list builtins like this
+_pwd: print the current directory
+_rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
+_$?: print the latest command exit return, not include builtins";
+
+const RUNE_VERSION: &str = "v0.16.10";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -81,11 +107,22 @@ fn environmentvar() -> String {
 
 fn cd(path: String) -> () {
     if path.is_empty(){
-        eprintln!("Help;\n cd [PATH]");
+        // Goes to home user dir
+        let binding = get_user_home();
+    	let home: &str = binding.as_str().clone();
+        match env::set_current_dir(&home) {
+            Ok(d) => d,
+            Err(_e) => {
+                eprintln!("Fail changing to current home directory");
+            },
+        }
     } else {
         let buff = path.trim();
         let npath = Path::new( &buff );
-        env::set_current_dir(&npath).expect("Failing setting the new working path");
+        match env::set_current_dir(&npath) {
+            Ok(d) => d,
+            Err(_e) => eprintln!("Failing setting the new working path"),
+        }
     }
 }
 
@@ -460,7 +497,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             result = environmentvar();
             Ok(result)
         } else if command == "list" {
-            result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}", LBUILTINS);
+            result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}\n\n{HBUILTINS}", LBUILTINS);
             Ok(result)
         } else if command == "clear" {
             clear();

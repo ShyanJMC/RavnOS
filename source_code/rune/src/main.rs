@@ -187,12 +187,25 @@ fn main(){
 					proc.arg(j).stdout(Stdio::piped()).stderr(Stdio::piped());
 				}
 				// Spawn execute it
-				let nproc = proc.spawn().expect("Error executing command.");
+				let nproc = match proc.spawn(){
+					Ok(d) => d,
+					Err(_e) => {
+						eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
+						continue;
+					}
+
+				};
 				// Drop function cleans from memory the variable and data
 				drop(proc);
 
 				// Wait_with_output method waits to command finishes and collect output, return Output struct
-				let output = nproc.wait_with_output().expect("Error waiting for command and taking process' stdin stdout stderr");
+				let output = match nproc.wait_with_output() {
+					Ok(d) => d,
+					Err(_e) => {
+						eprintln!("Error waiting for command and taking process' stdin stdout stderr");
+						continue;
+					}
+				};
 
 				io::stdout().write_all(&output.stdout).unwrap();
 				io::stderr().write_all(&output.stderr).unwrap();
@@ -201,7 +214,7 @@ fn main(){
 
 
 			} else {
-				let proc = process::Command::new( command.clone() )
+				let proc = match process::Command::new( command.clone() )
 											// Stdout configure process' stdout
 											// Stdio::piped connect parent and child processes
 											.stdout(Stdio::piped())
@@ -209,13 +222,40 @@ fn main(){
 											// Stdio::piped connect parent and child processes
 											.stderr(Stdio::piped())
 											// Spawn execute it
-											.spawn().expect("Error executing command.");
+											.spawn()
+											{
+												Ok(d) => d,
+												Err(_e) => {
+													eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
+													continue;
+												}
+
+											};
 
 				// Wait_with_output method waits to command finishes and collect output, return Output struct
-				let output = proc.wait_with_output().expect("Error waiting for command and taking process' stdin stdout stderr");
+				let output = match proc.wait_with_output() {
+					Ok(d) => d,
+					Err(_e) => {
+						eprintln!("Error waiting for command and taking process' stdin stdout stderr");
+						continue;
+					}
+				};
 
-				io::stdout().write_all(&output.stdout).unwrap();
-				io::stderr().write_all(&output.stderr).unwrap();
+				match io::stdout().write_all(&output.stdout) {
+					Ok(d) => d,
+					Err(_e) => {
+						eprintln!("Error writing command's stdout to system's stdout, the output can not be printed");
+						continue;
+					}
+				}
+
+				match io::stderr().write_all(&output.stderr) {
+					Ok(d) => d,
+					Err(_e) => {
+						eprintln!("Error writing command's stderr to system's stderr, the stderr can not be printed");
+						continue;
+					}
+				}
 
 				coreturn = output.status;
 
