@@ -27,7 +27,7 @@ Is my personal project to make from scratch an operative system, take this proje
 
 | ![](images/rune.png) |
 | :---: |
-| Rune v0.9.0 |
+| Rune v0.18.16 |
 
 | ![](images/show.png) |
 | :---: |
