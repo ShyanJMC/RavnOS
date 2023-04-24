@@ -16,9 +16,10 @@
 use std::process;
 use std::process::ExitStatus;
 use std::process::Stdio;
+use std::collections::HashMap;
 // I/O crate
 // Buffer reading crate
-use std::io::{self, BufRead, Write, Read};
+use std::io::{self,	Write};
 use std::fs::OpenOptions;
 
 // Import the files inside scope
@@ -38,13 +39,19 @@ fn main(){
 	// function.
 	let binding = io_mods::get_user_home();
 	let home: &str = binding.as_str().clone();
-	let mut rune_history = OpenOptions::new().create(true).append(true).open( home.clone().to_owned() + "/.ravnos/rune_history" ).unwrap();
+	let mut rune_history = match OpenOptions::new().create(true).append(true).open( home.clone().to_owned() + "/.ravnos/rune_history" ) {
+		Ok(d) => d,
+		Err(e) => {
+			eprintln!("Error writting / creating .ravnos/rune_history file. \n History will be located in /tmp {e}");
+			OpenOptions::new().create(true).append(true).open("/tmp/.ravnos/rune_history" ).expect("Fail creating temporary file")
+		},
+	};
 
 	// Enabled or not history
 	let mut enabled_history: bool = true;
 
 	// The fields of ExitStatus are private, because of that
-	// I must use Rune itself to generate the struct exiting directly.
+	// I can not use Rune itself to generate the struct exiting directly.
 	let mut coreturn: ExitStatus = process::Command::new( "/usr/bin/sleep" ).arg( "0" ).spawn().expect("").wait().expect("Error stdout command");
 
 	//
@@ -52,17 +59,34 @@ fn main(){
 		let args = std::env::args();
 		for i in args {
 			if i == "--help".to_string() || i == "-h".to_string() {
-				println!("Rune RavnOS Shell; \n List builtins; _list");
+				println!("Rune RavnOS Shell; \n List and/or help builtins; _list");
 				process::exit(0);
 			}
 		}
 	}
 	////////////////////////////////
 
+	let mut vhistory_map = HashMap::new();
+	let mut vhistory_position: usize = 0;
+
 	loop {
 		// String vector for history
-		let mut vhistory: Vec<String> = Vec::new();
-		let mut vhistory_position = vhistory.len();
+		let mut vhistory: Vec<String> = match io_mods::get_history(){
+			Ok(d) => d,
+			Err(_e) => Vec::new(),
+		};
+
+		// Map each entry to a position
+		let mut temp_buff: usize = 0;
+		for i in &vhistory {
+				vhistory_map.insert(temp_buff, i.clone());
+				temp_buff += 1;
+		}
+
+		// Store the position
+		if vhistory_position == 0 {
+			vhistory_position = vhistory_map.len();
+		}
 
 		// Saves the input
 		// in each loop is shadowed
@@ -72,39 +96,89 @@ fn main(){
 		print!("\n> ");
 		// Clean the stdout buffer to print the above line before takes the input
 		// if not will print first the stdin and then the prompt
-		std::io::stdout().flush().expect("Error cleaning stdout buffer");
+		match std::io::stdout().flush() {
+			Ok(_d) => (),
+			Err(e) => {
+				eprintln!("Error cleaning stdout buffer; \n {e}");
+				continue;
+			}
+		}
 
+		command = match io_mods::read_input() {
+			Ok(d) => {
 
-
-		// Lock or not the stdin controlling it
-		let mut handle = io::stdin().lock();
-		// Read the stdin until newline byte; 0xA byte or EOF (End of file) saving it to "command" variable
-		handle.read_line(&mut command).expect("Error reading I/O buffer for stdin");
+				if d == "up_arrow" {
+					println!("{}", vhistory_map.get( &(vhistory_position.clone() -1) ).unwrap() );
+					vhistory_position -= 1;
+					continue;
+				} else if d == "down_arrow" {
+					println!("{}", vhistory_map.get(&vhistory_position).unwrap() );
+					vhistory_position += 1;
+					continue;
+				} else if d == "right_arrow" {
+					println!("\x1B[D");
+					continue;
+				} else if d == "left_arrow" {
+					println!("\x1B[C");
+					continue;
+				} else {
+					d
+				}
+			},
+			Err(e) => {
+				eprintln!("{e}");
+				continue;
+			},
+		};
 
 		// Shadowing
 		// I directly do here the trim to avoid the same operation in the rest of code so many times
 		let command = command.trim();
 
 		if enabled_history {
-			// Temporal memory for history
-			// Must be string because we do not know how much large are the commands
-			vhistory = match io_mods::get_history(){
-				Ok(d) => d,
-				Err(_e) => Vec::new(),
-			};
 
-			let hist_command = {
-				let unix_date = SystemTime::now().duration_since(UNIX_EPOCH).expect("Error getting Unix Epoch Time").as_secs();
-				// Shadowing
-				let unix_date: i64 = unix_date as i64;
-				let hist_date = unix_date.epoch_to_human();
-				format!("[ {hist_date} ] : {command}")
-			};
+			if !command.is_empty() {
+				let hist_command = {
+					let unix_date = match SystemTime::now().duration_since(UNIX_EPOCH){
+						Ok(d) => d,
+						Err(e) => {
+							eprintln!("Error getting duration since UNIX_EPOCH; \n {e}");
+							continue;
+						},
+					}.as_secs();
 
-			// Save the command var after cleaning spaces and tabulations at beggining and
-			// end of string.
-			rune_history.write_all(hist_command.as_bytes()).expect("Fail saving history");
-			rune_history.write_all(b"\n").expect("Fail saving history");
+					// Shadowing
+					let unix_date: i64 = unix_date as i64;
+					let hist_date = unix_date.epoch_to_human();
+					format!("[ {hist_date} ] : {command}")
+				};
+
+				// Save the command var after cleaning spaces and tabulations at beggining and
+				// end of string.
+
+				match rune_history.write_all(hist_command.as_bytes()) {
+					Ok(_d) => (),
+					Err(_e) => {
+						eprintln!("Error saving command to history file");
+						continue;
+					},
+				}
+
+				match rune_history.write_all(b"\n"){
+					Ok(_d) => (),
+					Err(_e) => {
+						eprintln!("Error saving command to history file");
+						continue;
+					},
+				}
+
+				let mut temp_buff: usize = 0;
+					for i in &vhistory {
+						vhistory_map.insert(temp_buff, i.clone());
+						temp_buff += 1;
+					}
+				}
+
 		}
 
 		// Trim it again and compare with exit string
@@ -207,8 +281,21 @@ fn main(){
 					}
 				};
 
-				io::stdout().write_all(&output.stdout).unwrap();
-				io::stderr().write_all(&output.stderr).unwrap();
+				match io::stdout().write_all(&output.stdout) {
+					Ok(d) => d,
+					Err(_e) => {
+						eprintln!("Error writing command's stdout to system's stdout, the output can not be printed");
+						continue;
+					}
+				}
+
+				match io::stderr().write_all(&output.stderr) {
+					Ok(d) => d,
+					Err(_e) => {
+						eprintln!("Error writing command's stderr to system's stderr, the stderr can not be printed");
+						continue;
+					}
+				}
 
 				coreturn = output.status;
 
