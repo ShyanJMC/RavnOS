@@ -61,7 +61,7 @@ _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.18.16";
+const RUNE_VERSION: &str = "v0.20.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins

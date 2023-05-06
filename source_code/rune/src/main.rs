@@ -93,7 +93,11 @@ fn main(){
 		let command: String;
 
 		// Prompt
-		print!("\n> ");
+		let pwd = match std::env::current_dir() {
+			Ok(d) => d.display().to_string(),
+			Err(e) => e.to_string(),
+		};
+		print!("[{pwd}]\n> ");
 		// Clean the stdout buffer to print the above line before takes the input
 		// if not will print first the stdin and then the prompt
 		match std::io::stdout().flush() {
@@ -133,7 +137,21 @@ fn main(){
 
 		// Shadowing
 		// I directly do here the trim to avoid the same operation in the rest of code so many times
-		let command = command.trim();
+		let mut command = command.trim();
+		let mut buffer: String;
+		// Replace "~" with the home
+		if command.contains('~') {
+			// Shadowing
+			match libstream::search_replace_string(&command.to_string(), &"~".to_string(), &home.to_string() ) {
+				Ok(d) => buffer = d,
+				Err(_e) => {
+					eprintln!("Failing setting ~ to home's user");
+					continue;
+				}
+			};
+
+			command = buffer.as_str();
+		}
 
 		if enabled_history {
 
