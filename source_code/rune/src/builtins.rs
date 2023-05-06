@@ -18,7 +18,6 @@ use std::env;
 // Path lib
 use std::path::Path;
 
-
 // Filesystem lib
 use std::fs::{self,File};
 
@@ -180,15 +179,13 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
             }
         };
 
-        println!("sd; {sd}");
-
-        // Destionation directory
+        // Destination directory
         let dd: String = {
             let temp = dest.display().to_string();
             let buffer: Vec<&str> = temp.split('/').collect();
             // For absolute path
             if buffer.len() > 1 {
-            	format!("{}", &buffer[buffer.len()-1] )
+            	format!("{}", dest.display().to_string() )
             }
             // For relative path
             else {
@@ -201,9 +198,6 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
             	}
            }
         };
-
-        println!("dd; {dd}");
-
 
         // To detect if "source" is a file
         if source.is_file(){
@@ -281,8 +275,6 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
                         continue;
                     }
                 };
-
-                println!("npath file; {:?}",npath);
 
                 // Open file
                 let mut b_file = match File::open(d) {
