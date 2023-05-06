@@ -25,7 +25,7 @@ use std::sync::mpsc;
 // Read the input byte per byte
 pub fn read_input() -> Result<String,String> {
 
-    let mut entry = String::new();
+    let entry: String;
 
     //  Pipeline for thread communicaton of u8 type
     // sc = send channel ( with method; send([variable_x]); )
@@ -59,10 +59,11 @@ pub fn read_input() -> Result<String,String> {
 
                 // Send buffer variable to channel/pipeline
                 if buffer > [0] {
-                    match sc.send( buffer ) {
+                    let uresult = match sc.send( buffer ) {
                         Ok(_d) => Ok( "Data sent to thread channel".to_string() ),
                         Err(_e) => Err( "Fail comunicating trough threads".to_string() ),
                     };
+                    drop(uresult);
                 }
                 if buffer == [b'\n'] {
                     break;
