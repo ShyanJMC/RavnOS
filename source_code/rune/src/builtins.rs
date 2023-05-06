@@ -24,6 +24,9 @@ use std::fs::{self,File};
 // Read lib
 use std::io::Read;
 
+// Unix lib
+use std::os::unix::fs::symlink;
+
 use libstream::Stream;
 use libstream::search_replace_string;
 
@@ -37,7 +40,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 16] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "history", "home", "info", "mkdir", "mkfile", "list", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 17] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "history", "home", "info", "mkdir", "mkfile", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
 _cd [PATH]: If path do not exist, goes to user home directory
@@ -53,6 +56,7 @@ _info: show system's information
 _mkdir [dest] : create directory if it has more subdirectories it will create them recursively
 _mkfile [file]: create empty file
 _list: list builtins like this
+_ln [source] [dest]: creates a link [dest] to [source]
 _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _$?: print the latest command exit return, not include builtins";
@@ -322,6 +326,13 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
     }
 }
 
+fn ln(source: &Path, dest: &Path) -> Result<String,()>{
+    match symlink(source, dest) {
+        Ok(d) => Ok( format!("Symlink created for {} pointing to {}", dest.display(), source.display() )),
+        Err(_e) => Err(()),
+    }
+}
+
 // Create a directory recusively
 // We use "Path" type because it returns absolute path
 fn mkdir_r(path: &Path) -> Result<u64,String> {
@@ -491,7 +502,22 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "list" {
             result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}\n\n{HBUILTINS}", LBUILTINS);
             Ok(result)
-        } else if command == "clear" {
+        } else if command == "ln" {
+            let buff = b_arguments.split(' ').collect::<Vec<&str>>();
+            if buff.len() < 2 {
+                let str: &str = "Very few arguments; [SOURCE] [DESTINATION]";
+                return Err(str);
+            }
+
+            let source = buff[0];
+            let destination = buff[1];
+
+            drop(buff);
+            match ln( Path::new(source), Path::new(destination) ) {
+                Ok(d) => Ok(d),
+                Err(_e) => Err("Error creating symlink, maybe destionation already exists"),
+            }
+        }else if command == "clear" {
             clear();
             Ok( " ".to_string() )
         } else {
