@@ -90,7 +90,7 @@ fn main(){
 
 		// Saves the input
 		// in each loop is shadowed
-		let mut command = String::new();
+		let command: String;
 
 		// Prompt
 		print!("\n> ");
