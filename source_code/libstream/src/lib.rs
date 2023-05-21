@@ -34,6 +34,29 @@ pub struct DirStructure {
     pub fbuff: Vec<String>,
 }
 
+
+pub struct Colors {
+    pub reset: &'static str,
+    pub red: &'static str,
+    pub green: &'static str,
+    pub yellow: &'static str,
+    pub cyan: &'static str,
+}
+
+// Use ASCII scapes
+impl Colors {
+    pub fn new() -> Colors {
+        Colors {
+            reset: "\x1B[0m",
+            red: "\x1B[31m",
+            green: "\x1B[32m",
+            yellow: "\x1B[33m",
+            cyan: "\x1B[36m",
+        }
+    }
+}
+
+
 /// Outputs
 pub trait Stream {
     fn readkey(&self) -> HashMap<String, String>;
@@ -618,7 +641,7 @@ pub fn binary_search<'a>(filename: &String, mut file: File, ssearch: String) -> 
 // the return is the new string
 pub fn search_replace_string<'a>(input: &String, maatch: &String, replacement: &String) -> Result<String,&'a str> {
     if input.contains(maatch){
-        
+
         // Takes the "input" data, and replace maatch's  data with replacement's data
         // Save the return (the new str) in "b_input"
         let b_new = input.replace( maatch.as_str(), replacement.as_str() );
