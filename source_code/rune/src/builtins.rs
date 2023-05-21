@@ -40,7 +40,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 17] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "history", "home", "info", "mkdir", "mkfile", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 18] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "expand", "history", "home", "info", "mkdir", "mkfile", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
 _cd [PATH]: If path do not exist, goes to user home directory
@@ -50,6 +50,7 @@ _disable_history: disable save commands to history without truncate the file
 _enable_history: enable save commands to history
 _env: show environment variables
 _exit: exit the shell properly
+_expand: convert tabs to spaces in file (with new file; [FILE]-edited), with '-t X' you can specify the spaces number, first the options (if exists) and then the file.
 _history: show the history commands with date and time
 _home: returns the current user's home directory
 _info: show system's information
@@ -61,7 +62,7 @@ _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.20.18";
+const RUNE_VERSION: &str = "v0.21.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -106,6 +107,77 @@ fn environmentvar() -> String {
         buffer2 = buffer2 + &data.to_string();
     }
     buffer2
+}
+
+fn expand(input: String) -> String {
+    if input.contains("-t"){
+        let s_number: usize;
+        let args = input.split(' ').collect::<Vec<&str>>();
+        if args[0] == "-t" {
+            s_number = args[1].trim().parse().unwrap();
+            let mut file = match File::open(args[2].clone()) {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("Error opening file; {e}");
+                    return String::from("Error opening file.");
+                }
+            };
+            let mut string = String::new();
+            file.read_to_string(&mut string);
+            let ninput: String = match search_replace_string(&string,&'\t'.to_string(), &" ".repeat(s_number)){
+                Ok(d) => d,
+                Err(_e) => String::from("Matching not found"),
+            };
+
+            let nfile = args[2].clone().to_string() + "-edited";
+            match mkfile(Path::new(&nfile)) {
+                Ok(_d) => (),
+                Err(e) => {
+                    eprintln!("Error creating file; {e}");
+                    return String::from("Error creating file.");
+                }
+            };
+            match fs::write(nfile.clone(), ninput) {
+                Ok(_d) => println!("Writted new string into new file; {nfile}"),
+                Err(e) => {
+                    eprintln!("Error writting new file; {e}");
+                    return String::from("Error writting file.");
+                }
+            };
+        }
+        "".to_string()
+    } else {
+        let mut file = match File::open(input.clone()) {
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("Error opening file; {e}");
+                return String::from("Error opening file.");
+            }
+        };
+        let mut string = String::new();
+        file.read_to_string(&mut string);
+        let ninput: String = match search_replace_string(&string,&'\t'.to_string(), &"        ".to_string()){
+            Ok(d) => d,
+            Err(_e) => String::from("Matching not found"),
+        };
+
+        let nfile = input + "-edited";
+        match mkfile(Path::new(&nfile)) {
+            Ok(_d) => (),
+            Err(e) => {
+                eprintln!("Error creating file; {e}");
+                return String::from("Error creating file.");
+            }
+        };
+        match fs::write(nfile.clone(), ninput) {
+            Ok(_d) => println!("Writted new string into new file; {nfile}"),
+            Err(e) => {
+                eprintln!("Error writting new file; {e}");
+                return String::from("Error writting file.");
+            }
+        };
+        "".to_string()
+    }
 }
 
 fn cd(path: String) -> () {
@@ -328,7 +400,7 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
 
 fn ln(source: &Path, dest: &Path) -> Result<String,()>{
     match symlink(source, dest) {
-        Ok(d) => Ok( format!("Symlink created for {} pointing to {}", dest.display(), source.display() )),
+        Ok(_d) => Ok( format!("Symlink created for {} pointing to {}", dest.display(), source.display() )),
         Err(_e) => Err(()),
     }
 }
@@ -443,6 +515,9 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         if command == "info" {
             // "self" is needed because this is a module, not a binary
             result = info();
+            Ok(result)
+        } else if command == "expand" {
+            result = expand(b_arguments);
             Ok(result)
         } else if command == "mkdir" {
             match mkdir_r( Path::new( &b_arguments ) ) {
