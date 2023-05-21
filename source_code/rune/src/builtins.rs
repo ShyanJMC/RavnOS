@@ -40,7 +40,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 18] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "expand", "history", "home", "info", "mkdir", "mkfile", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 19] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "expand", "history", "home", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
 _cd [PATH]: If path do not exist, goes to user home directory
@@ -429,6 +429,51 @@ fn mkfile(path: &Path) -> Result<(),&str> {
     }
 }
 
+fn fdmove(input: String) {
+    let arguments: Vec<_> = input.split(' ').collect();
+    let n_arguments = arguments.len();
+    let destination = arguments[n_arguments-1];
+    let mut source: Vec<String> = Vec::new();
+
+    for i in &arguments[0..(n_arguments-1)] {
+        source.push(i.to_string());
+    }
+
+    if Path::new(destination).is_dir() {
+        let mut ndestination: Vec<String> = Vec::new();
+        for i in &source {
+            let snumber: Vec<_> = i.split('/').collect();
+            let sbuffer = snumber.len();
+            ndestination.push(destination.to_string() + snumber.iter().nth(sbuffer-1).unwrap());
+        }
+        for i in &source {
+            for j in &ndestination {
+                match copy(Path::new(&i),Path::new(&j)){
+                    Ok(_d) => {
+                        remove_f_d(i.clone());
+                        ()
+                    }
+                    Err(e) => eprintln!("{e}"),
+                };
+
+            }
+        }
+
+    } else {
+        for i in &source {
+            match copy(Path::new(&i),Path::new(&destination)){
+                Ok(_d) => {
+                    remove_f_d(i.to_string());
+                    ()
+                },
+                Err(e) => eprintln!("{e}"),
+            };
+
+        }
+
+    }
+}
+
 fn pwd() -> Result<String, String> {
 	match env::current_dir() {
 		Ok(d) => Ok( d.display().to_string() ),
@@ -542,6 +587,9 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                     }
                 },
             }
+        } else if command == "move" {
+            fdmove(b_arguments);
+            Ok(" ".to_string())
         } else if command == "rm" {
             match remove_f_d(b_arguments) {
                 Ok(()) => Ok( "".to_string() ),
