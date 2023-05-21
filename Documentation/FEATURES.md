@@ -83,7 +83,7 @@ At today, the latest version is; v0.31.0-ALPHA
 ## Huginn (sysinit)
 
 - [ ] Read TOML configuration files.
-- [ ] Start process based in configuration file.
+- [X] Start process based in configuration file.
 - [ ] Socket support.
 - [ ] Command line interface (C.L.I.) to manage services/daemons.
 
