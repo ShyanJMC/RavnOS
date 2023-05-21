@@ -3,6 +3,21 @@
 version = 3
 
 [[package]]
+name = "huginn"
+version = "0.1.0"
+dependencies = [
+ "libcommand",
+ "libstream",
+]
+
+[[package]]
+name = "libcommand"
+version = "0.1.0"
+dependencies = [
+ "libstream",
+]
+
+[[package]]
 name = "libconfarg"
 version = "0.5.2"
 
