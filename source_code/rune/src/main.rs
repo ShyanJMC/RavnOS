@@ -138,7 +138,7 @@ fn main(){
 		// Shadowing
 		// I directly do here the trim to avoid the same operation in the rest of code so many times
 		let mut command = command.trim();
-		let mut buffer: String;
+		let buffer: String;
 		// Replace "~" with the home
 		if command.contains('~') {
 			// Shadowing
