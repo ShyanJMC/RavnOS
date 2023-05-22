@@ -25,9 +25,13 @@ Is my personal project to make from scratch an operative system, take this proje
 
 ## Screenshots
 
+| ![](images/huginn.png) |
+| :---: |
+| Huginn v0.1.0 |
+
 | ![](images/rune.png) |
 | :---: |
-| Rune v0.18.16 |
+| Rune v0.21.18 |
 
 | ![](images/show.png) |
 | :---: |
