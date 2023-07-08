@@ -259,8 +259,4 @@ Donate me crypto;
 
    0x27219354cC70dE84e7fae0B71E9e2605026b10B2
 
-Also you can donate trough crypto-coffee.xyz;
-
-   - https://crypto-coffee.xyz/donate/shyanjmc
-
 And if you know me personally, let me know that you have donated, since that moment we will share a beer (or mead if you are man/women of honor).
