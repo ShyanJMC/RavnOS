@@ -45,6 +45,9 @@ Is my personal project to make from scratch an operative system, take this proje
 | :---: |
 | Search v0.6.1 |
 
+## Run over existing OS
+
+To run the system over an existing OS, the kernel must have support for POSIX (specially file, vector, hashmap and threads).
 
 ## Target
 
