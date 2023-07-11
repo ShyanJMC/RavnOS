@@ -23,6 +23,13 @@ Is my personal project to make from scratch an operative system, take this proje
 	- [Contributions and support](#contributions-and-support)
 <!-- TOC END -->
 
+## Objetive
+
+The objetive of RavnOS is make an operative system minimalist, self hosted, stable and secure.
+
+Think in this situation; you are in a wood or in another place, working with critical systems and without the time or resources to fix issues in the compilation
+process or fixing regretion issues. RavnOS fix that isolating the system and the user parts.
+
 ## Screenshots
 
 | ![](images/huginn.png) |
