@@ -40,9 +40,10 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 19] = ["cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "expand", "history", "home", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 20] = ["basename", "cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "expand", "history", "home", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
+_basename: takes a path and prints the last filename
 _cd [PATH]: If path do not exist, goes to user home directory
 _clear: Clean the screen
 _cp [source] [destination]: copy file or directory from [source] to [destination]
@@ -94,6 +95,21 @@ fn info() -> String {
     };
 
     format!(" RavnOS's Shell\n Copyright 2023 Joaquin 'ShyanJMC' Crespo\n Rune Shell version; {RUNE_VERSION}\n OS: {}\n User: {} ",os, user)
+}
+
+// Takes the path and returns only the file_name
+fn basename(input: &String) -> Option<String> {
+    // Path generation
+    let _buff = Path::new(&input);
+    // If "file_name" type returns is equal to Some(X) do that
+    if let Some(filename) = _buff.file_name() {
+        // To avoid use "unexpect" or "unwrap"
+        return Some(match filename.to_str(){
+            Some(d) => d,
+            None => "",
+        }.to_string());
+    }
+    None
 }
 
 fn environmentvar() -> String {
@@ -557,7 +573,13 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
     let command = command.trim();
 
     if LBUILTINS.contains( &command ){
-        if command == "info" {
+        if command == "basename" {
+            match basename(&b_arguments){
+                Some(d) => Ok(d),
+                None => Err("no file name"),
+            }
+
+        } else if command == "info" {
             // "self" is needed because this is a module, not a binary
             result = info();
             Ok(result)
