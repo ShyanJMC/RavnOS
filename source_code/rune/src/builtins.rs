@@ -41,7 +41,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 22] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "home", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 23] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "home", "join", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -59,6 +59,7 @@ _expand: convert tabs to spaces in file (with new file; [FILE]-edited), with '-t
 _head -n [number] [file]: show [number] first lines for file.
 _history: show the history commands with date and time
 _home: returns the current user's home directory
+_join [file_1] [file_n] [destination]: joins files into destionation file
 _info: show system's information
 _mkdir [dest] : create directory if it has more subdirectories it will create them recursively
 _mkfile [file]: create empty file
@@ -68,7 +69,7 @@ _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.23.18";
+const RUNE_VERSION: &str = "v0.24.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -467,6 +468,43 @@ fn head(input: &String){
 
 }
 
+fn join(input: &String) -> Result<(),&str> {
+    if input.len() <= 2 {
+        return Err("Not enough arguments");
+    }
+    let mut files: Vec<&str> = input.split_whitespace().collect();
+    let lenght = files.len();
+    let mut destination = match File::create(files[lenght-1]) {
+        Ok(d) => d,
+        Err(e) => {
+            return Err("Error creating destination file");
+        }
+    };
+    let mut fdata = String::new();
+    files.remove(lenght-1);
+
+    for i in files {
+        let file = match File::open(i.trim()){
+                Ok(d) => d,
+                Err(e) => {
+                    return Err("Error opening file");
+                }
+        };
+        let mut buff = BufReader::new(&file);
+        buff.read_to_string(&mut fdata);
+        drop(file);
+
+    }
+    match destination.write_all(fdata.as_bytes()){
+        Ok(d) => return Ok(()),
+        Err(e) => {
+            return Err("Error writting destination file from buffer");
+        }
+    };
+
+
+}
+
 fn ln(source: &Path, dest: &Path) -> Result<String,()>{
     match symlink(source, dest) {
         Ok(_d) => Ok( format!("Symlink created for {} pointing to {}", dest.display(), source.display() )),
@@ -703,6 +741,11 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "env" {
             result = environmentvar();
             Ok(result)
+        } else if command == "join" {
+            match join(&b_arguments){
+                Ok(()) => Ok("Joined files".to_string()),
+                Err(e) => Err("Error joining files, verify arguments, permissions and/or space"),
+            }
         } else if command == "list" {
             result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}\n\n{HBUILTINS}", LBUILTINS);
             Ok(result)
