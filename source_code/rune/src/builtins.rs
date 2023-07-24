@@ -21,8 +21,9 @@ use std::path::Path;
 // Filesystem lib
 use std::fs::{self,File};
 
-// Read lib
-use std::io::Read;
+// IO lib
+use std::io::{self, Read, Write};
+use std::io::BufReader;
 
 // Unix lib
 use std::os::unix::fs::symlink;
@@ -40,18 +41,22 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 20] = ["basename", "cd", "clear", "cp", "disable_history", "enable_history", "env", "exit", "expand", "history", "home", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 22] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "home", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
+Remember respect the positions of each argument
+
 _basename: takes a path and prints the last filename
 _cd [PATH]: If path do not exist, goes to user home directory
 _clear: Clean the screen
 _cp [source] [destination]: copy file or directory from [source] to [destination]
 _disable_history: disable save commands to history without truncate the file
 _enable_history: enable save commands to history
+_echo_raw: show string into stdout without interpreting special characters
 _env: show environment variables
 _exit: exit the shell properly
 _expand: convert tabs to spaces in file (with new file; [FILE]-edited), with '-t X' you can specify the spaces number, first the options (if exists) and then the file.
+_head -n [number] [file]: show [number] first lines for file.
 _history: show the history commands with date and time
 _home: returns the current user's home directory
 _info: show system's information
@@ -232,6 +237,10 @@ fn clear() {
     print!("\x1B[1;1H\x1B[2J");
 }
 
+fn echo_raw(input: &String) -> String {
+
+    input.clone()
+}
 // This function not copy directly using the kernel's filesystem
 // to avoid any possible issue we copy bit a bit directly.
 fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
@@ -414,6 +423,50 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
     }
 }
 
+fn head(input: &String){
+    let mut file;
+    let mut fdata = Default::default();
+    let mut lnumber = 0;
+    let mut cnumber = 1;
+    let s_lnumber: Vec<&str> = input.split(' ').collect();
+    if input.contains("-n") && s_lnumber.len() <=2 {
+        eprintln!("Not enough arguments. Remember; head -n [number] [file]");
+        return;
+    }
+    if input.contains("-n"){
+        lnumber = match s_lnumber[1].trim().parse(){
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("Error parsing str to int; {e}\nVerify kernel compatiblity with Rust std");
+                return;
+            }
+        };
+    }
+    file = match File::open(s_lnumber[2].trim()){
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("Error opening file; {e}");
+                return;
+            }
+    };
+
+    drop(s_lnumber);
+
+    // Is more eficient that a raw read
+    let mut buff = BufReader::new(&file);
+    buff.read_to_string(&mut fdata);
+    drop(file);
+    for i in fdata.lines(){
+        if cnumber <= lnumber {
+            println!("{i}");
+            cnumber += 1;
+        } else {
+            return;
+        }
+    }
+
+}
+
 fn ln(source: &Path, dest: &Path) -> Result<String,()>{
     match symlink(source, dest) {
         Ok(_d) => Ok( format!("Symlink created for {} pointing to {}", dest.display(), source.display() )),
@@ -583,9 +636,15 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             // "self" is needed because this is a module, not a binary
             result = info();
             Ok(result)
-        } else if command == "expand" {
+        } else if command == "echo_raw" {
+            result = echo_raw(&b_arguments);
+            Ok(result)
+        }else if command == "expand" {
             result = expand(b_arguments);
             Ok(result)
+        } else if command == "head" {
+            head(&b_arguments);
+            Ok("".to_string())
         } else if command == "mkdir" {
             match mkdir_r( Path::new( &b_arguments ) ) {
                 Ok(_d) => Ok( "".to_string() ),
