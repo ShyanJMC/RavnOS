@@ -30,6 +30,7 @@ use std::os::unix::fs::symlink;
 
 use libstream::Stream;
 use libstream::search_replace_string;
+use libstream::file_filter;
 
 
 
@@ -41,7 +42,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 23] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "home", "join", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 24] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "home", "id", "join", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -59,8 +60,9 @@ _expand: convert tabs to spaces in file (with new file; [FILE]-edited), with '-t
 _head -n [number] [file]: show [number] first lines for file.
 _history: show the history commands with date and time
 _home: returns the current user's home directory
-_join [file_1] [file_n] [destination]: joins files into destionation file
+_id [options]: show current user, '-n' for name and '-u' for UUID
 _info: show system's information
+_join [file_1] [file_n] [destination]: joins files into destionation file
 _mkdir [dest] : create directory if it has more subdirectories it will create them recursively
 _mkfile [file]: create empty file
 _list: list builtins like this
@@ -69,7 +71,7 @@ _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.24.18";
+const RUNE_VERSION: &str = "v0.25.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -468,6 +470,42 @@ fn head(input: &String){
 
 }
 
+fn id(input: &String) -> Result<String,String> {
+    let mut buff = String::new();
+    let username = match env::var("USERNAME") {
+        Ok(d) => d,
+        Err(e) => e.to_string(),
+    };
+    if input.contains("-n"){
+        buff = username.to_string();
+    }
+    if input.contains("-u"){
+        let uuid_line = file_filter(&"/etc/passwd".to_string(), username.clone());
+        // The return is a Vec<&str> we take the [1] position
+        let uuid = ( uuid_line[0].split(':').collect::<Vec<&str>>() )[2];
+        let guid = ( uuid_line[0].split(':').collect::<Vec<&str>>() )[3];
+        println!("userid {{ {uuid} }} ");
+        println!("groupid {{ {guid} }} ");
+    }
+
+    if input.contains("-g"){
+        let guid_line = file_filter(&"/etc/group".to_string(), username);
+        let mut groups = String::new();
+        for i in guid_line {
+                let name = (i.split(':').collect::<Vec<&str>>())[0].clone();
+                let id = (i.split(':').collect::<Vec<&str>>())[2].clone();
+                groups = groups + &name + ":" + &id + "\n";
+        }
+
+        println!("groups; {{ {groups} }}");
+    }
+
+    if !input.contains("-u") && !input.contains("-n") && !input.contains("-g"){
+        println!("Usage; '-n' for name, '-g' for user groups and '-u' for UUIDs");
+    }
+    Ok(buff)
+}
+
 fn join(input: &String) -> Result<(),&str> {
     if input.len() <= 2 {
         return Err("Not enough arguments");
@@ -741,6 +779,11 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "env" {
             result = environmentvar();
             Ok(result)
+        } else if command == "id" {
+            match id(&b_arguments) {
+                Ok(d) => Ok(d),
+                Err(e) => Err("Error getting environment variables"),
+            }
         } else if command == "join" {
             match join(&b_arguments){
                 Ok(()) => Ok("Joined files".to_string()),
