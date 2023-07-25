@@ -42,7 +42,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 24] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "home", "id", "join", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 25] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -789,7 +789,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Ok(()) => Ok("Joined files".to_string()),
                 Err(e) => Err("Error joining files, verify arguments, permissions and/or space"),
             }
-        } else if command == "list" {
+        } else if command == "list" || command == "help"{
             result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}\n\n{HBUILTINS}", LBUILTINS);
             Ok(result)
         } else if command == "ln" {
