@@ -42,7 +42,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 25] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 26] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -65,13 +65,15 @@ _info: show system's information
 _join [file_1] [file_n] [destination]: joins files into destionation file
 _mkdir [dest] : create directory if it has more subdirectories it will create them recursively
 _mkfile [file]: create empty file
+_move [source] [destination]: move files or directory to new location
+_nl [file]: prints each line with number
 _list: list builtins like this
 _ln [source] [dest]: creates a link [dest] to [source]
 _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.25.18";
+const RUNE_VERSION: &str = "v0.26.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -619,6 +621,24 @@ fn fdmove(input: String) {
     }
 }
 
+fn number_line(input: &String) -> Result<(),&str>{
+    let mut lnumber = 0;
+    let mut fdata = String::new();
+    let file = match File::open( Path::new(input.trim()) ){
+        Ok(d) => d,
+        Err(e) => return Err("Error opening file, check permissions and file system"),
+    };
+    let mut buff = BufReader::new(&file);
+    buff.read_to_string(&mut fdata);
+    drop(file);
+    for i in fdata.lines(){
+        lnumber += 1;
+        println!("{lnumber}   {i}");
+    }
+    Ok(())
+
+}
+
 fn pwd() -> Result<String, String> {
 	match env::current_dir() {
 		Ok(d) => Ok( d.display().to_string() ),
@@ -747,6 +767,11 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "move" {
             fdmove(b_arguments);
             Ok(" ".to_string())
+        } else if command == "nl" {
+            match number_line(&b_arguments){
+                Ok(()) => Ok("".to_string()),
+                Err(e) => Err("Error opening file, check permissions and file system"),
+            }
         } else if command == "rm" {
             match remove_f_d(b_arguments) {
                 Ok(()) => Ok( "".to_string() ),
