@@ -12,6 +12,9 @@
 //!
 //! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023
 
+// Time lib
+use core::time::Duration;
+
 // Environment lib
 use std::env;
 
@@ -24,6 +27,9 @@ use std::fs::{self,File};
 // IO lib
 use std::io::{self, Read, Write};
 use std::io::BufReader;
+
+// thread lib
+use std::{thread, time};
 
 // Unix lib
 use std::os::unix::fs::symlink;
@@ -42,7 +48,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 26] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "$?"];
+const LBUILTINS: [&str; 27] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "sleep", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -71,9 +77,10 @@ _list: list builtins like this
 _ln [source] [dest]: creates a link [dest] to [source]
 _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
+_sleep [seconds]:[nanoseconds]: waits X seconds with Y nanoseconds
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.26.18";
+const RUNE_VERSION: &str = "v0.28.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -709,6 +716,14 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
     Ok(())
 }
 
+fn sleep(input: &String) -> Result<(), String> {
+    let seconds = (input.split(':').collect::<Vec<&str>>())[0].parse::<u64>().unwrap();
+    let nanoseconds = (input.split(':').collect::<Vec<&str>>())[1].parse::<u32>().unwrap();
+    let finalcount = Duration::new( seconds, nanoseconds );
+    thread::sleep(finalcount);
+    Ok(())
+}
+
 ////////////////
 
 // Check the builtin executing it
@@ -832,7 +847,10 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Ok(d) => Ok(d),
                 Err(_e) => Err("Error creating symlink, maybe destionation already exists"),
             }
-        }else if command == "clear" {
+        } else if command == "sleep" {
+            sleep(&b_arguments);
+            Ok("".to_string() )
+        } else if command == "clear" {
             clear();
             Ok( " ".to_string() )
         } else {
