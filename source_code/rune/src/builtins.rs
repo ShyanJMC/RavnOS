@@ -48,7 +48,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 28] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "seq", "sleep", "$?"];
+const LBUILTINS: [&str; 29] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "seq", "sleep", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -63,6 +63,7 @@ _echo_raw: show string into stdout without interpreting special characters
 _env: show environment variables
 _exit: exit the shell properly
 _expand: convert tabs to spaces in file (with new file; [FILE]-edited), with '-t X' you can specify the spaces number, first the options (if exists) and then the file.
+_false [option] : returns a false value, '-n' for rune native or '-u' for 1 (false in Unix and GNU).
 _head -n [number] [file]: show [number] first lines for file.
 _history: show the history commands with date and time
 _home: returns the current user's home directory
@@ -81,7 +82,7 @@ _seq [first]:[last]:[increment] : start a secuence from [first] to [last] using 
 _sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.29.18";
+const RUNE_VERSION: &str = "v0.30.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -434,6 +435,20 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
 
 
     }
+}
+
+fn ffalse(input: &String) -> Result<(),bool>{
+    if !input.contains("-n") && !input.contains("-u") {
+        eprintln!("Bad arguments; -n or -u");
+        return Err(false);
+    } else if input.contains("-n") {
+        println!("false");
+        return Ok(());
+    } else if input.contains("-u"){
+        println!("1");
+        return Ok(());
+    }
+    return Err(false);
 }
 
 fn head(input: &String){
@@ -833,6 +848,17 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "env" {
             result = environmentvar();
             Ok(result)
+        } else if command == "false" {
+            let fresult = ffalse(&b_arguments);
+            // Why not use "if let" inside "if/else" ?
+            // Well; https://github.com/rust-lang/rust/issues/53667
+            if let Ok(()) = fresult {
+                return Err("");
+            }
+            else if let Err(false) = fresult {
+                return Ok("".to_string());
+            }
+            Ok("".to_string())
         } else if command == "id" {
             match id(&b_arguments) {
                 Ok(d) => Ok(d),
