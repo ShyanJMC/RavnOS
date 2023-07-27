@@ -48,7 +48,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 27] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "sleep", "$?"];
+const LBUILTINS: [&str; 28] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "seq", "sleep", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -77,10 +77,11 @@ _list: list builtins like this
 _ln [source] [dest]: creates a link [dest] to [source]
 _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
-_sleep [seconds]:[nanoseconds]: waits X seconds with Y nanoseconds
+_seq [first]:[last]:[increment] : start a secuence from [first] to [last] using [increment] as increment.
+_sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.28.18";
+const RUNE_VERSION: &str = "v0.29.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -724,6 +725,19 @@ fn sleep(input: &String) -> Result<(), String> {
     Ok(())
 }
 
+fn seq(input: &String) -> Result<(), String> {
+    let first = (input.split(':').collect::<Vec<&str>>())[0].parse::<u64>().unwrap();
+    let last = (input.split(':').collect::<Vec<&str>>())[1].parse::<u64>().unwrap();
+    let increment = (input.split(':').collect::<Vec<&str>>())[2].parse::<u64>().unwrap();
+
+    let mut count = first;
+    while count <= last {
+        println!("{count}");
+        count += increment;
+    }
+    Ok(())
+}
+
 ////////////////
 
 // Check the builtin executing it
@@ -849,6 +863,9 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             }
         } else if command == "sleep" {
             sleep(&b_arguments);
+            Ok("".to_string() )
+        } else if command == "seq" {
+            seq(&b_arguments);
             Ok("".to_string() )
         } else if command == "clear" {
             clear();
