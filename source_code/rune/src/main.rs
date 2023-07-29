@@ -12,6 +12,9 @@
 //!
 //! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023
 
+// Core crate
+use core::str::from_utf8;
+
 // Process crate
 use std::process;
 use std::process::ExitStatus;
@@ -21,6 +24,10 @@ use std::collections::HashMap;
 // Buffer reading crate
 use std::io::{self,	Write};
 use std::fs::OpenOptions;
+use std::fs::File;
+
+// Path lib
+use std::path::Path;
 
 // Import the files inside scope
 mod builtins;
@@ -138,6 +145,34 @@ fn main(){
 		// Shadowing
 		// I directly do here the trim to avoid the same operation in the rest of code so many times
 		let mut command = command.trim();
+		let mut second_part: &str = "";
+		let mut stdout_redirect: Vec<&str> = Vec::new();
+		let mut b_stdout_redirect: bool = false;
+		let mut stderr_redirect: Vec<&str> = Vec::new();
+		let mut b_stderr_redirect: bool = false;
+		let mut stdout_file_redirect: Vec<&str> = Vec::new();
+		let mut b_stdout_file_redirect: bool = false;
+
+		if command.contains("|") {
+			stdout_redirect = command.split("|").map(|e| e.trim()).collect();
+			command = stdout_redirect[0];
+			second_part = stdout_redirect[1];
+			b_stdout_redirect = true;
+			drop(stdout_redirect);
+		} else if command.contains("2>") {
+			stderr_redirect = command.split("2>").map(|e| e.trim()).collect();
+			command = stderr_redirect[0];
+			second_part = stderr_redirect[1];
+			b_stderr_redirect = true;
+			drop(stderr_redirect);
+		} else if command.contains(">") {
+			stdout_file_redirect = command.split(">").map(|e| e.trim()).collect();
+			command = stdout_file_redirect[0];
+			second_part = stdout_file_redirect[1];
+			b_stdout_file_redirect = true;
+			drop(stdout_file_redirect);
+		}
+
 		let buffer: String;
 		// Replace "~" with the home
 		if command.contains('~') {
@@ -299,20 +334,60 @@ fn main(){
 					}
 				};
 
-				match io::stdout().write_all(&output.stdout) {
-					Ok(d) => d,
-					Err(_e) => {
-						eprintln!("Error writing command's stdout to system's stdout, the output can not be printed");
-						continue;
+				if b_stdout_file_redirect {
+					let mut ffile = match OpenOptions::new().create(true).append(true).open(&second_part) {
+						Ok(d) => d,
+						Err(e) => {
+							eprintln!("Error creating/opening file");
+							continue;
+						},
+					};
+
+					match ffile.write_all(&output.stdout) {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error writing command's stdout to file");
+							continue;
+						}
 					}
 				}
+				if b_stderr_redirect {
+					let mut efile = match OpenOptions::new().create(true).append(true).open(&second_part) {
+						Ok(d) => d,
+						Err(e) => {
+							eprintln!("Error creating/opening file");
+							continue;
+						},
+					};
 
-				match io::stderr().write_all(&output.stderr) {
-					Ok(d) => d,
-					Err(_e) => {
-						eprintln!("Error writing command's stderr to system's stderr, the stderr can not be printed");
-						continue;
+					match efile.write_all(&output.stderr) {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error writing command's stdout to file");
+							continue;
+						}
 					}
+				}
+				if b_stdout_redirect {
+						println!("Not implemented yet");
+				}
+				if !b_stdout_redirect && !b_stderr_redirect && !b_stdout_file_redirect {
+					match io::stdout().write_all(&output.stdout) {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error writing command's stdout to system's stdout, the output can not be printed");
+							continue;
+						}
+					}
+
+					match io::stderr().write_all(&output.stderr) {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error writing command's stderr to system's stderr, the stderr can not be printed");
+							continue;
+						}
+					}
+
 				}
 
 				coreturn = output.status;
