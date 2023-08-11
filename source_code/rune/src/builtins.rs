@@ -48,7 +48,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 29] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "seq", "sleep", "$?"];
+const LBUILTINS: [&str; 30] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "seq", "sleep", "tail", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -79,10 +79,11 @@ _ln [source] [dest]: creates a link [dest] to [source]
 _pwd: print the current directory
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _seq [first]:[last]:[increment] : start a secuence from [first] to [last] using [increment] as increment.
-_sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds
+_sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds.
+_tail [number] [file] : show the last [number] lines of [file].
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.30.18";
+const RUNE_VERSION: &str = "v0.31.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -753,6 +754,40 @@ fn seq(input: &String) -> Result<(), String> {
     Ok(())
 }
 
+fn tail(input: &String) -> Result<(), String> {
+    if input.len() <= 1 {
+        eprintln!("Not enough arguments; _tail [number] [file] : show the last [number] lines of [file].");
+        return Err(" ".to_string());
+    }
+    let mut lnumber = (input.split(' ').collect::<Vec<&str>>())[0].parse::<u64>().unwrap();
+    let vfile = File::open( Path::new( (input.split(' ').collect::<Vec<&str>>())[1] )).unwrap();
+
+    let mut buffer = BufReader::new(&vfile);
+    let mut fdata = String::new();
+
+    buffer.read_to_string(&mut fdata);
+
+    let lines_vfile: Vec<&str> = fdata.lines().collect();
+    let mut lines_file: usize = fdata.lines().count() -1;
+
+    drop(buffer);
+    let mut buffer: Vec<&str> = Vec::new();
+
+    while lnumber > 0 {
+
+        buffer.push(lines_vfile[lines_file]);
+        lines_file -= 1;
+        lnumber -= 1;
+    }
+
+    for line in buffer.iter().rev() {
+        println!("{}", line);
+    }
+
+
+    Ok(())
+}
+
 ////////////////
 
 // Check the builtin executing it
@@ -892,6 +927,9 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             Ok("".to_string() )
         } else if command == "seq" {
             seq(&b_arguments);
+            Ok("".to_string() )
+        } else if command == "tail" {
+            tail(&b_arguments);
             Ok("".to_string() )
         } else if command == "clear" {
             clear();
