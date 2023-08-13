@@ -105,6 +105,7 @@ is used trough containers schema.
 - Musl target:
 
    This is not mandatory, but I recommend it to build as static.
+	 MUSL only is available for linux, for the rest use glibc.
 
 ## Versioning
 
@@ -147,11 +148,13 @@ Contains information about each system part.
 
 ## Build
 
+Right now the OS is in alpha, so right now you can only test it another OS.
+
 There are two ways for build RavnOS. ;
 
 - Cargo
 
-Remember replace; [x86_64/aarch64] for your case.
+Remember replace; [x86_64/aarch64] and [linux/windows/etc] for your case.
 
 I recommend use this configuration inside "~/.cargo/.config";
 
@@ -165,13 +168,13 @@ rustflags = ["-C","opt-level=2","-C","debuginfo=0","-C", "target-feature=+crt-st
 Add the target built with musl;
 
 ```rust
-rustup toolchain add --force-non-host stable-x86_64-unknown-linux-musl && rustup target add [x86_64/aarch64]-unknown-linux-musl
+rustup target add [x86_64/aarch64]-unknown-[linux/windows/etc]-musl
 ```
 
 To build;
 
 ```rust
-cargo build --release --target [x86_64/aarch64]-unknown-linux-musl
+cargo build --release --target [x86_64/aarch64]-unknown-[linux/windows/etc]-musl
 ```
 
 
@@ -192,7 +195,7 @@ rustc --crate-type=rlib --crate-name libfile [PATH_TO_LIBFILE]/src/lib.rs -o lib
 Then you can link into the binary build;
 
 ```rust
-rustc --target=[x86_64/aarm64/etc]-unknown-linux-musl -C opt-level=2 -C target-feature=+crt-static --extern libconfarg=libconfarg.rlib --extern libfile=libfile.rlib --extern libstream=libstream.rlib [COMPONENT]/src/main.rs -o [final_name]
+rustc --target=[x86_64/aarm64/etc]-unknown-[linux/windows/etc]-musl -C opt-level=2 -C target-feature=+crt-static --extern libconfarg=libconfarg.rlib --extern libfile=libfile.rlib --extern libstream=libstream.rlib [COMPONENT]/src/main.rs -o [final_name]
 ```
 
 with above command, you will the final binary of [COMPONENT] in static final form (aka; statically linked) with optimization level 2 and specific libs (crates).
