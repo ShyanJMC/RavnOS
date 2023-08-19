@@ -23,6 +23,9 @@ use std::collections::HashMap;
 // I/O crate
 // Buffer reading crate
 use std::io::{self,	Write};
+use std::io::Read;
+use std::io::BufReader;
+
 use std::fs::OpenOptions;
 use std::fs::File;
 
@@ -313,28 +316,30 @@ fn main(){
 					// Stdio::piped connect parent and child processes
 					proc.arg(j).stdout(Stdio::piped()).stderr(Stdio::piped());
 				}
-				// Spawn execute it
-				let nproc = match proc.spawn(){
-					Ok(d) => d,
-					Err(_e) => {
-						eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
-						continue;
-					}
 
-				};
-				// Drop function cleans from memory the variable and data
-				drop(proc);
-
-				// Wait_with_output method waits to command finishes and collect output, return Output struct
-				let output = match nproc.wait_with_output() {
-					Ok(d) => d,
-					Err(_e) => {
-						eprintln!("Error waiting for command and taking process' stdin stdout stderr");
-						continue;
-					}
-				};
 
 				if b_stdout_file_redirect {
+					// Spawn execute it
+					let nproc = match proc.spawn(){
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
+							continue;
+						}
+
+					};
+					// Drop function cleans from memory the variable and data
+					//drop(proc);
+
+					// Wait_with_output method waits to command finishes and collect output, return Output struct
+					let output = match nproc.wait_with_output() {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
+							continue;
+						}
+					};
+
 					let mut ffile = match OpenOptions::new().create(true).append(true).open(&second_part) {
 						Ok(d) => d,
 						Err(e) => {
@@ -352,6 +357,27 @@ fn main(){
 					}
 				}
 				if b_stderr_redirect {
+					// Spawn execute it
+					let nproc = match proc.spawn(){
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
+							continue;
+						}
+
+					};
+					// Drop function cleans from memory the variable and data
+					//drop(proc);
+
+					// Wait_with_output method waits to command finishes and collect output, return Output struct
+					let output = match nproc.wait_with_output() {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
+							continue;
+						}
+					};
+
 					let mut efile = match OpenOptions::new().create(true).append(true).open(&second_part) {
 						Ok(d) => d,
 						Err(e) => {
@@ -369,9 +395,111 @@ fn main(){
 					}
 				}
 				if b_stdout_redirect {
-						println!("Not implemented yet");
+
+					// Take the command, pass to "trim" for clean tabs, spaces and others, split it by spaces and then convert each to string
+					// collecting to strings.
+					let buff2 = second_part.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+					// Take the first, which is the binary to execute
+					let binn2 = &buff2[0].clone();
+					let binn2 = binn2.trim();
+					let mut arguments2: Vec<String> = Vec::new();
+
+					// TIterate from zero to the size of buff var.
+					for i in 0..buff2.len() {
+						// Avoid the first, remember, the binary
+						if i == 0{
+							continue;
+						} else {
+							arguments2.push(buff2[i].clone());
+						}
+					}
+
+					// Drop function cleans from memory the variable and data
+					drop(buff2);
+
+					// Execute the "binn" binary with the arguments collected in "arguments"
+					// "Spawn" execute the command with the arguments. The child process is not lineal to this, will run in
+					// 		another core
+					let mut proc2 = process::Command::new( binn2.trim() );
+					// Arg method inserts the arguments in the Command struct, because of that we can iterate adding it
+					for j in arguments2 {
+						// Stdout configure process' stdout
+						// Stdio::piped connect parent and child processes
+						// Stderr configure process' stderr
+						// Stdio::piped connect parent and child processes
+						proc2.arg(j).stdout(Stdio::piped()).stderr(Stdio::piped());
+					}
+
+					// Spawn execute it
+					let nproc11 = match proc.spawn(){
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
+							continue;
+						}
+
+					};
+
+					// output1 takes the normal stdout
+					let output1 = nproc11.stdout.unwrap();
+					// the output1 stdout is now the stdin for proc2
+					proc2.stdin(Stdio::from(output1));
+
+					// Spawn execute it
+					let mut nproc2 = match proc2.spawn(){
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
+							continue;
+						}
+
+					};
+					// Drop function cleans from memory the variable and data
+					drop(proc2);
+
+
+					// Wait_with_output method waits to command finishes and collect output, return Output struct
+					let output2 = match nproc2.wait_with_output() {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
+							continue;
+						}
+					};
+
+					match io::stdout().write_all(&output2.stdout) {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error writing command's stdout to system's stdout, the output can not be printed");
+							continue;
+						}
+					}
+
+					coreturn = output2.status;
+
 				}
 				if !b_stdout_redirect && !b_stderr_redirect && !b_stdout_file_redirect {
+					// Spawn execute it
+					let nproc = match proc.spawn(){
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
+							continue;
+						}
+
+					};
+					// Drop function cleans from memory the variable and data
+					//drop(proc);
+
+					// Wait_with_output method waits to command finishes and collect output, return Output struct
+					let output = match nproc.wait_with_output() {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
+							continue;
+						}
+					};
+
 					match io::stdout().write_all(&output.stdout) {
 						Ok(d) => d,
 						Err(_e) => {
@@ -390,7 +518,30 @@ fn main(){
 
 				}
 
-				coreturn = output.status;
+				if !b_stdout_redirect {
+					// Spawn execute it
+					let nproc = match proc.spawn(){
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
+							continue;
+						}
+
+					};
+					// Drop function cleans from memory the variable and data
+					//drop(proc);
+
+					// Wait_with_output method waits to command finishes and collect output, return Output struct
+					let output = match nproc.wait_with_output() {
+						Ok(d) => d,
+						Err(_e) => {
+							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
+							continue;
+						}
+					};
+					coreturn = output.status;
+				} else {
+				}
 
 
 			} else {
