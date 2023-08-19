@@ -159,7 +159,7 @@ fn expand(input: String) -> String {
                 }
             };
             let mut string = String::new();
-            file.read_to_string(&mut string);
+            let _ = file.read_to_string(&mut string);
             let ninput: String = match search_replace_string(&string,&'\t'.to_string(), &" ".repeat(s_number)){
                 Ok(d) => d,
                 Err(_e) => String::from("Matching not found"),
@@ -191,7 +191,7 @@ fn expand(input: String) -> String {
             }
         };
         let mut string = String::new();
-        file.read_to_string(&mut string);
+        let _ = file.read_to_string(&mut string);
         let ninput: String = match search_replace_string(&string,&'\t'.to_string(), &"        ".to_string()){
             Ok(d) => d,
             Err(_e) => String::from("Matching not found"),
@@ -483,7 +483,7 @@ fn head(input: &String){
 
     // Is more eficient that a raw read
     let mut buff = BufReader::new(&file);
-    buff.read_to_string(&mut fdata);
+    let _ = buff.read_to_string(&mut fdata);
     drop(file);
     for i in fdata.lines(){
         if cnumber <= lnumber {
@@ -555,7 +555,7 @@ fn join(input: &String) -> Result<(),&str> {
                 }
         };
         let mut buff = BufReader::new(&file);
-        buff.read_to_string(&mut fdata);
+        let _ = buff.read_to_string(&mut fdata);
         drop(file);
 
     }
@@ -621,7 +621,7 @@ fn fdmove(input: String) {
             for j in &ndestination {
                 match copy(Path::new(&i),Path::new(&j)){
                     Ok(_d) => {
-                        remove_f_d(i.clone());
+                        let _ = remove_f_d(i.clone());
                         ()
                     }
                     Err(e) => eprintln!("{e}"),
@@ -634,7 +634,7 @@ fn fdmove(input: String) {
         for i in &source {
             match copy(Path::new(&i),Path::new(&destination)){
                 Ok(_d) => {
-                    remove_f_d(i.to_string());
+                    let _ = remove_f_d(i.to_string());
                     ()
                 },
                 Err(e) => eprintln!("{e}"),
@@ -653,7 +653,7 @@ fn number_line(input: &String) -> Result<(),&str>{
         Err(e) => return Err("Error opening file, check permissions and file system"),
     };
     let mut buff = BufReader::new(&file);
-    buff.read_to_string(&mut fdata);
+    let _ = buff.read_to_string(&mut fdata);
     drop(file);
     for i in fdata.lines(){
         lnumber += 1;
@@ -765,7 +765,7 @@ fn tail(input: &String) -> Result<(), String> {
     let mut buffer = BufReader::new(&vfile);
     let mut fdata = String::new();
 
-    buffer.read_to_string(&mut fdata);
+    let _ = buffer.read_to_string(&mut fdata);
 
     let lines_vfile: Vec<&str> = fdata.lines().collect();
     let mut lines_file: usize = fdata.lines().count() -1;
@@ -818,7 +818,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             result = expand(b_arguments);
             Ok(result)
         } else if command == "head" {
-            head(&b_arguments);
+            let _ = head(&b_arguments);
             Ok("".to_string())
         } else if command == "mkdir" {
             match mkdir_r( Path::new( &b_arguments ) ) {
@@ -844,7 +844,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 },
             }
         } else if command == "move" {
-            fdmove(b_arguments);
+            let _ = fdmove(b_arguments);
             Ok(" ".to_string())
         } else if command == "nl" {
             match number_line(&b_arguments){
@@ -862,7 +862,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         		Err(_e) => Err("Error getting actual working directory")
         	}
         } else if command == "cd" {
-            cd(b_arguments);
+            let _ = cd(b_arguments);
             Ok(" ".to_string())
         } else if command == "cp" {
             let buff = b_arguments.split(' ').collect::<Vec<&str>>();
@@ -923,16 +923,16 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Err(_e) => Err("Error creating symlink, maybe destionation already exists"),
             }
         } else if command == "sleep" {
-            sleep(&b_arguments);
+            let _ = sleep(&b_arguments);
             Ok("".to_string() )
         } else if command == "seq" {
-            seq(&b_arguments);
+            let _ = seq(&b_arguments);
             Ok("".to_string() )
         } else if command == "tail" {
-            tail(&b_arguments);
+            let _ = tail(&b_arguments);
             Ok("".to_string() )
         } else if command == "clear" {
-            clear();
+            let _ = clear();
             Ok( " ".to_string() )
         } else {
             Err( "builtin not recognized" )
