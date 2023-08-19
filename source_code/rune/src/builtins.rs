@@ -83,7 +83,7 @@ _sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds.
 _tail [number] [file] : show the last [number] lines of [file].
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.31.18";
+const RUNE_VERSION: &str = "v0.32.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
