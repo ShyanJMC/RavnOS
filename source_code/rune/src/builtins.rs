@@ -20,6 +20,7 @@ use std::env;
 
 // Path lib
 use std::path::Path;
+use std::path::PathBuf;
 
 // Filesystem lib
 use std::fs::{self,File};
@@ -32,11 +33,19 @@ use std::io::BufReader;
 use std::{thread, time};
 
 // Unix lib
-use std::os::unix::fs::symlink;
+use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 
-use libstream::Stream;
-use libstream::search_replace_string;
-use libstream::file_filter;
+// Process lib
+use std::process::{self, Command};
+
+// RavnOS libraries
+extern crate libconfarg;
+extern crate libfile;
+extern crate libstream;
+
+use libconfarg::RavnArguments;
+use libfile::RavnSizeFile;
+use libstream::{Stream, search_replace_string, file_filter, getprocs, Epoch};
 
 
 
@@ -48,42 +57,43 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 30] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "pwd", "rm", "seq", "sleep", "tail", "$?"];
+const LBUILTINS: [&str; 31] = ["basename", "cd", "clear", "cp", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "pwd", "rm", "seq", "sleep", "tail", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
 
-_basename: takes a path and prints the last filename
-_cd [PATH]: If path do not exist, goes to user home directory
-_clear: Clean the screen
-_cp [source] [destination]: copy file or directory from [source] to [destination]
-_disable_history: disable save commands to history without truncate the file
-_enable_history: enable save commands to history
-_echo_raw: show string into stdout without interpreting special characters
-_env: show environment variables
-_exit: exit the shell properly
+_basename: takes a path and prints the last filename.
+_cd [PATH]: If path do not exist, goes to user home directory.
+_clear: Clean the screen.
+_cp [source] [destination]: copy file or directory from [source] to [destination].
+_disable_history: disable save commands to history without truncate the file.
+_enable_history: enable save commands to history.
+_echo_raw: show string into stdout without interpreting special characters.
+_env: show environment variables.
+_exit: exit the shell properly.
 _expand: convert tabs to spaces in file (with new file; [FILE]-edited), with '-t X' you can specify the spaces number, first the options (if exists) and then the file.
 _false [option] : returns a false value, '-n' for rune native or '-u' for 1 (false in Unix and GNU).
 _head -n [number] [file]: show [number] first lines for file.
-_history: show the history commands with date and time
-_home: returns the current user's home directory
-_id [options]: show current user, '-n' for name and '-u' for UUID
-_info: show system's information
-_join [file_1] [file_n] [destination]: joins files into destionation file
-_mkdir [dest] : create directory if it has more subdirectories it will create them recursively
-_mkfile [file]: create empty file
-_move [source] [destination]: move files or directory to new location
-_nl [file]: prints each line with number
-_list: list builtins like this
-_ln [source] [dest]: creates a link [dest] to [source]
-_pwd: print the current directory
+_history: show the history commands with date and time.
+_home: returns the current user's home directory.
+_id [options]: show current user, '-n' for name and '-u' for UUID.
+_info: show system's information.
+_join [file_1] [file_n] [destination]: joins files into destionation file.
+_mkdir [dest] : create directory if it has more subdirectories it will create them recursively.
+_mkfile [file]: create empty file.
+_move [source] [destination]: move files or directory to new location.
+_nl [file]: prints each line with number.
+_list: list builtins like this.
+_ln [source] [dest]: creates a link [dest] to [source].
+_ls [options] [path_1] [path_n]: lists files and directories in path.
+_pwd: print the current directory.
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _seq [first]:[last]:[increment] : start a secuence from [first] to [last] using [increment] as increment.
 _sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds.
 _tail [number] [file] : show the last [number] lines of [file].
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.32.18";
+const RUNE_VERSION: &str = "v0.33.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -576,6 +586,185 @@ fn ln(source: &Path, dest: &Path) -> Result<String,()>{
     }
 }
 
+fn ls(input: &String) -> String {
+    // env::args() takes program's arguments
+    // collect() takes arguments and returns in tuple
+    let mut arguments: Vec<String> = input.split(' ').map(|e| e.to_string()).collect();
+
+    // Result buffer
+    let mut buffer: Vec<String> = Vec::new();
+
+    // Return buffer
+    let mut returnbuff = String::new();
+
+    // Init the configuration as clean
+    let mut config = libconfarg::LsConfiguration {
+        verbose: false,
+        proc: false,
+        lines: false,
+        clean: false,
+    };
+
+    if arguments.checkarguments_help("ls") {
+        returnbuff = format!(" ");
+        return returnbuff;
+    }
+
+    // The vec<String> return with files index is stored in "lists" variable.
+    // The method is from RavnArguments trait.
+    let mut options: Vec<&str> = Vec::new();
+    let mut lists: Vec<String> = arguments.check_arguments("ls", &mut options);
+
+    if lists.is_empty() || lists.contains(&"".to_string()) || lists.contains(&".".to_string()) {
+        lists.push(env::current_dir().unwrap().display().to_string());
+    }
+
+    if  lists.contains(&"".to_string()) {
+        let index = lists.iter().position(|e| *e == "").unwrap();
+        lists.remove(index);
+
+    } else if lists.contains(&".".to_string()) {
+        let index = lists.iter().position(|e| *e == ".").unwrap();
+        lists.remove(index);
+    }
+
+    for confs in options {
+        if confs == "verbose" {
+            config.verbose = true;
+        } else if confs == "proc" {
+            config.proc = true;
+        } else if confs == "lines" {
+            config.lines = true;
+        } else if confs == "clean" {
+            config.clean = true;
+        }
+    }
+
+    if config.proc {
+        let procs: Vec<String> = getprocs();
+        for strings in procs {
+            returnbuff = returnbuff + &format!("{strings}");
+        }
+        return returnbuff;
+    }
+
+    for names in &lists {
+
+        // Entries store the files and directories inside path.
+        let mut entries = Vec::new();
+        // File buffer is used to store the file name if argument is not a dir.
+        // Check if arguments is directory.
+
+        match Path::new(names).is_dir() {
+            true => {
+                entries = names.readdir();
+                // I must use here and not as "readdir" method because if not the type will be forced to
+                // "()" (which is more like a unit and at the same time is a type also).
+                entries.sort();
+            }
+            false => {
+                // Check if arguments is a file.
+                if Path::new(names).is_file() {
+                    // If is a file, store it in variables.
+                    entries.push(PathBuf::from(names));
+                }
+            }
+        }
+
+        if config.lines && !config.clean {
+            if !config.verbose {
+                returnbuff = returnbuff + &format!("\nList of elements in {}; {}", names, &entries.len());
+                return returnbuff;
+            } else {
+                returnbuff = returnbuff + &format!("\nList of elements in {}; {}\n", names, &entries.len());
+            }
+
+        }
+
+        if config.verbose && !config.clean {
+            // Here I found an issue; as "readdir" returns Vec<PathBuf>, "metadata" will have
+            // issues in some paths like; ~/ . Because of that, we must convert it to String.
+            for h in &entries {
+                // 1; the name of file/directory
+                // 2; the time modified
+                // 3; the permissions (in octal)
+                // 4: the owner
+                // 5: the size
+
+                // Here "unwrap()" is not a good option because can fail, for example; if some symlink not points properly
+                // because of it I use a check.
+
+                if !h.exists() {
+                    // eprintln! shows string in stderr
+                    eprintln!(
+                        "{}: File/dir/symlink do not exist, is invalid or is broken.",
+                        h.display()
+                    );
+                    // break the loop for current stage
+                    continue;
+                }
+
+                let fmetadata = fs::metadata(h.display().to_string()).unwrap();
+
+                // ID numeric to user
+                let ownerout = Command::new("/usr/bin/id")
+                    .arg(fmetadata.uid().to_string())
+                    .output()
+                    .unwrap();
+                // When you use "output" method, the stdout of command will be stored in
+                // "stdout" field. But, is stored as u8, and needs to be processed as utf8.
+
+                let owner = match std::str::from_utf8(&ownerout.stdout) {
+                    Err(_e) => format!("Error reading owner, check file/dir permissions."),
+                    Ok(d) => match d.strip_suffix('\n') {
+                        Some(d) => {
+                            let buffer = d.clone();
+                            let buffer2 = buffer.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+                            drop(buffer);
+                            format!("{} {}", buffer2[0], buffer2[1])
+                        },
+                        None => format!("Error reading owner, check file/dir permissions."),
+                    },
+                };
+
+                // We convert "h" to Path type, we get the last file/dir name and we convert it to static str.
+                let df_name = Path::new(h).file_name().expect("Fail getting path's filename").to_str().expect("Fail getting path's filename");
+
+                returnbuff = returnbuff + &format!(
+                    "{} \t[{}]\t{:?}\t[{:?}] {}\n",
+                    match &h.is_file() {
+                        true => format!("f: {df_name}"),
+                        false => format!("d: {df_name}/"),
+                    },
+                    fmetadata.mtime().epoch_to_human(),
+                    // Permissions
+                    // Permissions method by default will return in bits, if you want the octal chmod
+                    // syntax need to use ".mode()".
+                    // As Octal is not a type by it self, we need use "format!" macro to convert it in
+                    // octal mode, the return is a String.
+                    format!("{:o}", fmetadata.permissions().mode()).permission_to_human(),
+                    owner,
+                    fmetadata.size().size_to_human()
+                );
+            }
+            // Show filename and size.
+            for ee in &buffer {
+                returnbuff = returnbuff + &format!("{}", ee);
+            }
+        } else {
+            if !config.clean && lists.len() > 1 {
+                returnbuff = returnbuff + &format!("{names} {{ \n{}\n }}\n", &entries.iter().map(|e| e.display().to_string() + "\n").collect::<String>().trim());
+            } else {
+                returnbuff = returnbuff + &format!("{names} {{ \n{}\n }}", &entries.iter().map(|e| e.display().to_string() + "\n").collect::<String>().trim());
+            }
+        }
+
+        // I must do this because if I use "clean()" will be dropped from memory.
+        buffer = Vec::new();
+    }
+    returnbuff
+}
+
 // Create a directory recusively
 // We use "Path" type because it returns absolute path
 fn mkdir_r(path: &Path) -> Result<u64,String> {
@@ -922,6 +1111,9 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Ok(d) => Ok(d),
                 Err(_e) => Err("Error creating symlink, maybe destionation already exists"),
             }
+        } else if command == "ls" {
+            result = ls(&b_arguments);
+            Ok(result)
         } else if command == "sleep" {
             let _ = sleep(&b_arguments);
             Ok("".to_string() )
