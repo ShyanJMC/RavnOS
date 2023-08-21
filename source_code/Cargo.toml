@@ -3,7 +3,6 @@
 members = [
   "huginn",
 	"show",
-	"ls",
 	"libcommand",
 	"libconfarg",
 	"libstream",

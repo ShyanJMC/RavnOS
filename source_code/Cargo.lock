@@ -33,15 +33,6 @@ name = "libstream"
 version = "0.6.3"
 
 [[package]]
-name = "ls"
-version = "0.7.7"
-dependencies = [
- "libconfarg",
- "libfile",
- "libstream",
-]
-
-[[package]]
 name = "rune"
 version = "0.33.18"
 dependencies = [
