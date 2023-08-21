@@ -43,7 +43,7 @@ dependencies = [
 
 [[package]]
 name = "rune"
-version = "0.21.18"
+version = "0.32.18"
 dependencies = [
  "libconfarg",
  "libfile",
