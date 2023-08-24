@@ -82,24 +82,21 @@ impl RavnFile for File {
     // Honestly, I needed help with the movement of bits ("<<" ">>") on octets because of that ChatGPT helped me a lot with
     // the "while" loop.
     fn encode_base64(&self) -> String {
-        let base64_chars: Vec<char> =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-                .chars()
-                .collect();
+        let base64_chars: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+            .chars()
+            .collect();
         let mut i = 0;
         let mut input = Vec::new();
         let mut output = String::new();
 
-        // Here I use the ownership to use as temporal without the requeriment of keep in memory an unnecessary variable.
         {
             let mut file = self.clone();
-            match file.read_to_end(&mut input){
-                Ok(d) => (),
-                Err(e) => return String::from("Error reading file"),
+            match file.read_to_end(&mut input) {
+                Ok(_) => (),
+                Err(e) => return format!("Error reading file: {}", e),
             };
         }
 
-        // In this loop ChatGPT helped me a lot with the movements of bits
         while i < input.len() {
             let mut octet_a = 0u8;
             let mut octet_b = 0u8;
@@ -115,12 +112,7 @@ impl RavnFile for File {
                 octet_c = input[i + 2];
             }
 
-            let mut triple =
-                (u32::from(octet_a) << 16) | (u32::from(octet_b) << 8) | u32::from(octet_c);
-
-            if i + 2 >= input.len() {
-                triple <<= 8;
-            }
+            let triple = (u32::from(octet_a) << 16) | (u32::from(octet_b) << 8) | u32::from(octet_c);
 
             for j in (0..4).rev() {
                 let index = (triple >> (6 * j)) & 0x3F;
@@ -132,20 +124,12 @@ impl RavnFile for File {
 
         let len = output.len();
 
-        // Remember, in Base64 the "=" and "==" are the end in the string.
-        // "=" is called "padding"
         match len % 4 {
             0 => (),
             1 => output.push('='),
             2 => output.push_str("=="),
             _ => unreachable!(),
         }
-
-        // If we not convert in String using UTF-8 as encoding the result will be in u8 only
-        output = match String::from_utf8(output.into_bytes()) {
-            Ok(s) => s,
-            Err(_) => return String::from("encode_base64; Error converting to UTF-8"),
-        };
 
         output
     }
