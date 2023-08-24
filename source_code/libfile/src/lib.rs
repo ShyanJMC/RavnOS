@@ -93,7 +93,10 @@ impl RavnFile for File {
         // Here I use the ownership to use as temporal without the requeriment of keep in memory an unnecessary variable.
         {
             let mut file = self.clone();
-            file.read_to_end(&mut input).expect("Error reading file");
+            match file.read_to_end(&mut input){
+                Ok(d) => (),
+                Err(e) => return String::from("Error reading file"),
+            };
         }
 
         // In this loop ChatGPT helped me a lot with the movements of bits
@@ -141,7 +144,7 @@ impl RavnFile for File {
         // If we not convert in String using UTF-8 as encoding the result will be in u8 only
         output = match String::from_utf8(output.into_bytes()) {
             Ok(s) => s,
-            Err(_) => panic!("encode_base64; Error converting to UTF-8"),
+            Err(_) => return String::from("encode_base64; Error converting to UTF-8"),
         };
 
         output
@@ -186,7 +189,7 @@ pub fn decode_base64(base64: &String) -> Result<Vec<u8>, String> {
     let input = base64.clone();
     let mut output = Vec::new();
     let mut chars = input.chars().peekable();
-    
+
     while let Some(c1) = chars.next() {
         if c1 == '=' {
             break; // padding character, end of data
