@@ -38,6 +38,9 @@ use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 // Process lib
 use std::process::{self, Command};
 
+// Time lib
+use std::time::SystemTime;
+
 // RavnOS libraries
 extern crate libconfarg;
 extern crate libfile;
@@ -57,7 +60,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 34] = ["base64", "basename", "cd", "clear", "cp", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "sleep", "tail", "$?"];
+const LBUILTINS: [&str; 35] = ["base64", "basename", "cd", "clear", "cp", "date", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "sleep", "tail", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -67,6 +70,7 @@ _basename: takes a path and prints the last filename.
 _cd [PATH]: If path do not exist, goes to user home directory.
 _clear: Clean the screen.
 _cp [source] [destination]: copy file or directory from [source] to [destination].
+_date: display the current time and date in UTC-0 (which is the same that GTM-0).
 _decodebase64 [input] [file]: decocde input from base64 to file.
 _disable_history: disable save commands to history without truncate the file.
 _enable_history: enable save commands to history.
@@ -96,7 +100,7 @@ _sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds.
 _tail [number] [file] : show the last [number] lines of [file].
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.36.18";
+const RUNE_VERSION: &str = "v0.37.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -161,6 +165,12 @@ fn basename(input: &String) -> Option<String> {
         }.to_string());
     }
     None
+}
+
+fn date() -> Result<String,String> {
+    let systime = SystemTime::now();
+    let diff = systime.duration_since(SystemTime::UNIX_EPOCH);
+    Ok( format!("{}", (diff.unwrap().as_secs() as i64).epoch_to_human()) )
 }
 
 fn decodebase64(input: &String) -> Option<String> {
@@ -1060,6 +1070,9 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "info" {
             // "self" is needed because this is a module, not a binary
             result = info();
+            Ok(result)
+        } else if command == "date" {
+            result = date().unwrap();
             Ok(result)
         } else if command == "decodebase64" {
             match decodebase64(&b_arguments) {
