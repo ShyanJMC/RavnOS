@@ -57,7 +57,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 33] = ["base64", "basename", "cd", "clear", "cp", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "pwd", "rm", "seq", "sleep", "tail", "$?"];
+const LBUILTINS: [&str; 34] = ["base64", "basename", "cd", "clear", "cp", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "sleep", "tail", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -88,6 +88,7 @@ _nl [file]: prints each line with number.
 _list: list builtins like this.
 _ln [source] [dest]: creates a link [dest] to [source].
 _ls [options] [path_1] [path_n]: lists files and directories in path.
+_proc: show process using /proc directory
 _pwd: print the current directory.
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _seq [first]:[last]:[increment] : start a secuence from [first] to [last] using [increment] as increment.
@@ -95,7 +96,7 @@ _sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds.
 _tail [number] [file] : show the last [number] lines of [file].
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.35.18";
+const RUNE_VERSION: &str = "v0.36.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -898,6 +899,15 @@ fn number_line(input: &String) -> Result<(),&str>{
 
 }
 
+fn proc() -> Result<String, String> {
+    let procs: Vec<String> = getprocs();
+    let mut strreturn = String::new();
+    for strings in procs {
+        strreturn = strreturn + &format!("{strings}\n");
+    }
+    Ok(strreturn)
+}
+
 fn pwd() -> Result<String, String> {
 	match env::current_dir() {
 		Ok(d) => Ok( d.display().to_string() ),
@@ -1100,6 +1110,11 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             match remove_f_d(b_arguments) {
                 Ok(()) => Ok( "".to_string() ),
                 Err(_e) => Err("Error deleting object"),
+            }
+        } else if command == "proc" {
+            match proc() {
+                Ok(d) => Ok(d),
+                Err(e) => Err("Error getting processes"),
             }
         } else if command == "pwd" {
         	match pwd(){
