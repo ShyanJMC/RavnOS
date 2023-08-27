@@ -60,7 +60,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 35] = ["base64", "basename", "cd", "clear", "cp", "date", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "sleep", "tail", "$?"];
+const LBUILTINS: [&str; 36] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "sleep", "tail", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -69,6 +69,7 @@ _base64 [file] [file_n]: encode file/s into base64.
 _basename: takes a path and prints the last filename.
 _cd [PATH]: If path do not exist, goes to user home directory.
 _clear: Clean the screen.
+_count [file]: Show the file's number lines and words
 _cp [source] [destination]: copy file or directory from [source] to [destination].
 _date: display the current time and date in UTC-0 (which is the same that GTM-0).
 _decodebase64 [input] [file]: decocde input from base64 to file.
@@ -100,7 +101,7 @@ _sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds.
 _tail [number] [file] : show the last [number] lines of [file].
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.37.18";
+const RUNE_VERSION: &str = "v0.38.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -281,6 +282,15 @@ fn expand(input: String) -> String {
         };
         "".to_string()
     }
+}
+
+fn count(input: &String) -> String {
+    let mut output = String::new();
+    output = format!("Lines {{ {} }} \n",fs::read_to_string(input).expect("Error reading file.").lines().count());
+
+    output = output + &format!("Words - Letters {{ {:?} }} \n",fs::read_to_string(input).expect("Error reading file").word_count() );
+
+    output
 }
 
 fn cd(path: String) -> () {
@@ -1067,6 +1077,9 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Some(d) => Ok(d),
                 None => Err("no file or error opening"),
             }
+        } else if command == "count" {
+            result = count(&b_arguments);
+            Ok(result)
         } else if command == "info" {
             // "self" is needed because this is a module, not a binary
             result = info();
