@@ -47,7 +47,7 @@ extern crate libfile;
 extern crate libstream;
 
 use libconfarg::RavnArguments;
-use libfile::{decode_base64, RavnSizeFile, RavnFile};
+use libfile::{decode_base64, which, RavnSizeFile, RavnFile};
 use libstream::{Stream, search_replace_string, file_filter, getprocs, Epoch};
 
 
@@ -60,7 +60,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 36] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "sleep", "tail", "$?"];
+const LBUILTINS: [&str; 37] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "sleep", "tail", "which", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -99,9 +99,10 @@ _rm [target]: delete the file or directory, if the directory have files inside m
 _seq [first]:[last]:[increment] : start a secuence from [first] to [last] using [increment] as increment.
 _sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds.
 _tail [number] [file] : show the last [number] lines of [file].
+_which [binary]: show where is located the binary based in PATH environment variable.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.38.18";
+const RUNE_VERSION: &str = "v0.39.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -1053,6 +1054,25 @@ fn tail(input: &String) -> Result<(), String> {
     Ok(())
 }
 
+fn fwhich(input: &String) -> Result<String,&str> {
+    let result: Vec<String> = which(input.to_string());
+    let mut sreturn = String::new();
+    if !result.is_empty() {
+        if result.len() > 1 {
+            for i in result {
+                sreturn = sreturn + &"," + &i;
+            }
+        } else {
+            for i in result {
+                sreturn = i;
+            }
+        }
+        return Ok(sreturn);
+    } else {
+        return Err("Not found");
+    }
+}
+
 ////////////////
 
 // Check the builtin executing it
@@ -1220,6 +1240,11 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "tail" {
             let _ = tail(&b_arguments);
             Ok("".to_string() )
+        } else if command == "which" {
+            match fwhich(&b_arguments) {
+                Ok(d) => Ok(d),
+                Err(e) => Err("Not found"),
+            }
         } else if command == "clear" {
             let _ = clear();
             Ok( " ".to_string() )
