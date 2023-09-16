@@ -106,7 +106,7 @@ _tail [number] [file] : show the last [number] lines of [file].
 _which [binary]: show where is located the binary based in PATH environment variable.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.41.18";
+const RUNE_VERSION: &str = "v0.41.19";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -932,9 +932,17 @@ fn ls(input: &String) -> String {
 
                 returnbuff = returnbuff + &format!(
                     "{} \t[{}]\t{:?}\t[{:?}] {}\n",
-                    match &h.is_file() {
-                        true => format!("f: {df_name}"),
-                        false => format!("d: {df_name}/"),
+                    if h.is_symlink() {
+                        format!("s: {df_name} -> {}", std::fs::read_link(h.clone()).unwrap().display())
+                    } else if h.is_file() {
+                        format!("f: {df_name}")
+                    // Why not use "else" directly?
+                    // because maybe there are one error
+                    // with the inode and is not correctly identified
+                    } else if h.is_dir() {
+                        format!("d: {df_name}/")
+                    } else {
+                        format!("?: {df_name}")
                     },
                     fmetadata.mtime().epoch_to_human(),
                     // Permissions
