@@ -22,23 +22,10 @@
 /// Each field determine if option is enabled or not.
 /// Show configuration struct
 pub struct ShowConfiguration {
-    pub size: bool,
-    pub datetime: bool,
-    pub lines: bool,
-    pub owner: bool,
-    pub permission: bool,
     pub clean: bool,
     pub stdin: bool,
-    pub proc: bool,
     pub hexa: bool,
-    pub base64: bool,
-    pub fbase64: bool,
-    pub words: bool,
-    pub env: bool,
-    pub date: bool,
     pub diff: bool,
-    pub systeminfo: bool,
-    pub which: bool,
 }
 
 /// Ls configuration struct
@@ -86,6 +73,8 @@ impl RavnArguments for Vec<String> {
                         options.push("file");
                     } else if indexs == "-i" {
                         options.push("stdin");
+                    } else {
+                        options.push("");
                     }
                 }
             }
@@ -96,36 +85,12 @@ impl RavnArguments for Vec<String> {
                         options.push("clean");
                     } else if indexs == "--stdin" {
                         options.push("stdin");
-                    } else if indexs == "-s" {
-                        options.push("size");
-                    } else if indexs == "-d" {
-                        options.push("datetime");
-                    } else if indexs == "-l" {
-                        options.push("lines")
-                    } else if indexs == "-o" {
-                        options.push("owner");
-                    } else if indexs == "-p" {
-                        options.push("permission");
-                    } else if indexs == "--proc" {
-                        options.push("proc");
-                    } else if indexs == "-w" {
-                        options.push("words");
                     } else if indexs == "--hexa" {
                         options.push("hexa");
-                    } else if indexs == "-e" {
-                        options.push("environment");
-                    } else if indexs == "--date" {
-                        options.push("date");
                     } else if indexs == "--diff" {
                         options.push("diff");
-                    } else if indexs == "--info" {
-                        options.push("systeminfo");
-                    } else if indexs == "--base64" {
-                        options.push("base64");
-                    } else if indexs == "--which" {
-                        options.push("which");
-                    } else if indexs == "--from-base64" {
-                        options.push("from_base64");
+                    } else {
+                        options.push("");
                     }
                 }
             }
@@ -139,6 +104,8 @@ impl RavnArguments for Vec<String> {
                         options.push("lines");
                     } else if indexs == "-c" {
                         options.push("clean");
+                    } else {
+                        options.push("");
                     }
                 }
             }
@@ -160,6 +127,8 @@ impl RavnArguments for Vec<String> {
                         options.push("ravnkey");
                     } else if indexs == "-b" {
                         options.push("binary");
+                    } else {
+                        options.push("");
                     }
                 }
             }
@@ -204,23 +173,9 @@ impl RavnArguments for Vec<String> {
 
             Options:
             --------
-            -s      : show file size in bytes .
-            -d      : show datetime format (in UTC).
-            -l      : show file's lines.
-            -o      : show owner.
-            -p      : show file permissions.
             -c      : clean verbose to show only file's content.
-            -w      : show file's words.
-            -e      : show ENV environment variable value.
-            --proc  : show the system's processes. Only in Unix systems.
             --stdin : read from standard input in addition of 'file n'.
-            --hexa  : show the file's content in hexa. For binary and text.
-            --base64: show the file's content in base64. Only for text files right now.
-            --date  : show current date based in Unix Epoch.
-            --diff  : show the differences of second file with respect to first.
-            --info  : show basic information about the operative system.
-            --which : show where is located the binary provided as argument
-            --from-base64 [stdin] [file] : convert base64 encoding to binary, saving to file
+            --hexa  : show file's content in hexadecimal.
             "
                 .to_string();
                 eprintln!("{}", var1);

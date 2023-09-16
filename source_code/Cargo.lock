@@ -34,7 +34,7 @@ version = "0.6.3"
 
 [[package]]
 name = "rune"
-version = "0.39.18"
+version = "0.41.18"
 dependencies = [
  "libconfarg",
  "libfile",
@@ -46,14 +46,5 @@ name = "search"
 version = "0.6.1"
 dependencies = [
  "libconfarg",
- "libstream",
-]
-
-[[package]]
-name = "show"
-version = "0.14.3"
-dependencies = [
- "libconfarg",
- "libfile",
  "libstream",
 ]

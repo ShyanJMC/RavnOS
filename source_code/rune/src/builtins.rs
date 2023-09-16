@@ -41,6 +41,9 @@ use std::process::{self, Command};
 // Time lib
 use std::time::SystemTime;
 
+// HashMap lib
+use std::collections::HashMap;
+
 // RavnOS libraries
 extern crate libconfarg;
 extern crate libfile;
@@ -60,7 +63,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 37] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "sleep", "tail", "which", "$?"];
+const LBUILTINS: [&str; 38] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "show","sleep", "tail", "which", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -97,12 +100,13 @@ _proc: show process using /proc directory
 _pwd: print the current directory.
 _rm [target]: delete the file or directory, if the directory have files inside must use '-r' argument to include them.
 _seq [first]:[last]:[increment] : start a secuence from [first] to [last] using [increment] as increment.
+_show [options] [file_1] [file_n]: show file's content, file's content in hexadecimal, system information or difference.
 _sleep [seconds]:[nanoseconds] : waits X seconds with Y nanoseconds.
 _tail [number] [file] : show the last [number] lines of [file].
 _which [binary]: show where is located the binary based in PATH environment variable.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.39.18";
+const RUNE_VERSION: &str = "v0.41.18";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -133,7 +137,135 @@ fn info() -> String {
         varvalue
     };
 
-    format!(" RavnOS's Shell\n Copyright 2023 Joaquin 'ShyanJMC' Crespo\n Rune Shell version; {RUNE_VERSION}\n OS: {}\n User: {} ",os, user)
+    let fileinfo = if Path::new("/etc/os-release").exists() {
+        "/etc/os-release".to_string()
+    } else {
+        "/var/lib/os-release".to_string()
+    };
+
+    // Check if file exists
+    let host_name = if Path::new("/etc/hostname").exists() {
+        let mut file = File::open("/etc/hostname").unwrap();
+        let mut buffer = String::new();
+        file.read_to_string(&mut buffer)
+            .expect("Error reading file.");
+        // When is moved to heap memory deletes the \n and \r
+        buffer.pop();
+        buffer
+    } else {
+        "File /etc/hostname doesn't exists.".to_string()
+    };
+
+    // boot id
+    let boot_id = if Path::new("/proc/sys/kernel/random/boot_id").exists() {
+        let mut file = File::open("/proc/sys/kernel/random/boot_id").unwrap();
+        let mut buffer = String::new();
+        file.read_to_string(&mut buffer)
+            .expect("Error reading file");
+        // When is moved to heap memory deletes the \n and \r
+        buffer.pop();
+        buffer
+    } else {
+        String::from("File /proc/sys/kernel/random/boot_id doesn't exist.")
+    };
+
+    // Read file and save it to buffer.
+    let os_name = file_filter(&fileinfo, "NAME".to_string());
+    let mut os_name = os_name[0].split('=');
+    os_name.next();
+    let os_name = os_name.next().unwrap();
+
+    let os_pretty = file_filter(&fileinfo, "PRETTY_NAME".to_string());
+    let mut os_pretty = os_pretty[0].split('=');
+    os_pretty.next();
+    let os_pretty = os_pretty.next().unwrap();
+
+    let os_url = file_filter(&fileinfo, "HOME_URL".to_string());
+    let mut os_url = os_url[0].split('=');
+    os_url.next();
+    let os_url = os_url.next().unwrap();
+
+    let os_doc = file_filter(&fileinfo, "DOCUMENTATION_URL".to_string());
+    let mut os_doc = os_doc[0].split('=');
+    os_doc.next();
+    let os_doc = os_doc.next().unwrap();
+
+    let os_legal = file_filter(&fileinfo, "PRIVACY_POLICY_URL".to_string());
+    let mut os_legal = os_legal[0].split('=');
+    os_legal.next();
+    let os_legal = os_legal.next().unwrap();
+
+    let machine_id = if Path::new("/etc/machine-id").exists() {
+        let mut file = File::open("/etc/machine-id").unwrap();
+        let mut buffer = String::new();
+        file.read_to_string(&mut buffer)
+            .expect("Error reading file");
+        buffer.pop();
+        buffer
+    } else {
+        String::from("File /etc/machine-id doesn't exist.")
+    };
+
+    // Take CPU information from /proc/cpuinfo
+    let cpuinfo = if Path::new("/proc/cpuinfo").exists() {
+        file_filter(&"/proc/cpuinfo".to_string(), "model name".to_string())
+    } else {
+    "The /proc/cpuinfo file doesn't exists. CPU information unavailable."
+        .to_string()
+        .chars()
+        .map(|e| e.to_string())
+        .collect::<Vec<String>>()
+    };
+    let cpu = cpuinfo[0].clone();
+
+    let cputhread = if Path::new("/proc/cpuinfo").exists() {
+        file_filter(&"/proc/cpuinfo".to_string(), "processor".to_string()).len()
+    } else {
+        0
+    };
+
+    // Take information about memory from /proc/meminfo
+    let meminfo = Path::new("/proc/meminfo").exists();
+
+    // As the information is stored in kB to transform into GB is needed
+    // devide it.
+    let memtotal = if meminfo {
+        let temp = file_filter(&"/proc/meminfo".to_string(), "MemTotal".to_string());
+        let mut temp = temp[0].split("       ");
+        temp.next();
+        temp.next().unwrap().to_string()
+    } else {
+        "Memory information not available".to_string()
+    };
+
+    // Kernel CMD Line
+    // Check if file exists
+    let cmdline = Path::new("/proc/cmdline").exists();
+
+    // If exists read the file
+    let temp = &fs::read("/proc/cmdline").unwrap();
+
+    let kernelcmd = if cmdline {
+        std::str::from_utf8(temp).unwrap().trim().clone()
+    } else {
+        "Kernel cmdline not available"
+    };
+
+    let kernel_version = if Path::new("/proc/version").exists() {
+        let mut file = File::open("/proc/version").unwrap();
+        let mut buffer = String::new();
+        file.read_to_string(&mut buffer)
+            .expect("Error reading file");
+        let mut buffer = buffer.split(" ");
+        let kernel = buffer.next().unwrap();
+        buffer.next();
+        format!("{}: {}", kernel, buffer.next().unwrap())
+    } else {
+        String::from("Can not read kernel version.")
+    };
+
+
+    format!(" RavnOS's Shell\n Copyright 2023 Joaquin 'ShyanJMC' Crespo\n Rune Shell version; {RUNE_VERSION}\n OS: {os}\n OS Release: {os_pretty} \n OS url: {os_url} \n OS doc: {os_doc} \n OS legal: {os_legal} \n CPU: {cpu} \n CPU Thread: {cputhread} \n Memory: {memtotal} \n Machine ID: {machine_id} \n Hostname: {host_name} \n BOOT ID: {boot_id} \n BOOT/Kernel Command: {kernelcmd} \n Kernel version: {kernel_version} \n User: {user} \n")
 }
 
 fn base64(input: &String) -> Option<String> {
@@ -999,6 +1131,161 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
     Ok(())
 }
 
+fn show(input: &String) -> Option<String> {
+    let mut arguments: Vec<String> = input.trim().split(' ').map(|e| e.to_string()).collect();
+    let mut string_return = String::new();
+
+    // Init the configuration as clean
+    let mut config = libconfarg::ShowConfiguration {
+        clean: false,
+        stdin: false,
+        hexa: false,
+        diff: false,
+    };
+
+    if arguments.checkarguments_help("show") {
+        return None;
+    }
+
+    // The vec<String> return with files index is stored in "archives" variable.
+    // The method is from RavnArguments trait.
+    let mut options: Vec<&str> = Vec::new();
+    let archives: Vec<String> = arguments.check_arguments("show", &mut options);
+
+    if archives.len() == 0 || archives[0] == "" {
+        return None;
+    }
+
+    for confs in options {
+        if confs == "clean" {
+            config.clean = true;
+        } else if confs == "stdin" {
+            config.stdin = true;
+        } else if confs == "hexa" {
+            config.hexa = true;
+        } else if confs == "diff" {
+            config.diff = true;
+        }
+    }
+
+    // Stdinput
+    if config.stdin {
+        // Buffer variable to store returns
+        let mut buffer = String::new();
+        // To work with stdin
+        // Match takes the read_line output, if is
+        // Ok(_i) will print the buffer variable, but if
+        // is Err(j) will print "j" (the error per se).
+        match io::stdin().read_to_string(&mut buffer) {
+            Ok(_i) => {
+                let buff = format!("stdin {{ {buffer} }}");
+                return Some(buff);
+            },
+            Err(j) => return None,
+        }
+        return None;
+    }
+
+    // Difference
+    if config.diff {
+        // file 1
+        let mut file1: File = File::open(&archives[0]).expect("Error opening file 1.");
+        let mut file1_buffer: String = String::new();
+        file1
+            .read_to_string(&mut file1_buffer)
+            .expect("Error reading file 1");
+
+        // file 2
+        let mut file2: File = File::open(&archives[1]).expect("Error opening file 2.");
+        let mut file2_buffer: String = String::new();
+        file2
+            .read_to_string(&mut file2_buffer)
+            .expect("Error reading file 2.");
+
+        let mut linen1: u64 = 0;
+        let mut linen2: u64 = 0;
+        let mut linebuffer = 1;
+
+        let mut hmap1 = HashMap::new();
+        let mut hmap2 = HashMap::new();
+
+        for ilines in file1_buffer.lines() {
+            linen1 += 1;
+            hmap1.insert(linen1, ilines);
+        }
+
+        for ilines2 in file2_buffer.lines() {
+            linen2 += 1;
+            hmap2.insert(linen2, ilines2);
+        }
+
+        while linebuffer <= linen2 {
+            if !hmap1.contains_key(&linebuffer) {
+                println!("ln {linebuffer} +{{ {} }}", hmap2.get(&linebuffer).unwrap());
+            } else {
+                if hmap1.get(&linebuffer) != hmap2.get(&linebuffer) {
+                    println!(
+                        "ln {linebuffer} {{ {} }}\n",
+                        hmap2.get(&linebuffer).unwrap()
+                    );
+                }
+            }
+
+            linebuffer += 1;
+        }
+
+        if linen1 > linen2 {
+            let diff = (linen1 - linen2) + linen2;
+            string_return = format!("ln {diff} -{{ {} }}", hmap1.get(&diff).unwrap());
+        }
+        return Some(string_return);
+    }
+
+    // Opening files and showing them
+    for names in &archives {
+        let fstring: String = String::from_utf8_lossy(&fs::read(names).unwrap()).to_string();
+
+        if config.clean && !config.hexa{
+            return Some( format!("{}",fstring) );
+        } else if !config.clean && config.hexa {
+            // Hexa mode
+            // Remember; each char will be stored as hexa.
+            let mut buffer: String = String::new();
+            // Split the file's data in lines() and collect each in &str vector.
+            for iteration in fstring.lines().collect::<Vec<&str>>() {
+                // Splits each line in chars
+                for dchar in iteration.chars() {
+                    // Transform each char in string and then into bytes data
+                    for fchar in dchar.to_string().into_bytes() {
+                        // Show each byte char into hexadecimal mode.
+                        buffer += &(format!("{:x} ", fchar)).to_string();
+                    }
+                }
+            }
+            return Some( format!("{names} data {{ {} }}", buffer) );
+        } else if config.clean && config.hexa {
+            // Hexa mode
+            // Remember; each char will be stored as hexa.
+            let mut buffer: String = String::new();
+            // Split the file's data in lines() and collect each in &str vector.
+            for iteration in fstring.lines().collect::<Vec<&str>>() {
+                // Splits each line in chars
+                for dchar in iteration.chars() {
+                    // Transform each char in string and then into bytes data
+                    for fchar in dchar.to_string().into_bytes() {
+                        // Show each byte char into hexadecimal mode.
+                        buffer += &(format!("{:x} ", fchar)).to_string();
+                    }
+                }
+            }
+            return Some( format!("{}", buffer) );
+        } else {
+            return Some( format!("{names} data {{ {} }}", fstring) );
+        }
+    }
+    None
+}
+
 fn sleep(input: &String) -> Result<(), String> {
     let seconds = (input.split(':').collect::<Vec<&str>>())[0].parse::<u64>().unwrap();
     let nanoseconds = (input.split(':').collect::<Vec<&str>>())[1].parse::<u32>().unwrap();
@@ -1231,6 +1518,11 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "ls" {
             result = ls(&b_arguments);
             Ok(result)
+        } else if command == "show" {
+            match show(&b_arguments) {
+                Some(d) => Ok(d),
+                None => Err(""),
+            }
         } else if command == "sleep" {
             let _ = sleep(&b_arguments);
             Ok("".to_string() )
