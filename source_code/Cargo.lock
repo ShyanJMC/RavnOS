@@ -34,7 +34,7 @@ version = "0.6.3"
 
 [[package]]
 name = "rune"
-version = "0.41.19"
+version = "0.42.19"
 dependencies = [
  "libconfarg",
  "libfile",

@@ -63,7 +63,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 38] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "show","sleep", "tail", "which", "$?"];
+const LBUILTINS: [&str; 39] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "du", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "show","sleep", "tail", "which", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -77,6 +77,7 @@ _cp [source] [destination]: copy file or directory from [source] to [destination
 _date: display the current time and date in UTC-0 (which is the same that GTM-0).
 _decodebase64 [input] [file]: decocde input from base64 to file.
 _disable_history: disable save commands to history without truncate the file.
+_du [path]: show disk usage ('du') in [path], read recusively.
 _enable_history: enable save commands to history.
 _echo_raw: show string into stdout without interpreting special characters.
 _env: show environment variables.
@@ -106,7 +107,7 @@ _tail [number] [file] : show the last [number] lines of [file].
 _which [binary]: show where is located the binary based in PATH environment variable.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.41.19";
+const RUNE_VERSION: &str = "v0.42.19";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -331,6 +332,41 @@ fn decodebase64(input: &String) -> Option<String> {
         Ok(_d) => return Some( format!("{:?}: Saved correctly", input.get(1)) ),
         Err(e) => return None,
     }
+}
+
+fn disk_usage(input: &String) -> Option<String> {
+    let mut input = input.clone();
+
+    if input.split(' ').map(|e| e.to_string()).collect::<Vec<String>>().len() > 1 {
+        return Some("Too many arguments. Pass just one path".to_string());
+    } else if input.len() == 0 {
+        return Some("Too few arguments. Pass just one path".to_string());
+    }
+
+    let fs_struct = input.readdir_recursive();
+    let mut temp_buff = HashMap::new();
+    let mut result = String::new();
+
+    for dir in fs_struct.dbuff {
+        let size = fs::metadata(dir.clone()).unwrap().size().size_to_human();
+        temp_buff.insert(size,dir);
+    }
+
+    for file in fs_struct.fbuff {
+        let size = fs::metadata(file.clone()).unwrap().size().size_to_human();
+        temp_buff.insert(size,file);
+    }
+
+    for (k,i) in temp_buff {
+        result = result + &format!("{k} {i}\n");
+    }
+
+    if result.is_empty() {
+        return None;
+    } else {
+        return Some(result);
+    }
+
 }
 
 fn environmentvar() -> String {
@@ -1407,10 +1443,15 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Some(d) => Ok(d),
                 None => Err("error converting"),
             }
+        } else if command == "du"{
+            match disk_usage(&b_arguments) {
+                Some(d) => Ok(d),
+                None => Err("Error reading path"),
+            }
         } else if command == "echo_raw" {
             result = echo_raw(&b_arguments);
             Ok(result)
-        }else if command == "expand" {
+        } else if command == "expand" {
             result = expand(b_arguments);
             Ok(result)
         } else if command == "head" {
