@@ -36,17 +36,11 @@ process or fixing regretion issues. RavnOS fix that isolating the system and the
 | :---: |
 | Huginn v0.1.0 |
 
-| ![](images/rune.png) |
+| ![](images/rune-info.png) |
 | :---: |
-| Rune v0.21.18 |
+| ![](images/rune.png)
+| Rune v0.43.19 |
 
-| ![](images/show.png) |
-| :---: |
-| Show v0.14.3 |
-
-| ![](images/ls.png) |
-| :---: |
-| Ls v0.7.7 |
 
 | ![](images/search.png) |
 | :---: |
