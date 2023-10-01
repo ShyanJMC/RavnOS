@@ -12,8 +12,6 @@
 //!
 //! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023
 
-// Core crate
-use core::str::from_utf8;
 
 // Process crate
 use std::process;
@@ -23,14 +21,8 @@ use std::collections::HashMap;
 // I/O crate
 // Buffer reading crate
 use std::io::{self,	Write};
-use std::io::Read;
-use std::io::BufReader;
 
 use std::fs::OpenOptions;
-use std::fs::File;
-
-// Path lib
-use std::path::Path;
 
 // Import the files inside scope
 mod builtins;
@@ -342,7 +334,7 @@ fn main(){
 
 					let mut ffile = match OpenOptions::new().create(true).append(true).open(&second_part) {
 						Ok(d) => d,
-						Err(e) => {
+						Err(_e) => {
 							eprintln!("Error creating/opening file");
 							continue;
 						},
@@ -380,7 +372,7 @@ fn main(){
 
 					let mut efile = match OpenOptions::new().create(true).append(true).open(&second_part) {
 						Ok(d) => d,
-						Err(e) => {
+						Err(_e) => {
 							eprintln!("Error creating/opening file");
 							continue;
 						},
@@ -446,7 +438,7 @@ fn main(){
 					proc2.stdin(Stdio::from(output1));
 
 					// Spawn execute it
-					let mut nproc2 = match proc2.spawn(){
+					let nproc2 = match proc2.spawn(){
 						Ok(d) => d,
 						Err(_e) => {
 							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");

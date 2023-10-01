@@ -17,11 +17,11 @@
 use std::collections::HashMap;
 // File lib
 use std::fs::{File,OpenOptions};
-use std::io::{self,prelude::*};
+use std::io::prelude::*;
 // Path lib
 use std::path::Path;
 // Process lib
-use std::process::{self,ChildStdout,ChildStderr,ExitStatus,Stdio};
+use std::process;
 
 use libstream::{Colors,Stream};
 use libcommand;
@@ -58,9 +58,9 @@ fn main() {
     let hservices: HashMap<String,String> = fservices.readkey();
     println!("Starting services (/etc/huginn/services)");
     // Take name and set ID to zero
-    let mut h_s_service: HashMap<String,i64> = {
+    let h_s_service: HashMap<String,i64> = {
         let mut buff: HashMap<String,i64> = HashMap::new();
-        for (serv,bin) in &hservices {
+        for (serv,_bin) in &hservices {
             let serv = serv.trim().to_string();
             buff.insert(serv,0);
         }
@@ -80,7 +80,7 @@ fn main() {
     for handles in threads_services {
         match handles.join(){
             Ok(_d) => (),
-            Err(e) => {
+            Err(_e) => {
                 eprintln!("{}[ERR]Failing awaiting for thread!{}", color.red, color.reset);
                 ()
             },

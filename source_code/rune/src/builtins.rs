@@ -30,13 +30,13 @@ use std::io::{self, Read, Write};
 use std::io::BufReader;
 
 // thread lib
-use std::{thread, time};
+use std::thread;
 
 // Unix lib
 use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 
 // Process lib
-use std::process::{self, Command};
+use std::process::Command;
 
 // Time lib
 use std::time::SystemTime;
@@ -170,12 +170,6 @@ fn info() -> String {
         String::from("File /proc/sys/kernel/random/boot_id doesn't exist.")
     };
 
-    // Read file and save it to buffer.
-    let os_name = file_filter(&fileinfo, "NAME".to_string());
-    let mut os_name = os_name[0].split('=');
-    os_name.next();
-    let os_name = os_name.next().unwrap();
-
     let os_pretty = file_filter(&fileinfo, "PRETTY_NAME".to_string());
     let mut os_pretty = os_pretty[0].split('=');
     os_pretty.next();
@@ -275,7 +269,7 @@ fn base64(input: &String) -> Option<String> {
     for names in &input {
         let file = match fs::File::open(&names) {
             Ok(d) => d,
-            Err(e) => return None,
+            Err(_e) => return None,
         };
         if input.len() > 1 {
             strreturn = strreturn + &format!("filename {names} base64 {{ {} }}", file.encode_base64());
@@ -323,19 +317,19 @@ fn decodebase64(input: &String) -> Option<String> {
         None => return None,
     }) {
         Ok(d) => d,
-        Err(e) => return None,
+        Err(_e) => return None,
     };
 
     let output = decode_base64(&buffer).expect("Error converting into binary");
 
     match file.write_all(&output) {
         Ok(_d) => return Some( format!("{:?}: Saved correctly", input.get(1)) ),
-        Err(e) => return None,
+        Err(_e) => return None,
     }
 }
 
 fn disk_usage(input: &String) -> Option<String> {
-    let mut input = input.clone();
+    let input = input.clone();
 
     if input.split(' ').map(|e| e.to_string()).collect::<Vec<String>>().len() > 1 {
         return Some("Too many arguments. Pass just one path".to_string());
@@ -454,7 +448,7 @@ fn expand(input: String) -> String {
 }
 
 fn count(input: &String) -> String {
-    let mut output = String::new();
+    let mut output;
     output = format!("Lines {{ {} }} \n",fs::read_to_string(input).expect("Error reading file.").lines().count());
 
     output = output + &format!("Words - Letters {{ {:?} }} \n",fs::read_to_string(input).expect("Error reading file").word_count() );
@@ -699,7 +693,7 @@ fn ffalse(input: &String) -> Result<(),bool>{
 }
 
 fn head(input: &String){
-    let mut file;
+    let file;
     let mut fdata = Default::default();
     let mut lnumber = 0;
     let mut cnumber = 1;
@@ -786,7 +780,7 @@ fn join(input: &String) -> Result<(),&str> {
     let lenght = files.len();
     let mut destination = match File::create(files[lenght-1]) {
         Ok(d) => d,
-        Err(e) => {
+        Err(_e) => {
             return Err("Error creating destination file");
         }
     };
@@ -796,7 +790,7 @@ fn join(input: &String) -> Result<(),&str> {
     for i in files {
         let file = match File::open(i.trim()){
                 Ok(d) => d,
-                Err(e) => {
+                Err(_e) => {
                     return Err("Error opening file");
                 }
         };
@@ -806,8 +800,8 @@ fn join(input: &String) -> Result<(),&str> {
 
     }
     match destination.write_all(fdata.as_bytes()){
-        Ok(d) => return Ok(()),
-        Err(e) => {
+        Ok(_d) => return Ok(()),
+        Err(_e) => {
             return Err("Error writting destination file from buffer");
         }
     };
@@ -825,7 +819,7 @@ fn ln(source: &Path, dest: &Path) -> Result<String,()>{
 fn ls(input: &String) -> String {
     // env::args() takes program's arguments
     // collect() takes arguments and returns in tuple
-    let mut arguments: Vec<String> = input.split(' ').map(|e| e.to_string()).collect();
+    let arguments: Vec<String> = input.split(' ').map(|e| e.to_string()).collect();
 
     // Result buffer
     let mut buffer: Vec<String> = Vec::new();
@@ -1083,7 +1077,7 @@ fn number_line(input: &String) -> Result<(),&str>{
     let mut fdata = String::new();
     let file = match File::open( Path::new(input.trim()) ){
         Ok(d) => d,
-        Err(e) => return Err("Error opening file, check permissions and file system"),
+        Err(_e) => return Err("Error opening file, check permissions and file system"),
     };
     let mut buff = BufReader::new(&file);
     let _ = buff.read_to_string(&mut fdata);
@@ -1176,7 +1170,7 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
 }
 
 fn show(input: &String) -> Option<String> {
-    let mut arguments: Vec<String> = input.trim().split(' ').map(|e| e.to_string()).collect();
+    let arguments: Vec<String> = input.trim().split(' ').map(|e| e.to_string()).collect();
     let mut string_return = String::new();
 
     // Init the configuration as clean
@@ -1225,7 +1219,7 @@ fn show(input: &String) -> Option<String> {
                 let buff = format!("stdin {{ {buffer} }}");
                 return Some(buff);
             },
-            Err(j) => return None,
+            Err(_j) => return None,
         }
         return None;
     }
@@ -1486,7 +1480,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "nl" {
             match number_line(&b_arguments){
                 Ok(()) => Ok("".to_string()),
-                Err(e) => Err("Error opening file, check permissions and file system"),
+                Err(_e) => Err("Error opening file, check permissions and file system"),
             }
         } else if command == "rm" {
             match remove_f_d(b_arguments) {
@@ -1496,7 +1490,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "proc" {
             match proc() {
                 Ok(d) => Ok(d),
-                Err(e) => Err("Error getting processes"),
+                Err(_e) => Err("Error getting processes"),
             }
         } else if command == "pwd" {
         	match pwd(){
@@ -1539,12 +1533,12 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "id" {
             match id(&b_arguments) {
                 Ok(d) => Ok(d),
-                Err(e) => Err("Error getting environment variables"),
+                Err(_e) => Err("Error getting environment variables"),
             }
         } else if command == "join" {
             match join(&b_arguments){
                 Ok(()) => Ok("Joined files".to_string()),
-                Err(e) => Err("Error joining files, verify arguments, permissions and/or space"),
+                Err(_e) => Err("Error joining files, verify arguments, permissions and/or space"),
             }
         } else if command == "list" || command == "help"{
             result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}\n\n{HBUILTINS}", LBUILTINS);
@@ -1584,7 +1578,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "which" {
             match fwhich(&b_arguments) {
                 Ok(d) => Ok(d),
-                Err(e) => Err("Not found"),
+                Err(_e) => Err("Not found"),
             }
         } else if command == "clear" {
             let _ = clear();

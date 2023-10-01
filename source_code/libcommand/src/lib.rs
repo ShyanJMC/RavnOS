@@ -14,18 +14,16 @@
 
 
 // Process crate
-use std::process::{self,ChildStderr,ChildStdout,ExitStatus,Stdio};
+use std::process::{self,ExitStatus,Stdio};
 // HashMap
 use std::collections::HashMap;
-// IO lib
-use std::io::{self,prelude::*};
+
 // Thread and Sync libs
-use std::sync::{Arc, Mutex};
 use std::thread::{self,JoinHandle};
-use std::sync::mpsc::channel;
 
 // Colors
 use libstream::Colors;
+
 
 pub struct SService {
     id: i64,
