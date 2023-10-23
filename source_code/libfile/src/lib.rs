@@ -65,7 +65,7 @@ impl RavnSizeFile for u64 {
 impl RavnFile for File {
     /// Detect if file is binary or not
     fn is_binary(&self) -> bool {
-        let mut file = self.clone();
+        let mut file = self;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)
             .expect("is_binary function: error to read file");
@@ -90,7 +90,7 @@ impl RavnFile for File {
         let mut output = String::new();
 
         {
-            let mut file = self.clone();
+            let mut file = self;
             match file.read_to_end(&mut input) {
                 Ok(_) => (),
                 Err(e) => return format!("Error reading file: {}", e),

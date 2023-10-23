@@ -241,7 +241,7 @@ fn info() -> String {
     let temp = &fs::read("/proc/cmdline").unwrap();
 
     let kernelcmd = if cmdline {
-        std::str::from_utf8(temp).unwrap().trim().clone()
+        std::str::from_utf8(temp).unwrap().trim()
     } else {
         "Kernel cmdline not available"
     };
@@ -382,7 +382,7 @@ fn expand(input: String) -> String {
         let args = input.split(' ').collect::<Vec<&str>>();
         if args[0] == "-t" {
             s_number = args[1].trim().parse().unwrap();
-            let mut file = match File::open(args[2].clone()) {
+            let mut file = match File::open(args[2]) {
                 Ok(d) => d,
                 Err(e) => {
                     eprintln!("Error opening file; {e}");
@@ -396,7 +396,7 @@ fn expand(input: String) -> String {
                 Err(_e) => String::from("Matching not found"),
             };
 
-            let nfile = args[2].clone().to_string() + "-edited";
+            let nfile = args[2].to_string() + "-edited";
             match mkfile(Path::new(&nfile)) {
                 Ok(_d) => (),
                 Err(e) => {
@@ -460,7 +460,7 @@ fn cd(path: String) -> () {
     if path.is_empty(){
         // Goes to home user dir
         let binding = get_user_home();
-    	let home: &str = binding.as_str().clone();
+    	let home: &str = binding.as_str();
         match env::set_current_dir(&home) {
             Ok(d) => d,
             Err(_e) => {
@@ -758,8 +758,8 @@ fn id(input: &String) -> Result<String,String> {
         let guid_line = file_filter(&"/etc/group".to_string(), username);
         let mut groups = String::new();
         for i in guid_line {
-                let name = (i.split(':').collect::<Vec<&str>>())[0].clone();
-                let id = (i.split(':').collect::<Vec<&str>>())[2].clone();
+                let name = (i.split(':').collect::<Vec<&str>>())[0];
+                let id = (i.split(':').collect::<Vec<&str>>())[2];
                 groups = groups + &name + ":" + &id + "\n";
         }
 
@@ -948,7 +948,7 @@ fn ls(input: &String) -> String {
                     Err(_e) => format!("Error reading owner, check file/dir permissions."),
                     Ok(d) => match d.strip_suffix('\n') {
                         Some(d) => {
-                            let buffer = d.clone();
+                            let buffer = d;
                             let buffer2 = buffer.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
                             drop(buffer);
                             format!("{} {}", buffer2[0], buffer2[1])
