@@ -615,8 +615,6 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
                     }
                 };
 
-                drop(source);
-
                 match mkdir_r( Path::new(&ddir) ){
                 	Ok(_d) => {},
                 	Err(e) => eprintln!("{e}"),
@@ -950,7 +948,6 @@ fn ls(input: &String) -> String {
                         Some(d) => {
                             let buffer = d;
                             let buffer2 = buffer.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
-                            drop(buffer);
                             format!("{} {}", buffer2[0], buffer2[1])
                         },
                         None => format!("Error reading owner, check file/dir permissions."),
@@ -1126,7 +1123,6 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
     if b_argspo != 2023 {
         b_arguments.remove( b_argspo );
     }
-    drop(b_argspo);
 
     let mut a_files: Vec<&str> = Vec::new();
     let mut a_dirs: Vec<&str> = Vec::new();
