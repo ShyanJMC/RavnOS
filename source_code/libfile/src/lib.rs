@@ -150,11 +150,10 @@ pub fn which(binary: String) -> Vec<String> {
     for ivalue in inv_paths {
         for i in ivalue.to_string().readdir() {
             entries.push(i.clone());
-        }
-    }
-    for ipath in entries {
-        if ipath.display().to_string().contains(&binary) {
-            results.push(ipath.display().to_string());
+
+            if i.clone().into_os_string().into_string().unwrap().contains(&binary) {
+                results.push(i.display().to_string());
+            }
         }
     }
     results
