@@ -151,7 +151,7 @@ pub fn which(binary: String) -> Vec<String> {
         for i in ivalue.to_string().readdir() {
             entries.push(i.clone());
 
-            if i.clone().into_os_string().into_string().unwrap().contains(&binary) {
+            if i.clone().file_name().unwrap().to_os_string().into_string().unwrap() == binary {
                 results.push(i.display().to_string());
             }
         }
