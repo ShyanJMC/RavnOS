@@ -296,7 +296,9 @@ fn basename(input: &String) -> Option<String> {
     None
 }
 
-fn date() -> Result<String,String> {
+// As this function do not return Err(e) does not matter if (e) is static str becuase
+// never will exist
+fn date() -> Result<String,&'static str> {
     let systime = SystemTime::now();
     let diff = systime.duration_since(SystemTime::UNIX_EPOCH);
     Ok( format!("{}", (diff.unwrap().as_secs() as i64).epoch_to_human()) )
@@ -1426,8 +1428,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             result = info();
             Ok(result)
         } else if command == "date" {
-            result = date().unwrap();
-            Ok(result)
+            date()
         } else if command == "decodebase64" {
             match decodebase64(&b_arguments) {
                 Some(d) => Ok(d),
