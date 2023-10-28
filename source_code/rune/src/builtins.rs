@@ -959,8 +959,16 @@ fn ls(input: &String) -> String {
                 // We convert "h" to Path type, we get the last file/dir name and we convert it to static str.
                 let df_name = Path::new(h).file_name().expect("Fail getting path's filename").to_str().expect("Fail getting path's filename");
 
+                let varpermissions = {
+                    let mut temp = String::new();
+                    for i in format!("{:o}",fmetadata.permissions().mode()).permission_to_human() {
+                        temp = temp + &i;
+                    }
+                    temp
+                };
+
                 returnbuff = returnbuff + &format!(
-                    "{} \t[{}]\t{:?}\t[{:?}] {}\n",
+                    "{} \t[{}]\t[{}]\t[{}] {}\n",
                     if h.is_symlink() {
                         format!("s: {df_name} -> {}", std::fs::read_link(h.clone()).unwrap().display())
                     } else if h.is_file() {
@@ -979,7 +987,7 @@ fn ls(input: &String) -> String {
                     // syntax need to use ".mode()".
                     // As Octal is not a type by it self, we need use "format!" macro to convert it in
                     // octal mode, the return is a String.
-                    format!("{:o}", fmetadata.permissions().mode()).permission_to_human(),
+                    varpermissions,
                     owner,
                     fmetadata.size().size_to_human()
                 );
