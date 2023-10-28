@@ -394,10 +394,10 @@ impl Stream for String {
         // Setuid / Setguid / Stickybit
         match fbuffer[0] {
             0 => vecper.push(" "),
-            1 => vecper.push("sticky bit"),
-            2 => vecper.push("seted user id"),
-            4 => vecper.push("seted group id"),
-            _ => vecper.push("error"),
+            1 => vecper.push("sticky bit, "),
+            2 => vecper.push("seted user id, "),
+            4 => vecper.push("seted group id, "),
+            _ => vecper.push("error, "),
         }
 
         // Quick fix, because sometimes the octal output (self) is 5 digit and sometimes is 6
@@ -405,28 +405,28 @@ impl Stream for String {
         if fbuffer.len() == 5 {
             // Owner
             match fbuffer[2] {
-                0 => vecper.push("---"),
-                1 => vecper.push("--x"),
-                2 => vecper.push("-w-"),
-                3 => vecper.push("-wx"),
-                4 => vecper.push("r--"),
-                5 => vecper.push("r-x"),
-                6 => vecper.push("rw-"),
-                7 => vecper.push("rwx"),
-                _ => vecper.push("error"),
+                0 => vecper.push("---, "),
+                1 => vecper.push("--x, "),
+                2 => vecper.push("-w-, "),
+                3 => vecper.push("-wx, "),
+                4 => vecper.push("r--, "),
+                5 => vecper.push("r-x, "),
+                6 => vecper.push("rw-, "),
+                7 => vecper.push("rwx, "),
+                _ => vecper.push("error,  "),
             }
 
             // Group
             match fbuffer[3] {
-                0 => vecper.push("---"),
-                1 => vecper.push("--x"),
-                2 => vecper.push("-w-"),
-                3 => vecper.push("-wx"),
-                4 => vecper.push("r--"),
-                5 => vecper.push("r-x"),
-                6 => vecper.push("rw-"),
-                7 => vecper.push("rwx"),
-                _ => vecper.push("error"),
+                0 => vecper.push("---, "),
+                1 => vecper.push("--x, "),
+                2 => vecper.push("-w-, "),
+                3 => vecper.push("-wx, "),
+                4 => vecper.push("r--, "),
+                5 => vecper.push("r-x, "),
+                6 => vecper.push("rw-, "),
+                7 => vecper.push("rwx, "),
+                _ => vecper.push("error, "),
             }
 
             // Others
@@ -446,28 +446,28 @@ impl Stream for String {
         if fbuffer.len() == 6 {
             // Owner
             match fbuffer[3] {
-                0 => vecper.push("---"),
-                1 => vecper.push("--x"),
-                2 => vecper.push("-w-"),
-                3 => vecper.push("-wx"),
-                4 => vecper.push("r--"),
-                5 => vecper.push("r-x"),
-                6 => vecper.push("rw-"),
-                7 => vecper.push("rwx"),
-                _ => vecper.push("error"),
+                0 => vecper.push("---, "),
+                1 => vecper.push("--x, "),
+                2 => vecper.push("-w-, "),
+                3 => vecper.push("-wx, "),
+                4 => vecper.push("r--, "),
+                5 => vecper.push("r-x, "),
+                6 => vecper.push("rw-, "),
+                7 => vecper.push("rwx, "),
+                _ => vecper.push("error, "),
             }
 
             // Group
             match fbuffer[4] {
-                0 => vecper.push("---"),
-                1 => vecper.push("--x"),
-                2 => vecper.push("-w-"),
-                3 => vecper.push("-wx"),
-                4 => vecper.push("r--"),
-                5 => vecper.push("r-x"),
-                6 => vecper.push("rw-"),
-                7 => vecper.push("rwx"),
-                _ => vecper.push("error"),
+                0 => vecper.push("---, "),
+                1 => vecper.push("--x, "),
+                2 => vecper.push("-w-, "),
+                3 => vecper.push("-wx, "),
+                4 => vecper.push("r--, "),
+                5 => vecper.push("r-x, "),
+                6 => vecper.push("rw-, "),
+                7 => vecper.push("rwx, "),
+                _ => vecper.push("error, "),
             }
 
             // Others
