@@ -736,6 +736,10 @@ fn head(input: &String){
 
 }
 
+fn envhome<'a>() -> Result<String, &'a str> {
+   Ok( get_user_home())
+}
+
 fn id(input: &String) -> Result<String,String> {
     let mut buff = String::new();
     let username = match env::var("USERNAME") {
@@ -994,7 +998,7 @@ fn ls(input: &String) -> String {
             }
             // Show filename and size.
             for ee in &buffer {
-                returnbuff = returnbuff + &format!("{}", ee);
+                returnbuff = returnbuff + &format!("{}\n", ee);
             }
         } else {
             if !config.clean && lists.len() > 1 {
@@ -1456,6 +1460,8 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "head" {
             let _ = head(&b_arguments);
             Ok("".to_string())
+        } else if command == "home" {
+            envhome()
         } else if command == "mkdir" {
             match mkdir_r( Path::new( &b_arguments ) ) {
                 Ok(_d) => Ok( "".to_string() ),
