@@ -22,7 +22,9 @@ use std::collections::HashMap;
 // Buffer reading crate
 use std::io::{self,	Write};
 
-use std::fs::OpenOptions;
+use std::fs::{File,OpenOptions};
+
+use std::path::Path;
 
 // Import the files inside scope
 mod builtins;
@@ -33,15 +35,13 @@ use libstream::Epoch;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-fn main(){
+pub struct SService {
+    stdout: String,
+    stderr: String,
+}
 
-	// Why do this instead directly store in "home"?
-	// Because how memory works; instead use String to store in heap, &str store in stack with a pointer (because of that; &)
-	// and if you do not store in a previous variable can unowner that memory when the variable is passed as argument to some
-	// function.
-	let binding = io_mods::get_user_home();
-	let home: &str = binding.as_str().clone();
-	let mut rune_history = match OpenOptions::new().create(true).append(true).open( home.clone().to_owned() + "/.ravnos/rune_history" ) {
+fn main(){
+	let mut rune_history = match OpenOptions::new().create(true).append(true).open( io_mods::get_user_home() + "/.ravnos/rune_history" ) {
 		Ok(d) => d,
 		Err(e) => {
 			eprintln!("Error writting / creating .ravnos/rune_history file. \n History will be located in /tmp {e}");
@@ -72,6 +72,8 @@ fn main(){
 	let mut vhistory_position: usize = 0;
 
 	loop {
+		let mut string_stdout: String;
+		let mut string_stderr: String;
 		// String vector for history
 		let mut vhistory: Vec<String> = match io_mods::get_history(){
 			Ok(d) => d,
@@ -140,7 +142,7 @@ fn main(){
 		// Shadowing
 		// I directly do here the trim to avoid the same operation in the rest of code so many times
 		let mut command = command.trim();
-		let mut second_part: &str = "";
+		let mut second_part = "";
 		let mut stdout_redirect: Vec<&str> = Vec::new();
 		let mut b_stdout_redirect: bool = false;
 		let mut stderr_redirect: Vec<&str> = Vec::new();
@@ -172,7 +174,7 @@ fn main(){
 		// Replace "~" with the home
 		if command.contains('~') {
 			// Shadowing
-			match libstream::search_replace_string(&command.to_string(), &"~".to_string(), &home.to_string() ) {
+			match libstream::search_replace_string(&command.to_string(), &"~".to_string(), &io_mods::get_user_home() ) {
 				Ok(d) => buffer = d,
 				Err(_e) => {
 					eprintln!("Failing setting ~ to home's user");
@@ -182,9 +184,7 @@ fn main(){
 
 			command = buffer.as_str();
 		}
-
 		if enabled_history {
-
 			if !command.is_empty() {
 				let hist_command = {
 					let unix_date = match SystemTime::now().duration_since(UNIX_EPOCH){
@@ -226,19 +226,14 @@ fn main(){
 						temp_buff += 1;
 					}
 				}
-
 		}
-
 		// Trim it again and compare with exit string
 		if command == "_exit".to_string() {
 			process::exit(0);
-		} else if command == "_$?".to_string() {
-			print!("{}\n", coreturn);
-			// Check if start with "_" which means is a builtin
 		} else if command == "_history".to_string() && enabled_history {
 			let mut num = 0;
 			for i in &vhistory {
-				println!("{num} {i}");
+				println!("{}", format!("{num} {i}"));
 				num +=1;
 			}
 		} else if command == "_disable_history" {
@@ -250,345 +245,166 @@ fn main(){
 		} else if command == " " || command == "\n" || command == "" {
 			// Do not misunderstand, "continue" breaks the actual loop to start again
 			continue;
-		} else if command == "_home".to_string() {
-			print!("{home}");
-		} else if command.chars().next().unwrap() == '_' {
-				// With this we take the characters avoiding the first; "_"
-				let buff = &command[1..].split(' ').collect::<Vec<&str>>().clone();
-				let builtin = buff[0].clone();
-				// For arguments we take the complete vector and then we remove the first position
-				// which is the binary. Then we strip the '\n' at the end of string
-				let b_arguments: String = {
-					let mut args = buff.clone();
-					args.remove(0);
-					let temp = args.join(" ");
-					let temp = temp.trim_end_matches('\n').to_string();
-					temp
-				};
-
-				// Drop function cleans from memory the variable and data
-				drop(buff);
-
-				match builtins::rbuiltins( builtin, b_arguments ) {
-					Ok(d) => println!("{d}"),
-					Err(e) => println!("{e}"),
-				}
 		} else {
-			if command.len() > 2 {
-				// Take the command, pass to "trim" for clean tabs, spaces and others, split it by spaces and then convert each to string
-				// collecting to strings.
-				let buff = command.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
-				// Take the first, which is the binary to execute
-				let binn = &buff[0].clone();
-				let binn = binn.trim();
-				let mut arguments: Vec<String> = Vec::new();
-
-				// TIterate from zero to the size of buff var.
-				for i in 0..buff.len() {
-					// Avoid the first, remember, the binary
-					if i == 0{
-						continue;
-					} else {
-						arguments.push(buff[i].clone());
-					}
-				}
-
-				// Drop function cleans from memory the variable and data
-				drop(buff);
-
-				// Execute the "binn" binary with the arguments collected in "arguments"
-				// "Spawn" execute the command with the arguments. The child process is not lineal to this, will run in
-				// 		another core
-				let mut proc = process::Command::new( binn.trim() );
-				// Arg method inserts the arguments in the Command struct, because of that we can iterate adding it
-				for j in arguments {
-					// Stdout configure process' stdout
-					// Stdio::piped connect parent and child processes
-					// Stderr configure process' stderr
-					// Stdio::piped connect parent and child processes
-					proc.arg(j).stdout(Stdio::piped()).stderr(Stdio::piped());
-				}
-
+			if !second_part.is_empty() {
 
 				if b_stdout_file_redirect {
-					// Spawn execute it
-					let nproc = match proc.spawn(){
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
-							continue;
-						}
+					let mut command_stdin = command.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+					command_stdin.remove(0);
+					let stdreturn = fcommand(command, command_stdin, Vec::new());
+					string_stdout = stdreturn.stdout;
+					string_stderr = stdreturn.stderr;
 
-					};
-					// Drop function cleans from memory the variable and data
-					//drop(proc);
+					OpenOptions::new().create(true).append(true).open(second_part).unwrap();
+					let _ = std::fs::write(Path::new(second_part), string_stdout);
+					eprintln!("{string_stderr}");
 
-					// Wait_with_output method waits to command finishes and collect output, return Output struct
-					let output = match nproc.wait_with_output() {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
-							continue;
-						}
-					};
+				} else if b_stderr_redirect {
+					let mut command_stdin = command.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+					command_stdin.remove(0);
+					let stdreturn = fcommand(command, command_stdin, Vec::new());
+					string_stdout = stdreturn.stdout;
+					string_stderr = stdreturn.stderr;
 
-					let mut ffile = match OpenOptions::new().create(true).append(true).open(&second_part) {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error creating/opening file");
-							continue;
-						},
-					};
-
-					match ffile.write_all(&output.stdout) {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error writing command's stdout to file");
-							continue;
-						}
-					}
+					OpenOptions::new().create(true).append(true).open(second_part).unwrap();
+					let _ = std::fs::write(Path::new(second_part), string_stderr);
+					println!("{string_stdout}");
 				}
-				if b_stderr_redirect {
-					// Spawn execute it
-					let nproc = match proc.spawn(){
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
-							continue;
-						}
 
-					};
-					// Drop function cleans from memory the variable and data
-					//drop(proc);
-
-					// Wait_with_output method waits to command finishes and collect output, return Output struct
-					let output = match nproc.wait_with_output() {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
-							continue;
-						}
-					};
-
-					let mut efile = match OpenOptions::new().create(true).append(true).open(&second_part) {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error creating/opening file");
-							continue;
-						},
-					};
-
-					match efile.write_all(&output.stderr) {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error writing command's stdout to file");
-							continue;
-						}
-					}
-				}
 				if b_stdout_redirect {
+					let mut command_stdin = command.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+					command_stdin.remove(0);
+					let stdreturn = fcommand(command, command_stdin, Vec::new());
+					string_stdout = stdreturn.stdout;
+					string_stderr = stdreturn.stderr;
 
-					// Take the command, pass to "trim" for clean tabs, spaces and others, split it by spaces and then convert each to string
-					// collecting to strings.
-					let buff2 = second_part.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
-					// Take the first, which is the binary to execute
-					let binn2 = &buff2[0].clone();
-					let binn2 = binn2.trim();
-					let mut arguments2: Vec<String> = Vec::new();
+					let mut second_part_args = second_part.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+                    let borrow = second_part_args[0].clone();
+					let second_part_bin = (borrow.split(' ').collect::<Vec<&str>>())[0];
+					second_part_args.remove(0);
 
-					// TIterate from zero to the size of buff var.
-					for i in 0..buff2.len() {
-						// Avoid the first, remember, the binary
-						if i == 0{
-							continue;
-						} else {
-							arguments2.push(buff2[i].clone());
-						}
-					}
+                    let stdin_data = {
+                        let mut vec = Vec::new();
+                        vec.push(string_stdout.as_str());
+                        vec
+                    };
 
-					// Drop function cleans from memory the variable and data
-					drop(buff2);
+					let stdreturn2 = fcommand(&second_part_bin, second_part_args, stdin_data);
+					let string_stdout2 = stdreturn2.stdout;
+					let string_stderr2 = stdreturn2.stderr;
 
-					// Execute the "binn" binary with the arguments collected in "arguments"
-					// "Spawn" execute the command with the arguments. The child process is not lineal to this, will run in
-					// 		another core
-					let mut proc2 = process::Command::new( binn2.trim() );
-					// Arg method inserts the arguments in the Command struct, because of that we can iterate adding it
-					for j in arguments2 {
-						// Stdout configure process' stdout
-						// Stdio::piped connect parent and child processes
-						// Stderr configure process' stderr
-						// Stdio::piped connect parent and child processes
-						proc2.arg(j).stdout(Stdio::piped()).stderr(Stdio::piped());
-					}
-
-					// Spawn execute it
-					let nproc11 = match proc.spawn(){
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
-							continue;
-						}
-
-					};
-
-					// output1 takes the normal stdout
-					let output1 = nproc11.stdout.unwrap();
-					// the output1 stdout is now the stdin for proc2
-					proc2.stdin(Stdio::from(output1));
-
-					// Spawn execute it
-					let nproc2 = match proc2.spawn(){
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
-							continue;
-						}
-
-					};
-					// Drop function cleans from memory the variable and data
-					drop(proc2);
-
-
-					// Wait_with_output method waits to command finishes and collect output, return Output struct
-					let output2 = match nproc2.wait_with_output() {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
-							continue;
-						}
-					};
-
-					match io::stdout().write_all(&output2.stdout) {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error writing command's stdout to system's stdout, the output can not be printed");
-							continue;
-						}
-					}
-
-					coreturn = output2.status;
+                    if !string_stderr.is_empty() && string_stdout.is_empty(){
+                        eprintln!("stderr {{\n{string_stderr2}}}\n");
+                    } else if !string_stderr.is_empty() && !string_stdout.is_empty(){
+                        println!("stdout {{\n{string_stdout2}}}\n");
+                        eprintln!("stderr {{\n{string_stderr2}}}\n");
+                    } else if string_stderr.is_empty() {
+                        println!("{string_stdout2}");
+                    }
 
 				}
-				if !b_stdout_redirect && !b_stderr_redirect && !b_stdout_file_redirect {
-					// Spawn execute it
-					let nproc = match proc.spawn(){
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
-							continue;
-						}
-
-					};
-					// Drop function cleans from memory the variable and data
-					//drop(proc);
-
-					// Wait_with_output method waits to command finishes and collect output, return Output struct
-					let output = match nproc.wait_with_output() {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
-							continue;
-						}
-					};
-
-					match io::stdout().write_all(&output.stdout) {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error writing command's stdout to system's stdout, the output can not be printed");
-							continue;
-						}
-					}
-
-					match io::stderr().write_all(&output.stderr) {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error writing command's stderr to system's stderr, the stderr can not be printed");
-							continue;
-						}
-					}
-
-				}
-
-				if !b_stdout_redirect {
-					// Spawn execute it
-					let nproc = match proc.spawn(){
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
-							continue;
-						}
-
-					};
-					// Drop function cleans from memory the variable and data
-					//drop(proc);
-
-					// Wait_with_output method waits to command finishes and collect output, return Output struct
-					let output = match nproc.wait_with_output() {
-						Ok(d) => d,
-						Err(_e) => {
-							eprintln!("Error waiting for command and taking process' stdin stdout stderr");
-							continue;
-						}
-					};
-					coreturn = output.status;
-				} else {
-				}
-
-
 			} else {
-				let proc = match process::Command::new( command.clone() )
-											// Stdout configure process' stdout
-											// Stdio::piped connect parent and child processes
-											.stdout(Stdio::piped())
-											// Stderr configure process' stderr
-											// Stdio::piped connect parent and child processes
-											.stderr(Stdio::piped())
-											// Spawn execute it
-											.spawn()
-											{
-												Ok(d) => d,
-												Err(_e) => {
-													eprintln!("Error executing command. Check if binary/command exists, you can try executing with absolute path.");
-													continue;
-												}
+				let mut arguments = command.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+				arguments.remove(0);
+				let stdreturn = fcommand(command, arguments, Vec::new());
+				string_stdout = stdreturn.stdout;
+				string_stderr = stdreturn.stderr;
 
-											};
-
-				// Wait_with_output method waits to command finishes and collect output, return Output struct
-				let output = match proc.wait_with_output() {
-					Ok(d) => d,
-					Err(_e) => {
-						eprintln!("Error waiting for command and taking process' stdin stdout stderr");
-						continue;
-					}
-				};
-
-				match io::stdout().write_all(&output.stdout) {
-					Ok(d) => d,
-					Err(_e) => {
-						eprintln!("Error writing command's stdout to system's stdout, the output can not be printed");
-						continue;
-					}
-				}
-
-				match io::stderr().write_all(&output.stderr) {
-					Ok(d) => d,
-					Err(_e) => {
-						eprintln!("Error writing command's stderr to system's stderr, the stderr can not be printed");
-						continue;
-					}
-				}
-
-				coreturn = output.status;
-
-
+                if !string_stderr.is_empty() && string_stdout.is_empty(){
+                    eprintln!("stderr {{\n{string_stderr}}}\n");
+                } else if !string_stderr.is_empty() && !string_stdout.is_empty(){
+                    println!("stdout {{\n{string_stdout}}}\n");
+                    eprintln!("stderr {{\n{string_stderr}}}\n");
+                } else if string_stderr.is_empty() {
+                    println!("{string_stdout}");
+                }
 			}
 
 		}
-
-		// we clean the memory dropping the "command" variable
-		drop(command);
 	} // end loop
 
+}
+
+pub fn fcommand( input: &str, arguments: Vec<String>, stdin_data: Vec<&str>) -> SService {
+    let mut init1 = SService {
+      stdout: String::new(),
+      stderr: String::new(),
+    };
+
+    // Take the first, which is the binary to execute
+    let binn = {
+        if input.chars().next().unwrap() == '_' {
+                // With this we take the characters avoiding the first; "_"
+                let buff: Vec<&str> = input[1..].split(' ').collect::<Vec<&str>>();
+                let builtin = buff[0];
+                // For arguments we take the complete vector and then we remove the first position
+                // which is the binary. Then we strip the '\n' at the end of string
+                let b_arguments: String = {
+                    let mut args = buff.clone();
+                    args.remove(0);
+                    let temp = args.join(" ");
+                    let temp = temp.trim_end_matches('\n').to_string();
+                    temp
+                };
+
+                match builtins::rbuiltins( builtin, b_arguments ) {
+                    Ok(d) => {
+						init1.stdout = d.clone().trim().to_string();
+						return init1;
+					}
+                    Err(e) => {
+						init1.stderr = e.trim().to_string();
+						return init1;
+					},
+                }
+        } else if !input.contains("/bin/"){
+				match builtins::rbuiltins( "which", (input.split(' ').map(|e| e.to_string()).collect::<Vec<String>>())[0].clone() ) {
+					Ok(d) => d,
+					Err(_e) => {
+						eprintln!("Binary {:?} not found in PATH", input);
+						return init1;
+					},
+				}
+		} else {
+				(input.split(' ').map(|e| e.to_string()).collect::<Vec<String>>())[0].clone().to_string()
+		}
+    };
+
+    // Execute the "binn" binary with the arguments collected in "arguments"
+    let mut proc = process::Command::new( binn );
+    // Arg method inserts the arguments in the Command struct, because of that we can iterate adding it
+    for j in &arguments {
+        // Stdout configure process' stdout
+        // Stdio::piped connect parent and child processes
+        // Stderr configure process' stderr
+        // Stdio::piped connect parent and child processes
+        proc.arg(j).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    }
+
+    if stdin_data.is_empty(){
+        // Spawn execute it
+        let nproc = proc.spawn().unwrap();
+        // Wait_with_output method waits to command finishes and collect output, return Output struct
+        let output = nproc.wait_with_output().unwrap();
+        init1.stdout = std::str::from_utf8(&(output.stdout).clone()).unwrap().to_string();
+        init1.stderr = std::str::from_utf8(&(output.stderr).clone()).unwrap().to_string();
+    } else {
+        // Spawn execute it
+        let mut nproc = proc.spawn().expect("Error al ejecutar el proceso");
+        if let Some(ref mut nproc_stdin) = nproc.stdin {
+            for i in stdin_data {
+                nproc_stdin.write_all(i.as_bytes()).expect("Error al escribir en stdin");
+            }
+        } else {
+            eprintln!("Error taking child's stdin");
+            return init1;
+        }
+        // Wait_with_output method waits to command finishes and collect output, return Output struct
+        let output = nproc.wait_with_output().unwrap();
+        init1.stdout = std::str::from_utf8(&(output.stdout).clone()).unwrap().to_string();
+        init1.stderr = std::str::from_utf8(&(output.stderr).clone()).unwrap().to_string();
+    }
+
+
+    init1
 }
