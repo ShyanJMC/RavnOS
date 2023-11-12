@@ -1551,9 +1551,12 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Ok(()) => Ok("Joined files".to_string()),
                 Err(_e) => Err("Error joining files, verify arguments, permissions and/or space"),
             }
-        } else if command == "list" || command == "help"{
-            result = format!(" Bultins, they are called with '_'; {{\n {:?}\n}}\n\n{HBUILTINS}", LBUILTINS);
+        } else if command == "list" {
+            result = format!(" Bultins (they are called with '_'); {{\n {:?}\n}}", LBUILTINS);
             Ok(result)
+        } else if command == "help" {
+          result = format!("{HBUILTINS}");
+          Ok(result)
         } else if command == "ln" {
             let buff = b_arguments.split(' ').collect::<Vec<&str>>();
             if buff.len() < 2 {
