@@ -178,7 +178,6 @@ impl Epoch for i64 {
 impl Stream for String {
     /// The self string is the configurations
     fn readconfig(&self)-> HashMap<String, String>{
-        println!("Input; {self}");
         let mut hmap:  HashMap<String, String> = HashMap::new();
         let mut buff2: Vec<&str> = Vec::new();
         for tline in self.lines(){
