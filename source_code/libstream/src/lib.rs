@@ -60,6 +60,7 @@ impl Colors {
 /// Outputs
 pub trait Stream {
     fn readkey(&self) -> HashMap<String, String>;
+    fn readconfig(&self) -> HashMap<String, String>;
     fn permission_to_human(&self) -> Vec<&'static str>;
     fn word_count(&self) -> Vec<usize>;
     fn readdir(&self) -> Vec<PathBuf>;
@@ -175,6 +176,22 @@ impl Epoch for i64 {
 }
 
 impl Stream for String {
+    /// The self string is the configurations
+    fn readconfig(&self)-> HashMap<String, String>{
+        println!("Input; {self}");
+        let mut hmap:  HashMap<String, String> = HashMap::new();
+        let mut buff2: Vec<&str> = Vec::new();
+        for tline in self.lines(){
+            let borrow: Vec<&str> = tline.split('=').map(|e| e.trim()).collect();
+            for i in borrow {
+                buff2.push(i);
+            }
+        }
+        hmap = buff2.chunks_exact(2)
+            .map(|chunk| (chunk[0].to_string(), chunk[1].to_string()))
+            .collect::<HashMap<_, _>>();
+        hmap
+    }
     /// The self string is the data.
     /// The return is a HashMap with syntax <key,data>
     fn readkey(&self) -> HashMap<String, String> {
