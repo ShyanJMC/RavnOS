@@ -26,6 +26,7 @@ use libstream::Colors;
 
 
 pub struct SService {
+    sname: String,
     id: i64,
     stdout: Vec<u8>,
     stderr: Vec<u8>,
@@ -36,53 +37,29 @@ pub struct SService {
 // Arc is used to allow ownership between more that one thread.
 /////////////////////////////////////
 
-pub fn thread_command( h_s_service: HashMap<String,i64>, name: String, binary: String) -> JoinHandle<Result<SService, String>>{
+pub fn thread_command( name: String, binary: String, arguments: String) -> JoinHandle<Result<SService, String>>{
 		thread::spawn(move || {
-			let mut h_s_service = h_s_service.clone();
 			let color = Colors::new();
 			let s_id: i64;
-
-	        // Take the command, pass to "trim" for clean tabs, spaces and others, split it by spaces and then convert each to string
-	        // collecting to strings.
-	        let buff = binary.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
-	        // Take the first, which is the binary to execute
-	        let binn = &buff[0].clone();
-	        let binn = binn.trim();
-	        let mut arguments: Vec<String> = Vec::new();
-
-	        // TIterate from zero to the size of buff var.
-	        for i in 0..buff.len() {
-	            // Avoid the first, remember, the binary
-	            if i == 0{
-	                continue;
-	            } else {
-	                arguments.push(buff[i].clone());
-	            }
-	        }
-
-	        // Drop function cleans from memory the variable and data
-	        drop(buff);
+	        let binn = binary.trim();
 
 	        // Execute the "binn" binary with the arguments collected in "arguments"
 	       // "Spawn" execute the command with the arguments. The child process is not lineal to this, will run in
 	        // 		another core
 	        let mut proc = process::Command::new( binn.trim() );
 	        // Arg method inserts the arguments in the Command struct, because of that we can iterate adding it
-	        for j in arguments {
-	            // Stdout configure process' stdout
-	            // Stdio::piped connect parent and child processes
-	            // Stderr configure process' stderr
-	            // Stdio::piped connect parent and child processes
-	            proc.arg(j).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
-	        }
 
+	        // Stdout configure process' stdout
+	        // Stdio::piped connect parent and child processes
+	        // Stderr configure process' stderr
+	        // Stdio::piped connect parent and child processes
+	        proc.arg(arguments).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
 
 	        println!("{}[INFO]\tStarting; {name}{}", color.cyan, color.reset);
 	        // Spawn execute it
 	        let nproc = match proc.spawn(){
 	            Ok(d) => {
 	                s_id = d.id().into();
-	                h_s_service.insert( name.clone(), s_id );
 	                println!("{}[OK]\tStarted {name}, id; {s_id}{}", color.green, color.reset);
 	                d
 	            },
@@ -108,6 +85,7 @@ pub fn thread_command( h_s_service: HashMap<String,i64>, name: String, binary: S
 
 			// Return this as Ok(SService)
 			let instance = SService {
+                sname: name,
 			    id: s_id,
 			    stdout: output.stdout,
 			    stderr: output.stderr,
@@ -190,6 +168,7 @@ pub fn single_command( h_s_service:&mut HashMap<String,i64>, name: String, binar
 
 		// Return this as Ok(SService)
 		let instance = SService {
+            sname: name,
 		    id: s_id,
 		    stdout: output.stdout,
 		    stderr: output.stderr,
