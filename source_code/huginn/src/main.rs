@@ -27,10 +27,12 @@ use libstream::{Colors,Stream};
 use libcommand;
 
 // Version constant
-const HVERSION: &str = "0.1.0";
+const HVERSION: &str = "0.1.1";
 
 fn main() {
     let color = Colors::new();
+    let mut threads_services = Vec::new();
+
     println!("Huginn sysinit version {HVERSION}");
 
     // Create huginn path configuration if do not exists
@@ -43,7 +45,7 @@ fn main() {
     } else if !( Path::new("/etc/huginn/services").try_exists().unwrap() ) {
         // Create service file is not exists
         match OpenOptions::new().create(true).append(true).open( "/etc/huginn/services" ) {
-    		Ok(_d) => println!("[INFO]\tCreated huginn file configuration; /etc/huginn/service"),
+    		Ok(_d) => println!("[INFO]\tCreated huginn file configuration; /etc/huginn/services"),
     		Err(e) => {
     			eprintln!("[ERR]\tError creating /etc/huginn/services file: {e}");
                 process::exit(1);
@@ -51,29 +53,35 @@ fn main() {
     	};
     } else {}
 
-    let mut fservices = String::new();
-    File::open("/etc/huginn/services").expect("Error opening configuration service.").read_to_string(&mut fservices).expect("Error reading configuration service.");
-
     // Takes service's name and binary
-    let hservices: HashMap<String,String> = fservices.readkey();
-    println!("Starting services (/etc/huginn/services)");
-    // Take name and set ID to zero
-    let h_s_service: HashMap<String,i64> = {
-        let mut buff: HashMap<String,i64> = HashMap::new();
-        for (serv,_bin) in &hservices {
-            let serv = serv.trim().to_string();
-            buff.insert(serv,0);
+    // "readkey" returns a HashMap with <Service_name, binary_arguments>
+    let hservices: HashMap<String,HashMap<String, String>> = {
+        let mut fservices = String::new();
+        File::open("/etc/huginn/services").expect("Error opening configuration service.").read_to_string(&mut fservices).expect("Error reading configuration service.");
+        let buff = fservices.readkey();
+        let mut vreturn: HashMap<String,HashMap<String, String>> = Default::default();
+        for (serv,data) in buff{
+            let buff2 = data.readconfig();
+            vreturn.insert(serv,buff2);
         }
-        buff
+        vreturn
     };
+    println!("Starting services (/etc/huginn/services)");
+    for (serv,data) in &hservices {
+        let serv = serv.trim().to_string();
+        let binary = match data.get("binary"){
+            Some(data) => data.to_string(),
+            None => {
+                eprintln!("{}[ERR]{serv}\n\tFailing detecting binary{}", color.red, color.reset);
+                "".to_string()
+            },
+        };
+        let arguments = match data.get("arguments"){
+            Some(data) => data.to_string(),
+            None => "".to_string(),
+        };
 
-    let mut threads_services = Vec::new();
-
-    for (serv,bin) in &hservices {
-        let serv = serv.trim();
-        let binary = bin.trim();
-
-        let command = libcommand::thread_command(h_s_service.clone(), serv.to_string(), binary.to_string());
+        let command = libcommand::thread_command(serv, binary, arguments);
         threads_services.push(command);
     }
 
