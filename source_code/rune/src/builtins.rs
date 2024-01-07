@@ -1394,7 +1394,11 @@ fn fwhich(input: &String) -> Result<String,&str> {
     if !result.is_empty() {
         if result.len() > 1 {
             for i in result {
-                sreturn = sreturn + &"," + &i;
+            	if !sreturn.is_empty() {
+            		sreturn = sreturn + &"," + &i;
+            	} else {
+            		sreturn = i;
+            	}
             }
         } else {
             for i in result {
