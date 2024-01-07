@@ -63,7 +63,7 @@ use crate::io_mods::get_user_home;
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 39] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "du", "echo_raw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "show","sleep", "tail", "which", "$?"];
+const LBUILTINS: [&str; 39] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "du", "echoraw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "show","sleep", "tail", "which", "$?"];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -79,7 +79,7 @@ _decodebase64 [input] [file]: decocde input from base64 to file.
 _disable_history: disable save commands to history without truncate the file.
 _du [path]: show disk usage ('du') in [path], read recusively.
 _enable_history: enable save commands to history.
-_echo_raw: show string into stdout without interpreting special characters.
+_echoraw: show string into stdout without interpreting special characters.
 _env: show environment variables.
 _exit: exit the shell properly.
 _expand: convert tabs to spaces in file (with new file; [FILE]-edited), with '-t X' you can specify the spaces number, first the options (if exists) and then the file.
@@ -494,7 +494,7 @@ fn clear() {
     print!("\x1B[1;1H\x1B[2J");
 }
 
-fn echo_raw(input: &String) -> String {
+fn echoraw(input: &String) -> String {
 
     input.clone()
 }
@@ -1231,7 +1231,6 @@ fn show(input: &String) -> Option<String> {
             },
             Err(_j) => return None,
         }
-        return None;
     }
 
     // Difference
@@ -1451,8 +1450,8 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Some(d) => Ok(d),
                 None => Err("Error reading path"),
             }
-        } else if command == "echo_raw" {
-            result = echo_raw(&b_arguments);
+        } else if command == "echoraw" {
+            result = echoraw(&b_arguments);
             Ok(result)
         } else if command == "expand" {
             result = expand(b_arguments);
