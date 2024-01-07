@@ -13,7 +13,6 @@
 //! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023
 
 use std::env;
-use std::process;
 use std::path::Path;
 use std::fs::{self,File};
 use std::io::{self,Read};
@@ -52,9 +51,8 @@ pub fn read_input() -> Result<String,String> {
                     Ok(_d) => (),
                     Err(e) => {
                         eprintln!("Error in thread_shell_input thread reading stdin; \n {}", e);
-                        process::exit(1);
                         ()
-                    }
+                    },
                 }
 
                 // Send buffer variable to channel/pipeline
