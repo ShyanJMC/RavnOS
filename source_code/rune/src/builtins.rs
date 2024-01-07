@@ -107,7 +107,7 @@ _tail [number] [file] : show the last [number] lines of [file].
 _which [binary]: show where is located the binary based in PATH environment variable.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.42.20";
+const RUNE_VERSION: &str = "v0.43.24";
 
 // Builtins
 // Are private for only be executed by rbuiltins
