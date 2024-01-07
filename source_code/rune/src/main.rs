@@ -250,9 +250,10 @@ fn main(){
                 buffer1.clear();
             }
 
+			// I use this to store if the last command terminated successfully
+			let mut last_return: bool = true;
+			
 		    if !commargs.is_empty(){
-                // I use this to store if the last command terminated successfully
-		    	let mut last_return: bool = true;
 		    	for vcommand in commargs {
                     let mut buffering: Vec<&str>  = vcommand.split(' ').collect();
                     // Iterate over vector and check if there are some empty
@@ -312,7 +313,7 @@ fn main(){
                         let mut buffer2 = String::new();
                         for j in 1..fposition{
                             if !buffer2.is_empty(){
-                                buffer2 = buffer2 + &" " + &buffering[j];
+                                buffer2 = buffer2 + " " + &buffering[j];
                             } else {
                                 buffer2 = buffering[j].to_string();
                             }
@@ -340,7 +341,7 @@ fn main(){
                         for i in (pipeline_redirect_position+1)..buffering.len() {
                             if buffering[i] != "2>" && buffering[i] != ";" {
                                 if !buffer.is_empty() {
-                                    buffer = buffer + &" " + &buffering[i];
+                                    buffer = buffer + " " + &buffering[i];
                                 } else {
                                     buffer = buffering[i].to_string();
                                 }
@@ -411,7 +412,7 @@ fn main(){
                                             break;
                                         }
                                         if !buffer.is_empty(){
-                                            buffer = buffer + &" " + &i.to_string();
+                                            buffer = buffer + " " + &i.to_string();
                                         } else {
                                             buffer = i.to_string();
                                         }
@@ -453,6 +454,7 @@ fn main(){
                     // Second or higher command
                     } else {
                         if !ampersand_redirect_position.is_empty() && (command_position[0]-3) == ampersand_redirect_position[0] {
+                        	let _ = ampersand_redirect_position.pop_front();
                             if last_return == true {
                                 if second_command.is_empty(){
                                     let arguments: Vec<String> = cargs[1].split(' ').map(|e| e.to_string()).collect();
@@ -483,7 +485,7 @@ fn main(){
                                                     break;
                                                 }
                                                 if !buffer.is_empty(){
-                                                    buffer = buffer + &" " + &i.to_string();
+                                                    buffer = buffer + " " + &i.to_string();
                                                 } else {
                                                     buffer = i.to_string();
                                                 }
@@ -546,10 +548,60 @@ fn main(){
                               }
 
                             } else {
-                                eprintln!("ERR: {} {} not executed",cargs[0],cargs[1]);
+                                // Pipeline redirect
+                                // First part
+
+                                let arguments: Vec<String> = cargs[1].split(' ').map(|e| e.to_string()).collect();
+                                let empty: Vec<&str> = Vec::new();
+                                let freturn = fcommand(&cargs[0], arguments, empty);
+
+                                let second_bin = second_command.split(' ').collect::<Vec<&str>>()[0];
+                                let second_argument: Vec<String> = {
+                                	let mut buffer = String::new();
+                                	for i in second_command.split(' ').collect::<Vec<&str>>() {
+                                	if i != second_bin {
+                                		if i == ">" || i == "2>" {
+                                			break;
+                                		}
+
+                                		if !buffer.is_empty(){
+                                			buffer = buffer + " " + &i.to_string();
+                                		} else {
+                                			buffer = i.to_string();
+                                		}
+                                     }
+                                    }
+                                    buffer.split(' ').map(|e| e.to_string()).collect()
+                                };
+
+                                let mut second_stdin: Vec<&str> = Vec::new();
+                                if !freturn.stderr.is_empty(){
+                                	second_stdin.push(freturn.stderr.as_str());
+                                }
+
+                                if !freturn.stdout.is_empty(){
+                                	for i in freturn.stdout.lines() {
+                                		second_stdin.push(i);
+                                    }
+                                }
+                                                    
+                                let freturn2 = fcommand(&second_bin, second_argument, second_stdin);
+                                
+                                if !stderr_file.is_empty(){
+                                	let _ = fs::write(stderr_file, freturn2.stderr );
+                                } else {
+                                	last_return = false;
+                                    eprintln!("{}", freturn2.stderr);
+                                }
+                                                    
+                                if stdout_file.is_empty(){
+                                    println!("{}", freturn2.stdout);
+                                } else {
+                                    let _ = fs::write(stdout_file, freturn2.stdout );
+                                }
                           }
                         }
-                        let _ = ampersand_redirect_position.pop_front();
+                        
                     }
                  }
 
@@ -613,7 +665,7 @@ fn main(){
                     let mut buffer2 = String::new();
                     for j in 1..fposition{
                         if !buffer2.is_empty(){
-                            buffer2 = buffer2 + &" " + &buffering[j];
+                            buffer2 = buffer2 + " " + &buffering[j];
                         } else {
                             buffer2 = buffering[j].to_string();
                         }
@@ -641,7 +693,7 @@ fn main(){
                     for i in (pipeline_redirect_position+1)..buffering.len() {
                         if buffering[i] != "2>" && buffering[i] != ";" {
                             if !buffer.is_empty() {
-                                buffer = buffer + &" " + &buffering[i];
+                                buffer = buffer + " " + &buffering[i];
                             } else {
                                 buffer = buffering[i].to_string();
                             }
@@ -658,7 +710,7 @@ fn main(){
                     if !stderr_file.is_empty(){
                         let _ = fs::write(stderr_file, freturn.stderr );
                     } else {
-                        eprintln!("{}", freturn.stderr);
+                    	eprintln!("{}", freturn.stderr);
                     }
                     if stdout_file.is_empty(){
                         println!("{}", freturn.stdout);
@@ -683,7 +735,7 @@ fn main(){
                                     break;
                                 }
                                 if !buffer.is_empty(){
-                                    buffer = buffer + &" " + &i.to_string();
+                                    buffer = buffer + " " + &i.to_string();
                                 } else {
                                     buffer = i.to_string();
                                 }
@@ -701,14 +753,15 @@ fn main(){
                             second_stdin.push(i);
                         }
                     }
-
+                    
                     let freturn2 = fcommand(&second_bin, second_argument, second_stdin);
 
-                    if !freturn2.stderr.is_empty(){
+                    if !stderr_file.is_empty(){
                         let _ = fs::write(stderr_file, freturn2.stderr );
                     } else {
                         eprintln!("{}", freturn2.stderr);
                     }
+                    
                     if stdout_file.is_empty(){
                         println!("{}", freturn2.stdout);
                     } else {
@@ -739,7 +792,7 @@ pub fn fcommand( input: &str, arguments: Vec<String>, stdin_data: Vec<&str>) -> 
                     if buffer.is_empty(){
                         buffer = i.clone();
                     } else {
-                        buffer = buffer + &" " + &i;
+                        buffer = buffer + " " + &i;
                     }
                 }
                 buffer
@@ -756,14 +809,16 @@ pub fn fcommand( input: &str, arguments: Vec<String>, stdin_data: Vec<&str>) -> 
             }
         } else if !input.contains("/bin/"){
 				match builtins::rbuiltins( "which", (input.split(' ').map(|e| e.to_string()).collect::<Vec<String>>())[0].clone() ) {
-					Ok(d) => d,
+					Ok(d) => {
+						d.split(',').collect::<Vec<&str>>()[0].to_string()
+					},
 					Err(_e) => {
                         init1.stderr = format!("Binary {:?} not found in PATH", input);
 						return init1;
 					},
 				}
 		} else {
-				(input.split(' ').map(|e| e.to_string()).collect::<Vec<String>>())[0].clone().to_string()
+				input.split(' ').map(|e| e.to_string()).collect::<Vec<String>>()[0].to_string()
 		}
     };
 
@@ -782,16 +837,16 @@ pub fn fcommand( input: &str, arguments: Vec<String>, stdin_data: Vec<&str>) -> 
         // Spawn execute it
         let nproc = match proc.spawn(){
             Ok(d) => d,
-            Err(_e) => {
-                init1.stderr = format!("Binary failed to execute");
+            Err(e) => {
+                init1.stderr = format!("Binary failed to execute; {e}");
                 return init1;
             },
         };
         // Wait_with_output method waits to command finishes and collect output, return Output struct
         let output = match nproc.wait_with_output(){
             Ok(d) => d,
-            Err(_e) => {
-                init1.stderr = format!("Failed to execute");
+            Err(e) => {
+                init1.stderr = format!("Failed to execute; {e}");
                 return init1;
             },
         };
@@ -807,8 +862,8 @@ pub fn fcommand( input: &str, arguments: Vec<String>, stdin_data: Vec<&str>) -> 
         // Spawn execute it
         let mut nproc = match proc.spawn(){
             Ok(d) => d,
-            Err(_e) => {
-                init1.stderr = format!("Binary failed to execute");
+            Err(e) => {
+                init1.stderr = format!("Binary failed to execute; {e}");
                 return init1;
             },
         };
@@ -829,8 +884,8 @@ pub fn fcommand( input: &str, arguments: Vec<String>, stdin_data: Vec<&str>) -> 
         // Wait_with_output method waits to command finishes and collect output, return Output struct
         let output = match nproc.wait_with_output(){
             Ok(d) => d,
-            Err(_e) => {
-                init1.stderr = format!("Failed to execute");
+            Err(e) => {
+                init1.stderr = format!("Failed to execute; {e}");
                 return init1;
             },
         };
