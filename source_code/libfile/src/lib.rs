@@ -98,7 +98,7 @@ impl RavnFile for File {
         }
 
         while i < input.len() {
-            let mut octet_a = 0u8;
+            let octet_a;
             let mut octet_b = 0u8;
             let mut octet_c = 0u8;
 
