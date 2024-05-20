@@ -25,7 +25,7 @@ Is my personal project to make from scratch an operative system, take this proje
 
 ## Objetive
 
-The objetive of RavnOS is make an operative system minimalist, self hosted, stable and secure.
+The objetive of RavnOS is make an operative system minimalist, self hosted (with some exceptions; hardware architecture crates), stable and secure.
 
 Think in this situation; you are in a wood or in another place, working with critical systems and without the time or resources to fix issues in the compilation
 process or fixing regretion issues. RavnOS fix that isolating the system and the user parts.
@@ -69,6 +69,7 @@ Will have absolute priority the stability and security of the system over X feat
 Each part of system must be portable over Rust supported platforms.
 
 Each part of system must be self hosted, no external crates (over internet) are allowed. All must be local, how can you be sure that the remote dependency is secure? how can you be sure that the remote dependency will be developed to the end of times? how can you be sure that the remote dependency will not break the compatibility?
+With this point I must do an exception; are allowed crates for hardware (like AArch64/ARM64) because is very hard do crates at the same level than officials.
 
 Each part of system distributed in binary form must be done as static, at 2022 the best way for this is use MUSL standard C library.
 
