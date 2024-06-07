@@ -1,11 +1,12 @@
 [workspace]
-
+resolver = "2"
 members = [
   "huginn",
-	"libcommand",
-	"libconfarg",
-	"libstream",
-	"libfile",
-	"search",
-	"rune",
+  "kernel",
+  "libcommand",
+  "libconfarg",
+  "libstream",
+  "libfile",
+  "search",
+  "rune",
 	]

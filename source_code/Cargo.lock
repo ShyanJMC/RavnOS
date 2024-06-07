@@ -3,8 +3,17 @@
 version = 3
 
 [[package]]
+name = "aarch64-cpu"
+version = "9.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac42a04a61c19fc8196dd728022a784baecc5d63d7e256c01ad1b3fbfab26287"
+dependencies = [
+ "tock-registers",
+]
+
+[[package]]
 name = "huginn"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "libcommand",
  "libstream",
@@ -12,7 +21,7 @@ dependencies = [
 
 [[package]]
 name = "libcommand"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "libstream",
 ]
@@ -30,11 +39,19 @@ dependencies = [
 
 [[package]]
 name = "libstream"
-version = "0.6.3"
+version = "0.7.3"
+
+[[package]]
+name = "ravnos_kernel"
+version = "0.1.0"
+dependencies = [
+ "aarch64-cpu",
+ "tock-registers",
+]
 
 [[package]]
 name = "rune"
-version = "0.42.19"
+version = "0.43.24"
 dependencies = [
  "libconfarg",
  "libfile",
@@ -48,3 +65,9 @@ dependencies = [
  "libconfarg",
  "libstream",
 ]
+
+[[package]]
+name = "tock-registers"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
