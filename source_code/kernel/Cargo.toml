@@ -1,0 +1,19 @@
+[package]
+name = "ravnos_kernel"
+version = "0.1.0"
+authors = ["Joaquin 'ShyanJMC' Crespo <shyan@shyanjmc.com>"]
+edition = "2021"
+
+[features]
+default = []
+bsp_rpi4 = ["tock-registers"]
+tock-registers = ["dep:tock-registers"]
+
+##--------------------------------------------------------------------------------------------------
+## Dependencies
+##--------------------------------------------------------------------------------------------------
+
+[dependencies]
+aarch64-cpu = "9.x.x"
+#tock-registers = { version = "0.8.x", default-features = false, features = ["register_types"], optional = true }
+tock-registers = { version = "0.8.x", features = ["register_types"], optional = true }
