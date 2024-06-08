@@ -839,7 +839,10 @@ pub fn fcommand( input: &str, arguments: Vec<String>, stdin_data: Vec<&str>) -> 
         // Stdio::piped connect parent and child processes
         // Stderr configure process' stderr
         // Stdio::piped connect parent and child processes
-        proc.arg(j.trim()).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+        //proc.arg(j.trim()).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+
+        // Stdio::inherit allows the child process to inherit the parent's file descriptors so that it can access the TTY terminal
+        proc.arg(j.trim()).stdin(Stdio::inherit()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     }
 
     if stdin_data.is_empty(){
