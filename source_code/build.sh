@@ -24,7 +24,7 @@ function huginn(){
 function rune(){
 	cargo build --bin rune --target x86_64-unknown-linux-musl --release
 	if [ $? -eq 0 ]; then
-		trip target/x86_64-unknown-linux-musl/release/rune
+		strip target/x86_64-unknown-linux-musl/release/rune
 	fi
 }
 
