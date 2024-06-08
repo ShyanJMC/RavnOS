@@ -16,6 +16,7 @@ use std::env;
 use std::path::Path;
 use std::fs::{self,File};
 use std::io::{self,Read};
+use std::collections::HashMap;
 
 // Threads and comunication sync
 use std::thread;
@@ -212,4 +213,31 @@ pub fn get_history() -> Result<Vec<String>,()> {
 
     Ok(history)
 
+}
+
+pub fn aliases() -> HashMap<String,String> {
+	let rune_aliases = self::get_user_home() + &"/.ravnos/" + &"rune_alias";
+	// Create the dir if not exist
+	match fs::create_dir_all( Path::new(&(self::get_user_home() + &"/.ravnos/")) ) {
+		Ok(_d) => {},
+	    Err(_e) => eprintln!("{_e}"),
+	}
+	if !Path::new(&rune_aliases).exists(){
+		match fs::File::create(rune_aliases.clone() ) {
+			Ok(_d) => {},
+			Err(_e) => eprintln!("{_e}"),
+		}
+	}
+
+	let mut ffile = File::open(rune_aliases).expect("Fail to open rune alias, check ~/.ravnos/rune_alias file");
+	let mut buffer = String::new();
+	let mut lalias: HashMap<String,String> = HashMap::new();
+
+	ffile.read_to_string(&mut buffer).expect("Fail to open rune alias, check ~/.ravnos/rune_alias file");
+	for ddata in buffer.lines(){
+		let list = ddata.split("=").map(|e| e.trim()).collect::<Vec<&str>>();
+		lalias.insert(list[0].to_string(),list[1].to_string());
+	}
+	lalias
+	
 }

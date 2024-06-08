@@ -66,8 +66,10 @@ fn main(){
 
 	let mut vhistory_map = HashMap::new();
 	let mut vhistory_position: usize = 0;
+	let halias = io_mods::aliases();
 
 	loop {
+		
 		// String vector for history
 		let mut vhistory: Vec<String> = match io_mods::get_history(){
 			Ok(d) => d,
@@ -133,6 +135,13 @@ fn main(){
 			},
 		};
 
+		for (k,v) in &halias {
+			command = match libstream::search_replace_string(&command, &k, &v) {
+				Ok(d) => d,
+				Err(_e) => command,
+			};
+		}
+		
         let buffer: String;
 		// Replace "~" with the home
 		if command.contains('~') {
