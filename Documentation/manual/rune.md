@@ -35,6 +35,50 @@ I designed rune to be most bullet proof as is possible, becuase of that;
 
 2. To exit execute; "_exit"
 
+## History
+
+Rune enable by default the command history. Is saved by default in;
+
+```
+~/.ravnos/rune_history
+```
+
+If can not open or append/write in the file will use the temporary directory;
+
+```
+/tmp/.ravnos/rune_history
+```
+
+Each command will have specified the complete timestamp with this sintax;
+
+```bash
+[command_number] [ [day]/[month]/[year] [time] UTC-0] : [command]
+```
+
+You can disable with built-in;
+
+> _disable_history
+
+Or enable again with;
+
+> _enable_history
+
+## Alias
+
+Rune support use alias for commands and built-ins. They are specified line by line in;
+
+```
+~/.ravnos/rune_alias
+```
+
+Each alias is specified using this simple sintax;
+
+```bash
+[alias] = [command and arguments]
+```
+
+Be careful because the alias can replace everything in the command line.
+
 ## External programs
 
 Rune locate the binary to execute searching in directories specified in "PATH" environment variable. So, if can not find the binary to execute,
