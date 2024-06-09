@@ -10,7 +10,7 @@
 //!  You should have received a copy of the GNU General Public License along with RavnOS. If not, see <https://www.gnu.org/licenses/>
 
 //!
-//! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023
+//! Copyright; Joaquin "ShyanJMC" Crespo - 2022-2023-2024
 
 // Time lib
 use core::time::Duration;
@@ -272,9 +272,9 @@ fn base64(input: &String) -> Option<String> {
             Err(_e) => return None,
         };
         if input.len() > 1 {
-            strreturn = strreturn + &format!("filename {names} base64 {{ {} }}", file.encode_base64());
+            strreturn = strreturn + &format!("filename {names} base64 {{ {} }}\n\n", file.encode_base64());
         } else {
-            strreturn = format!("base64 {{ {} }}", file.encode_base64() );
+            strreturn = format!("base64 {{ {} }}\n", file.encode_base64() );
         }
     }
     return Some(strreturn);
