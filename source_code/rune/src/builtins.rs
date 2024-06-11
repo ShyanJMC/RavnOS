@@ -485,7 +485,6 @@ fn cd(path: String) -> () {
             let mut vtemp = String::new();
             for i in buff {
                 if vtemp.is_empty(){
-                    dbg!("is empty");
                     vtemp = "/".to_owned() + &i;
                 } else {
                     vtemp = vtemp + &"/" + &i;
@@ -494,7 +493,6 @@ fn cd(path: String) -> () {
             }
             vtemp
         };
-        dbg!(&npath);
         match env::set_current_dir(npath) {
             Ok(d) => d,
             Err(_e) => eprintln!("Failing setting the new working path"),
