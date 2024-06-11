@@ -469,10 +469,33 @@ fn cd(path: String) -> () {
                 eprintln!("Fail changing to current home directory");
             },
         }
-    } else {
+    } else if path != ".."{
         let buff = path.trim();
         let npath = Path::new( &buff );
         match env::set_current_dir(&npath) {
+            Ok(d) => d,
+            Err(_e) => eprintln!("Failing setting the new working path"),
+        }
+    } else {
+        // I know, I know, I also do not like to many methods but
+        // PathBuf type is....complicated
+        let mut buff: Vec<String> = env::current_dir().expect("Error getting current dir").into_os_string().into_string().expect("Error getting current dir").split("/").map(|e| e.to_string()).collect();
+        buff.remove(buff.len()-1);
+        let npath = {
+            let mut vtemp = String::new();
+            for i in buff {
+                if vtemp.is_empty(){
+                    dbg!("is empty");
+                    vtemp = "/".to_owned() + &i;
+                } else {
+                    vtemp = vtemp + &"/" + &i;
+                }
+
+            }
+            vtemp
+        };
+        dbg!(&npath);
+        match env::set_current_dir(npath) {
             Ok(d) => d,
             Err(_e) => eprintln!("Failing setting the new working path"),
         }
