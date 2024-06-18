@@ -25,6 +25,7 @@ By default the Rust Standard Library (stdlib) is not async because of that;
 1. You can not use right and left arrows to edit command without delete first.
 2. You can not use up and down arrows to change stdin with older commands.
 3. You can not use tab key to complete binary's, directory's or file's name.
+4. In OpenBSD rune can not create automatically the ".ravnos" folder in user's home.
 
 As RavnOS design is not use external crates, I must design and create a async engine to bypass those limitations.
 
