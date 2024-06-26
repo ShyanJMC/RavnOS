@@ -52,24 +52,12 @@ fn main(){
 	// Enabled or not history
 	let mut enabled_history: bool = true;
 
-	//
-	{
-		let args = std::env::args();
-		for i in args {
-			if i == "--help".to_string() || i == "-h".to_string() {
-				println!("Rune RavnOS Shell; \n List and/or help builtins; _list");
-				process::exit(0);
-			}
-		}
-	}
-	////////////////////////////////
-
 	let mut vhistory_map = HashMap::new();
 	let mut vhistory_position: usize = 0;
 	let halias = io_mods::aliases();
 
 	loop {
-		
+
 		// String vector for history
 		let mut vhistory: Vec<String> = match io_mods::get_history(){
 			Ok(d) => d,
@@ -141,7 +129,7 @@ fn main(){
 				Err(_e) => command,
 			};
 		}
-		
+
         let buffer: String;
 		// Replace "~" with the home
 		if command.contains('~') {
@@ -261,7 +249,7 @@ fn main(){
 
 			// I use this to store if the last command terminated successfully
 			let mut last_return: bool = true;
-			
+
 		    if !commargs.is_empty(){
 		    	for vcommand in commargs {
                     let mut buffering: Vec<&str>  = vcommand.split(' ').collect();
@@ -593,16 +581,16 @@ fn main(){
                                 		second_stdin.push(i);
                                     }
                                 }
-                                                    
+
                                 let freturn2 = fcommand(&second_bin, second_argument, second_stdin);
-                                
+
                                 if !stderr_file.is_empty(){
                                 	let _ = fs::write(stderr_file, freturn2.stderr );
                                 } else {
                                 	last_return = false;
                                     eprintln!("{}", freturn2.stderr);
                                 }
-                                                    
+
                                 if stdout_file.is_empty(){
                                     println!("{}", freturn2.stdout);
                                 } else {
@@ -610,7 +598,7 @@ fn main(){
                                 }
                           }
                         }
-                        
+
                     }
                  }
 
@@ -762,7 +750,7 @@ fn main(){
                             second_stdin.push(i);
                         }
                     }
-                    
+
                     let freturn2 = fcommand(&second_bin, second_argument, second_stdin);
 
                     if !stderr_file.is_empty(){
@@ -770,7 +758,7 @@ fn main(){
                     } else {
                         eprintln!("{}", freturn2.stderr);
                     }
-                    
+
                     if stdout_file.is_empty(){
                         println!("{}", freturn2.stdout);
                     } else {
