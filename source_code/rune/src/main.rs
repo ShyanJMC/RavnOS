@@ -29,11 +29,7 @@ use std::fs::{self,OpenOptions};
 // Import the files inside scope
 mod builtins;
 mod io_mods;
-
-// For epoch_to_human()
-use libstream::Epoch;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
+mod history;
 
 pub struct SService {
     stdout: String,
@@ -96,7 +92,7 @@ fn main(){
             varvalue
         };
 		print!("[{prompt_pwd}]\n{prompt_user} > ");
-        
+
 		// Clean the stdout buffer to print the above line before takes the input
 		// if not will print first the stdin and then the prompt
 		match std::io::stdout().flush() {
@@ -155,47 +151,10 @@ fn main(){
 			command = buffer;
 		}
 		if enabled_history {
-			if !command.is_empty() {
-				let hist_command = {
-					let unix_date = match SystemTime::now().duration_since(UNIX_EPOCH){
-						Ok(d) => d,
-						Err(e) => {
-							eprintln!("Error getting duration since UNIX_EPOCH; \n {e}");
-							continue;
-						},
-					}.as_secs();
-
-					// Shadowing
-					let unix_date: i64 = unix_date as i64;
-					let hist_date = unix_date.epoch_to_human();
-					format!("[ {hist_date} ] : {command}")
-				};
-
-				// Save the command var after cleaning spaces and tabulations at beggining and
-				// end of string.
-
-				match rune_history.write_all(hist_command.as_bytes()) {
-					Ok(_d) => (),
-					Err(_e) => {
-						eprintln!("Error saving command to history file");
-						continue;
-					},
-				}
-
-				match rune_history.write_all(b"\n"){
-					Ok(_d) => (),
-					Err(_e) => {
-						eprintln!("Error saving command to history file");
-						continue;
-					},
-				}
-
-				let mut temp_buff: usize = 0;
-					for i in &vhistory {
-						vhistory_map.insert(temp_buff, i.clone());
-						temp_buff += 1;
-					}
-				}
+            match history::user_history(&command, &vhistory, &mut rune_history, &mut vhistory_map){
+                Err(_e) => continue,
+                Ok(_d) => (),
+            }
 		}
 		// Trim it again and compare with exit string
 		if command == "_exit".to_string() {
