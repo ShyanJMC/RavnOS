@@ -81,11 +81,22 @@ fn main(){
 		let mut command: String;
 
 		// Prompt
-		let pwd = match std::env::current_dir() {
+		let prompt_pwd = match std::env::current_dir() {
 			Ok(d) => d.display().to_string(),
 			Err(e) => e.to_string(),
 		};
-		print!("[{pwd}]\n> ");
+        let prompt_user = {
+            let mut varvalue: String = String::new();
+            for (key, value) in std::env::vars(){
+                if key == "USER" {
+                    varvalue = String::from( value);
+                    break;
+                }
+            }
+            varvalue
+        };
+		print!("[{prompt_pwd}]\n{prompt_user} > ");
+        
 		// Clean the stdout buffer to print the above line before takes the input
 		// if not will print first the stdin and then the prompt
 		match std::io::stdout().flush() {
