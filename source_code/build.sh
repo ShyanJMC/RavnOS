@@ -18,6 +18,8 @@ function huginn(){
 	cargo build --bin huginn --target x86_64-unknown-linux-musl --release
 	if [ $? -eq 0 ]; then
 		strip target/x86_64-unknown-linux-musl/release/huginn
+	else
+		return 1
 	fi
 }
 
@@ -25,6 +27,8 @@ function rune(){
 	cargo build --bin rune --target x86_64-unknown-linux-musl --release
 	if [ $? -eq 0 ]; then
 		strip target/x86_64-unknown-linux-musl/release/rune
+	else
+		return 1
 	fi
 }
 
@@ -32,6 +36,8 @@ function search(){
 	cargo build --bin search --target x86_64-unknown-linux-musl --release
 	if [ $? -eq 0 ]; then
 		strip target/x86_64-unknown-linux-musl/release/search
+	else
+		return 1
 	fi
 }
 
