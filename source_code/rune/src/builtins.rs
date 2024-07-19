@@ -23,11 +23,11 @@ use std::path::Path;
 use std::path::PathBuf;
 
 // Filesystem lib
-use std::fs::{self,File};
+use std::fs::{self, File};
 
 // IO lib
-use std::io::{self, Read, Write};
 use std::io::BufReader;
+use std::io::{self, Read, Write};
 
 // thread lib
 use std::thread;
@@ -50,20 +50,57 @@ extern crate libfile;
 extern crate libstream;
 
 use libconfarg::RavnArguments;
-use libfile::{decode_base64, which, RavnSizeFile, RavnFile};
-use libstream::{Stream, search_replace_string, file_filter, getprocs, Epoch};
-
-
+use libfile::{decode_base64, which, RavnFile, RavnSizeFile};
+use libstream::{file_filter, getprocs, search_replace_string, Epoch, Stream};
 
 // Because this file is not a binary or lib, is just another module, to import
 // under score another module we must use "crate"
 use crate::io_mods::get_user_home;
 
-
 // Here we use a const and not let because is a global variable
 // As we know the size of each word we can use "&str" and then we specify the number
 // of elements. This is because a const must have know size at compiling time.
-const LBUILTINS: [&str; 39] = ["base64", "basename", "cd", "clear", "count", "cp", "date", "decodebase64", "disable_history", "du", "echoraw", "enable_history", "env", "exit", "expand", "false", "history", "head", "help", "home", "id", "join", "info", "mkdir", "mkfile", "move", "nl", "list", "ln", "ls", "proc", "pwd", "rm", "seq", "show","sleep", "tail", "which", "$?"];
+const LBUILTINS: [&str; 39] = [
+    "base64",
+    "basename",
+    "cd",
+    "clear",
+    "count",
+    "cp",
+    "date",
+    "decodebase64",
+    "disable_history",
+    "du",
+    "echoraw",
+    "enable_history",
+    "env",
+    "exit",
+    "expand",
+    "false",
+    "history",
+    "head",
+    "help",
+    "home",
+    "id",
+    "join",
+    "info",
+    "mkdir",
+    "mkfile",
+    "move",
+    "nl",
+    "list",
+    "ln",
+    "ls",
+    "proc",
+    "pwd",
+    "rm",
+    "seq",
+    "show",
+    "sleep",
+    "tail",
+    "which",
+    "$?",
+];
 
 const HBUILTINS: &str = "Help;
 Remember respect the positions of each argument
@@ -129,9 +166,9 @@ fn info() -> String {
 
     let user = {
         let mut varvalue: String = String::new();
-        for (key, value) in std::env::vars(){
+        for (key, value) in std::env::vars() {
             if key == "USER" {
-                varvalue = String::from( value);
+                varvalue = String::from(value);
                 break;
             }
         }
@@ -146,26 +183,50 @@ fn info() -> String {
 
     // Check if file exists
     let host_name = if Path::new("/etc/hostname").exists() {
-        let mut file = File::open("/etc/hostname").unwrap();
+        let mut file = match File::open("/etc/hostname") {
+            Ok(d) => d,
+            Err(e) => {
+                println!("Error opening file; /etc/hostname");
+                return e.to_string();
+            }
+        };
         let mut buffer = String::new();
-        file.read_to_string(&mut buffer)
-            .expect("Error reading file.");
-        // When is moved to heap memory deletes the \n and \r
-        buffer.pop();
-        buffer
+        match file.read_to_string(&mut buffer) {
+            Ok(_d) => {
+                // When is moved to heap memory deletes the \n and \r
+                buffer.pop();
+                buffer
+            }
+            Err(_e) => {
+                println!("Error reading /etc/hostname");
+                format!("Error reading /etc/hostname")
+            }
+        }
     } else {
         "File /etc/hostname doesn't exists.".to_string()
     };
 
     // boot id
     let boot_id = if Path::new("/proc/sys/kernel/random/boot_id").exists() {
-        let mut file = File::open("/proc/sys/kernel/random/boot_id").unwrap();
+        let mut file = match File::open("/proc/sys/kernel/random/boot_id") {
+            Ok(d) => d,
+            Err(e) => {
+                println!("Error opening file; /proc/sys/kernel/random/boot_id");
+                return e.to_string();
+            }
+        };
         let mut buffer = String::new();
-        file.read_to_string(&mut buffer)
-            .expect("Error reading file");
-        // When is moved to heap memory deletes the \n and \r
-        buffer.pop();
-        buffer
+        match file.read_to_string(&mut buffer) {
+            Ok(_d) => {
+                // When is moved to heap memory deletes the \n and \r
+                buffer.pop();
+                buffer
+            }
+            Err(_e) => {
+                println!("Error reading /proc/sys/kernel/random/boot_id");
+                format!("Error reading /proc/sys/kernel/random/boot_id")
+            }
+        }
     } else {
         String::from("File /proc/sys/kernel/random/boot_id doesn't exist.")
     };
@@ -173,30 +234,54 @@ fn info() -> String {
     let os_pretty = file_filter(&fileinfo, "PRETTY_NAME".to_string());
     let mut os_pretty = os_pretty[0].split('=');
     os_pretty.next();
-    let os_pretty = os_pretty.next().unwrap();
+    let os_pretty = match os_pretty.next() {
+        Some(d) => d,
+        None => return format!("Error getting pretty name"),
+    };
 
     let os_url = file_filter(&fileinfo, "HOME_URL".to_string());
     let mut os_url = os_url[0].split('=');
     os_url.next();
-    let os_url = os_url.next().unwrap();
+    let os_url = match os_url.next() {
+        Some(d) => d,
+        None => return format!("Error getting HOME_URL name"),
+    };
 
     let os_doc = file_filter(&fileinfo, "DOCUMENTATION_URL".to_string());
     let mut os_doc = os_doc[0].split('=');
     os_doc.next();
-    let os_doc = os_doc.next().unwrap();
+    let os_doc = match os_doc.next() {
+        Some(d) => d,
+        None => return format!("Error getting DOCUMENTATION_URL name"),
+    };
 
     let os_legal = file_filter(&fileinfo, "PRIVACY_POLICY_URL".to_string());
     let mut os_legal = os_legal[0].split('=');
     os_legal.next();
-    let os_legal = os_legal.next().unwrap();
+    let os_legal = match os_legal.next() {
+        Some(d) => d,
+        None => return format!("Error getting PRIVACY_POLICY_URL name"),
+    };
 
     let machine_id = if Path::new("/etc/machine-id").exists() {
-        let mut file = File::open("/etc/machine-id").unwrap();
+        let mut file = match File::open("/etc/machine-id"){
+            Ok(d) => d,
+            Err(e) => {
+                return format!("Error opening /etc/machine-id file; {e}")
+            }
+        };
         let mut buffer = String::new();
-        file.read_to_string(&mut buffer)
-            .expect("Error reading file");
-        buffer.pop();
-        buffer
+        match file.read_to_string(&mut buffer) {
+            Ok(_d) => {
+                // When is moved to heap memory deletes the \n and \r
+                buffer.pop();
+                buffer
+            }
+            Err(_e) => {
+                println!("Error reading /proc/sys/kernel/random/boot_id");
+                format!("Error reading /proc/sys/kernel/random/boot_id")
+            }
+        }
     } else {
         String::from("File /etc/machine-id doesn't exist.")
     };
@@ -205,11 +290,11 @@ fn info() -> String {
     let cpuinfo = if Path::new("/proc/cpuinfo").exists() {
         file_filter(&"/proc/cpuinfo".to_string(), "model name".to_string())
     } else {
-    "The /proc/cpuinfo file doesn't exists. CPU information unavailable."
-        .to_string()
-        .chars()
-        .map(|e| e.to_string())
-        .collect::<Vec<String>>()
+        "The /proc/cpuinfo file doesn't exists. CPU information unavailable."
+            .to_string()
+            .chars()
+            .map(|e| e.to_string())
+            .collect::<Vec<String>>()
     };
     let cpu = cpuinfo[0].clone();
 
@@ -219,52 +304,68 @@ fn info() -> String {
         0
     };
 
-    // Take information about memory from /proc/meminfo
-    let meminfo = Path::new("/proc/meminfo").exists();
-
     // As the information is stored in kB to transform into GB is needed
     // devide it.
-    let memtotal = if meminfo {
+    let memtotal = if Path::new("/proc/meminfo").exists() {
         let temp = file_filter(&"/proc/meminfo".to_string(), "MemTotal".to_string());
         let mut temp = temp[0].split("       ");
         temp.next();
-        temp.next().unwrap().to_string()
+        match temp.next() {
+            Some(d) => d.to_string(),
+            None => return format!("Error getting memory information"),
+        }
     } else {
         "Memory information not available".to_string()
     };
 
     // Kernel CMD Line
     // Check if file exists
-    let cmdline = Path::new("/proc/cmdline").exists();
-
-    // If exists read the file
-    let temp = &fs::read("/proc/cmdline").unwrap();
-
-    let kernelcmd = if cmdline {
-        std::str::from_utf8(temp).unwrap().trim()
+    let temp = match fs::read("/proc/cmdline") {
+        Ok(d) => d,
+        Err(_e) => return format!("Error reading /proc/cmdline"),
+    };
+    let kernelcmd = if Path::new("/proc/cmdline").exists() {
+        match std::str::from_utf8(&temp) {
+            Ok(d) => d.trim(),
+            Err(e) => &format!("{e}"),
+        }
     } else {
         "Kernel cmdline not available"
     };
 
     let kernel_version = if Path::new("/proc/version").exists() {
-        let mut file = File::open("/proc/version").unwrap();
+        let mut file = match File::open("/proc/version") {
+            Ok(d) => d,
+            Err(e) => {
+                println!("Error opening file; /proc/version");
+                return e.to_string();
+            }
+        };
         let mut buffer = String::new();
-        file.read_to_string(&mut buffer)
-            .expect("Error reading file");
+        match file.read_to_string(&mut buffer) {
+            Ok(_d) => "",
+            Err(_e) => "",
+        };
         let mut buffer = buffer.split(" ");
-        let kernel = buffer.next().unwrap();
+        let kernel = match buffer.next() {
+            Some(d) => d,
+            None => &"No kernel detected",
+        };
         buffer.next();
-        format!("{}: {}", kernel, buffer.next().unwrap())
+        format!("{}: {}",kernel, match buffer.next() {
+                Some(d) => d,
+                None => &"No version kernel detected",
+            }
+        )
     } else {
         String::from("Can not read kernel version.")
     };
-
 
     format!(" RavnOS's Shell\n Copyright 2023 Joaquin 'ShyanJMC' Crespo\n Rune Shell version; {RUNE_VERSION}\n OS: {os}\n OS Release: {os_pretty} \n OS url: {os_url} \n OS doc: {os_doc} \n OS legal: {os_legal} \n CPU: {cpu} \n CPU Thread: {cputhread} \n Memory: {memtotal} \n Machine ID: {machine_id} \n Hostname: {host_name} \n BOOT ID: {boot_id} \n BOOT/Kernel Command: {kernelcmd} \n Kernel version: {kernel_version} \n User: {user} \n")
 }
 
 fn base64(input: &String) -> Option<String> {
-    let input: Vec<String> = input.split(' ').map(|e| e.to_string() ).collect();
+    let input: Vec<String> = input.split(' ').map(|e| e.to_string()).collect();
     let mut strreturn: String = String::new();
     for names in &input {
         let file = match fs::File::open(&names) {
@@ -274,11 +375,10 @@ fn base64(input: &String) -> Option<String> {
         if input.len() > 1 {
             strreturn = strreturn + &format!("filename {names} base64 {{ {} }}\n\n", file.encode_base64());
         } else {
-            strreturn = format!("base64 {{ {} }}\n", file.encode_base64() );
+            strreturn = format!("base64 {{ {} }}\n", file.encode_base64());
         }
     }
     return Some(strreturn);
-
 }
 
 // Takes the path and returns only the file_name
@@ -288,24 +388,31 @@ fn basename(input: &String) -> Option<String> {
     // If "file_name" type returns is equal to Some(X) do that
     if let Some(filename) = _buff.file_name() {
         // To avoid use "unexpect" or "unwrap"
-        return Some(match filename.to_str(){
-            Some(d) => d,
-            None => "",
-        }.to_string());
+        return Some(
+            match filename.to_str() {
+                Some(d) => d,
+                None => "",
+            }
+            .to_string(),
+        );
     }
     None
 }
 
 // As this function do not return Err(e) does not matter if (e) is static str becuase
 // never will exist
-fn date() -> Result<String,&'static str> {
-    let systime = SystemTime::now();
-    let diff = systime.duration_since(SystemTime::UNIX_EPOCH);
-    Ok( format!("{}", (diff.unwrap().as_secs() as i64).epoch_to_human()) )
+fn date() -> Result<String, &'static str> {
+    let convertion = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH){
+        Ok(d) => (d.as_secs() as i64).epoch_to_human(),
+        Err(_e) => {
+            return Err(&"Error getting SystemTime since UNIX_EPOCH");
+        },
+    };
+    Ok(format!( "{convertion}"))
 }
 
 fn decodebase64(input: &String) -> Option<String> {
-    let input: Vec<String> = input.split(' ').map(|e| e.to_string() ).collect();
+    let input: Vec<String> = input.split(' ').map(|e| e.to_string()).collect();
     if input.len() < 2 {
         eprintln!("Few arguments; [base64] [file_target]");
         return None;
@@ -314,7 +421,7 @@ fn decodebase64(input: &String) -> Option<String> {
         Some(d) => d,
         None => return None,
     };
-    let mut file = match File::create( match input.get(1) {
+    let mut file = match File::create(match input.get(1) {
         Some(d) => d,
         None => return None,
     }) {
@@ -322,10 +429,16 @@ fn decodebase64(input: &String) -> Option<String> {
         Err(_e) => return None,
     };
 
-    let output = decode_base64(&buffer).expect("Error converting into binary");
+    let output = match decode_base64(&buffer){
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("Error decoding base64 flow.\n\t{e}");
+            return None
+        }
+    };
 
     match file.write_all(&output) {
-        Ok(_d) => return Some( format!("{:?}: Saved correctly", input.get(1)) ),
+        Ok(_d) => return Some(format!("{:?}: Saved correctly", input.get(1))),
         Err(_e) => return None,
     }
 }
@@ -344,16 +457,22 @@ fn disk_usage(input: &String) -> Option<String> {
     let mut result = String::new();
 
     for dir in fs_struct.dbuff {
-        let size = fs::metadata(dir.clone()).unwrap().size().size_to_human();
-        temp_buff.insert(size,dir);
+        let size = match fs::metadata(dir.clone()){
+            Ok(d) => d.size().size_to_human(),
+            Err(_e) => format!("Error getting directory's metadata"),
+        };
+        temp_buff.insert(size, dir);
     }
 
     for file in fs_struct.fbuff {
-        let size = fs::metadata(file.clone()).unwrap().size().size_to_human();
-        temp_buff.insert(size,file);
+        let size = match fs::metadata(file.clone()){
+            Ok(d) => d.size().size_to_human(),
+            Err(_e) => format!("Error getting file's metadata"),
+        };
+        temp_buff.insert(size, file);
     }
 
-    for (k,i) in temp_buff {
+    for (k, i) in temp_buff {
         result = result + &format!("{k} {i}\n");
     }
 
@@ -362,15 +481,14 @@ fn disk_usage(input: &String) -> Option<String> {
     } else {
         return Some(result);
     }
-
 }
 
 fn environmentvar() -> String {
     let mut buffer: Vec<String> = Vec::new();
     let mut buffer2: String = String::new();
-    for (key, value) in std::env::vars(){
+    for (key, value) in std::env::vars() {
         let envv = format!("{}; {}\n", key, value);
-        buffer.push( envv );
+        buffer.push(envv);
     }
     for data in buffer {
         buffer2 = buffer2 + &data.to_string();
@@ -379,11 +497,14 @@ fn environmentvar() -> String {
 }
 
 fn expand(input: String) -> String {
-    if input.contains("-t"){
+    if input.contains("-t") {
         let s_number: usize;
         let args = input.split(' ').collect::<Vec<&str>>();
         if args[0] == "-t" {
-            s_number = args[1].trim().parse().unwrap();
+            s_number = match args[1].trim().parse(){
+                Ok(d) => d,
+                Err(e) => return format!("Error {e}")
+            };
             let mut file = match File::open(args[2]) {
                 Ok(d) => d,
                 Err(e) => {
@@ -393,10 +514,11 @@ fn expand(input: String) -> String {
             };
             let mut string = String::new();
             let _ = file.read_to_string(&mut string);
-            let ninput: String = match search_replace_string(&string,&'\t'.to_string(), &" ".repeat(s_number)){
-                Ok(d) => d,
-                Err(_e) => String::from("Matching not found"),
-            };
+            let ninput: String =
+                match search_replace_string(&string, &'\t'.to_string(), &" ".repeat(s_number)) {
+                    Ok(d) => d,
+                    Err(_e) => String::from("Matching not found"),
+                };
 
             let nfile = args[2].to_string() + "-edited";
             match mkfile(Path::new(&nfile)) {
@@ -425,10 +547,11 @@ fn expand(input: String) -> String {
         };
         let mut string = String::new();
         let _ = file.read_to_string(&mut string);
-        let ninput: String = match search_replace_string(&string,&'\t'.to_string(), &"        ".to_string()){
-            Ok(d) => d,
-            Err(_e) => String::from("Matching not found"),
-        };
+        let ninput: String =
+            match search_replace_string(&string, &'\t'.to_string(), &"        ".to_string()) {
+                Ok(d) => d,
+                Err(_e) => String::from("Matching not found"),
+            };
 
         let nfile = input + "-edited";
         match mkfile(Path::new(&nfile)) {
@@ -451,27 +574,31 @@ fn expand(input: String) -> String {
 
 fn count(input: &String) -> String {
     let mut output;
-    output = format!("Lines {{ {} }} \n",fs::read_to_string(input).expect("Error reading file.").lines().count());
-
-    output = output + &format!("Words - Letters {{ {:?} }} \n",fs::read_to_string(input).expect("Error reading file").word_count() );
-
+    output = format!("Lines {{ {} }} \n", match fs::read_to_string(input){
+        Ok(d) => d.lines().count(),
+        Err(e) => return format!("Error reading file; {e}"),
+    });
+    output = output + &format!("Words - Letters {{ {:?} }} \n", match fs::read_to_string(input){
+        Ok(d) => d.word_count(),
+        Err(e) => return format!("Error reading file; {e}"),
+    });
     output
 }
 
 fn cd(path: String) -> () {
-    if path.is_empty(){
+    if path.is_empty() {
         // Goes to home user dir
         let binding = get_user_home();
-    	let home: &str = binding.as_str();
+        let home: &str = binding.as_str();
         match env::set_current_dir(&home) {
             Ok(d) => d,
             Err(_e) => {
                 eprintln!("Fail changing to current home directory");
-            },
+            }
         }
-    } else if path != ".."{
+    } else if path != ".." {
         let buff = path.trim();
-        let npath = Path::new( &buff );
+        let npath = Path::new(&buff);
         match env::set_current_dir(&npath) {
             Ok(d) => d,
             Err(_e) => eprintln!("Failing setting the new working path"),
@@ -479,17 +606,29 @@ fn cd(path: String) -> () {
     } else {
         // I know, I know, I also do not like to many methods but
         // PathBuf type is....complicated
-        let mut buff: Vec<String> = env::current_dir().expect("Error getting current dir").into_os_string().into_string().expect("Error getting current dir").split("/").map(|e| e.to_string()).collect();
-        buff.remove(buff.len()-1);
+        let mut buff: Vec<String> = match env::current_dir() {
+            Ok(d) => match d.into_os_string().into_string(){
+                Ok(d) => d.split("/").map(|e| e.to_string()).collect(),
+                Err(_e) => {
+                    eprintln!("Failing getting current dir");
+                    return ();
+                }
+            },
+            Err(_e) => {
+                eprintln!("Failing getting current dir");
+                return ();
+            },
+        };
+
+        buff.remove(buff.len() - 1);
         let npath = {
             let mut vtemp = String::new();
             for i in buff {
-                if vtemp.is_empty(){
+                if vtemp.is_empty() {
                     vtemp = "/".to_owned() + &i;
                 } else {
                     vtemp = vtemp + &"/" + &i;
                 }
-
             }
             vtemp
         };
@@ -516,17 +655,15 @@ fn clear() {
 }
 
 fn echoraw(input: &String) -> String {
-
     input.clone()
 }
 // This function not copy directly using the kernel's filesystem
 // to avoid any possible issue we copy bit a bit directly.
-fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
+fn copy<'a>(source: &Path, dest: &Path) -> Result<(), &'a str> {
     if dest.exists() {
         let str: &str = "Destination already exists";
         Err(str)
     } else {
-
         // With the variables "sd" and "dd" we take the complete path,
         // we split them and then we take the last directory
 
@@ -544,17 +681,18 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
                 // We just not take the last
                 //temp.iter().map(|e| e.to_string() + &"/".to_string() ).collect()
                 source.display().to_string().trim().to_string()
-
             } else {
-
-                match env::current_dir(){
-            		Ok(d) => format!("{}/{}",d.display().to_string(),source.display().to_string()),
-            		Err(e) => {
-            			eprintln!("{e}");
-            			return Err("Error getting current dir for source");
-            		},
-            	}
-
+                match env::current_dir() {
+                    Ok(d) => format!(
+                        "{}/{}",
+                        d.display().to_string(),
+                        source.display().to_string()
+                    ),
+                    Err(e) => {
+                        eprintln!("{e}");
+                        return Err("Error getting current dir for source");
+                    }
+                }
             }
         };
 
@@ -564,23 +702,22 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
             let buffer: Vec<&str> = temp.split('/').collect();
             // For absolute path
             if buffer.len() > 1 {
-            	format!("{}", dest.display().to_string() )
+                format!("{}", dest.display().to_string())
             }
             // For relative path
             else {
-            	match env::current_dir(){
-            		Ok(d) => format!("{}/{}",d.display().to_string(),buffer[0]),
-            		Err(e) => {
-            			eprintln!("{e}");
-            			return Err("Error getting current dir for destionation");
-            		},
-            	}
-           }
+                match env::current_dir() {
+                    Ok(d) => format!("{}/{}", d.display().to_string(), buffer[0]),
+                    Err(e) => {
+                        eprintln!("{e}");
+                        return Err("Error getting current dir for destionation");
+                    }
+                }
+            }
         };
 
         // To detect if "source" is a file
-        if source.is_file(){
-
+        if source.is_file() {
             // Open file
             let mut b_file = match File::open(source.display().to_string()) {
                 Ok(d) => d,
@@ -593,7 +730,7 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
             // Read it saving to b_reader
             let mut b_reader = Vec::new();
             match b_file.read_to_end(&mut b_reader) {
-                Ok(_d) => {},
+                Ok(_d) => {}
                 Err(_e) => {
                     let str: &str = "Error reading source file, check permissions.";
                     return Err(str);
@@ -602,9 +739,9 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
 
             // Create the file
             match File::create(dest.display().to_string()) {
-                Ok(_d) => {},
+                Ok(_d) => {}
                 Err(_e) => {
-                    print!("{_e}; {}",dest.display());
+                    print!("{_e}; {}", dest.display());
                     let str: &str = "Error creating destination";
                     return Err(str);
                 }
@@ -621,16 +758,13 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
 
             // If is not, is a directory
         } else if source.is_dir() {
-
             let entries = source.display().to_string().readdir_recursive();
 
             for d in &entries.dbuff {
-
-
                 // Takes the absolute path of directory in variable "d", search the directories
                 // of old path unless that last (which is the directory to copy) and replace it with
                 // the absolute path of new path with variable "dd"
-            	let ddir = match search_replace_string(&d, &sd, &dd) {
+                let ddir = match search_replace_string(&d, &sd, &dd) {
                     Ok(d) => d,
                     Err(_e) => {
                         eprintln!("{_e}");
@@ -638,9 +772,9 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
                     }
                 };
 
-                match mkdir_r( Path::new(&ddir) ){
-                	Ok(_d) => {},
-                	Err(e) => eprintln!("{e}"),
+                match mkdir_r(Path::new(&ddir)) {
+                    Ok(_d) => {},
+                    Err(e) => eprintln!("{e}"),
                 }
             }
 
@@ -686,7 +820,8 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
                 match fs::write(npath.clone(), b_reader) {
                     Ok(d) => d,
                     Err(_e) => {
-                        let str: &str = "Error writting buffer to destination file, check permissions.";
+                        let str: &str =
+                            "Error writting buffer to destination file, check permissions.";
                         return Err(str);
                     }
                 }
@@ -694,50 +829,50 @@ fn copy<'a>(source: &Path, dest: &Path) -> Result<(),&'a str> {
         }
 
         Ok(())
-
-
     }
 }
 
-fn ffalse(input: &String) -> Result<(),bool>{
+fn ffalse(input: &String) -> Result<(), bool> {
     if !input.contains("-n") && !input.contains("-u") {
         eprintln!("Bad arguments; -n or -u");
         return Err(false);
     } else if input.contains("-n") {
         println!("false");
         return Ok(());
-    } else if input.contains("-u"){
+    } else if input.contains("-u") {
         println!("1");
         return Ok(());
     }
     return Err(false);
 }
 
-fn head(input: &String){
+fn head(input: &String) {
     let file;
     let mut fdata = Default::default();
     let mut lnumber = 0;
     let mut cnumber = 1;
     let s_lnumber: Vec<&str> = input.split(' ').collect();
-    if input.contains("-n") && s_lnumber.len() <=2 {
+    if input.contains("-n") && s_lnumber.len() <= 2 {
         eprintln!("Not enough arguments. Remember; head -n [number] [file]");
         return;
     }
-    if input.contains("-n"){
-        lnumber = match s_lnumber[1].trim().parse(){
+    if input.contains("-n") {
+        lnumber = match s_lnumber[1].trim().parse() {
             Ok(d) => d,
             Err(e) => {
-                eprintln!("Error parsing str to int; {e}\nVerify kernel compatiblity with Rust std");
+                eprintln!(
+                    "Error parsing str to int; {e}\nVerify kernel compatiblity with Rust std"
+                );
                 return;
             }
         };
     }
-    file = match File::open(s_lnumber[2].trim()){
-            Ok(d) => d,
-            Err(e) => {
-                eprintln!("Error opening file; {e}");
-                return;
-            }
+    file = match File::open(s_lnumber[2].trim()) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("Error opening file; {e}");
+            return;
+        }
     };
 
     drop(s_lnumber);
@@ -746,7 +881,7 @@ fn head(input: &String){
     let mut buff = BufReader::new(&file);
     let _ = buff.read_to_string(&mut fdata);
     drop(file);
-    for i in fdata.lines(){
+    for i in fdata.lines() {
         if cnumber <= lnumber {
             println!("{i}");
             cnumber += 1;
@@ -754,89 +889,89 @@ fn head(input: &String){
             return;
         }
     }
-
 }
 
 fn envhome<'a>() -> Result<String, &'a str> {
-   Ok( get_user_home())
+    Ok(get_user_home())
 }
 
-fn id(input: &String) -> Result<String,String> {
+fn id(input: &String) -> Result<String, String> {
     let mut buff = String::new();
     let username = match env::var("USERNAME") {
         Ok(d) => d,
         Err(e) => e.to_string(),
     };
-    if input.contains("-n"){
+    if input.contains("-n") {
         buff = username.to_string();
     }
-    if input.contains("-u"){
+    if input.contains("-u") {
         let uuid_line = file_filter(&"/etc/passwd".to_string(), username.clone());
         // The return is a Vec<&str> we take the [1] position
-        let uuid = ( uuid_line[0].split(':').collect::<Vec<&str>>() )[2];
-        let guid = ( uuid_line[0].split(':').collect::<Vec<&str>>() )[3];
+        let uuid = (uuid_line[0].split(':').collect::<Vec<&str>>())[2];
+        let guid = (uuid_line[0].split(':').collect::<Vec<&str>>())[3];
         println!("userid {{ {uuid} }} ");
         println!("groupid {{ {guid} }} ");
     }
 
-    if input.contains("-g"){
+    if input.contains("-g") {
         let guid_line = file_filter(&"/etc/group".to_string(), username);
         let mut groups = String::new();
         for i in guid_line {
-                let name = (i.split(':').collect::<Vec<&str>>())[0];
-                let id = (i.split(':').collect::<Vec<&str>>())[2];
-                groups = groups + &name + ":" + &id + "\n";
+            let name = (i.split(':').collect::<Vec<&str>>())[0];
+            let id = (i.split(':').collect::<Vec<&str>>())[2];
+            groups = groups + &name + ":" + &id + "\n";
         }
 
         println!("groups; {{ {groups} }}");
     }
 
-    if !input.contains("-u") && !input.contains("-n") && !input.contains("-g"){
+    if !input.contains("-u") && !input.contains("-n") && !input.contains("-g") {
         println!("Usage; '-n' for name, '-g' for user groups and '-u' for UUIDs");
     }
     Ok(buff)
 }
 
-fn join(input: &String) -> Result<(),&str> {
+fn join(input: &String) -> Result<(), &str> {
     if input.len() <= 2 {
         return Err("Not enough arguments");
     }
     let mut files: Vec<&str> = input.split_whitespace().collect();
     let lenght = files.len();
-    let mut destination = match File::create(files[lenght-1]) {
+    let mut destination = match File::create(files[lenght - 1]) {
         Ok(d) => d,
         Err(_e) => {
             return Err("Error creating destination file");
         }
     };
     let mut fdata = String::new();
-    files.remove(lenght-1);
+    files.remove(lenght - 1);
 
     for i in files {
-        let file = match File::open(i.trim()){
-                Ok(d) => d,
-                Err(_e) => {
-                    return Err("Error opening file");
-                }
+        let file = match File::open(i.trim()) {
+            Ok(d) => d,
+            Err(_e) => {
+                return Err("Error opening file");
+            }
         };
         let mut buff = BufReader::new(&file);
         let _ = buff.read_to_string(&mut fdata);
         drop(file);
-
     }
-    match destination.write_all(fdata.as_bytes()){
+    match destination.write_all(fdata.as_bytes()) {
         Ok(_d) => return Ok(()),
         Err(_e) => {
             return Err("Error writting destination file from buffer");
         }
     };
-
-
 }
 
-fn ln(source: &Path, dest: &Path) -> Result<String,()>{
+fn ln(source: &Path, dest: &Path) -> Result<String, ()> {
     match symlink(source, dest) {
-        Ok(_d) => Ok( format!("Symlink created for {} pointing to {}", dest.display(), source.display() )),
+        Ok(_d) => Ok(format!(
+            "Symlink created for {} pointing to {}",
+            dest.display(),
+            source.display()
+        )),
         Err(_e) => Err(()),
     }
 }
@@ -861,8 +996,8 @@ fn ls(input: &String) -> String {
     };
 
     if arguments.checkarguments_help("ls") {
-        returnbuff = format!(" ");
-        return returnbuff;
+        //returnbuff = format!(" ");
+        return " ".to_string();
     }
 
     // The vec<String> return with files index is stored in "lists" variable.
@@ -871,15 +1006,27 @@ fn ls(input: &String) -> String {
     let mut lists: Vec<String> = arguments.check_arguments("ls", &mut options);
 
     if lists.is_empty() || lists.contains(&"".to_string()) || lists.contains(&".".to_string()) {
-        lists.push(env::current_dir().unwrap().display().to_string());
+         lists.push(match env::current_dir(){
+             Ok(d) => d.display().to_string(),
+             Err(_e) => format!(" "),
+         });
     }
 
-    if  lists.contains(&"".to_string()) {
-        let index = lists.iter().position(|e| *e == "").unwrap();
+    if lists.contains(&"".to_string()) {
+        let index = match lists.iter().position(|e| *e == ""){
+            Some(d) => d,
+            None => {
+                return "Error getting position in ls".to_string();
+            }
+        };
         lists.remove(index);
-
     } else if lists.contains(&".".to_string()) {
-        let index = lists.iter().position(|e| *e == ".").unwrap();
+        let index = match lists.iter().position(|e| *e == "."){
+            Some(d) => d,
+            None => {
+                return "Error getting position in ls".to_string();
+            }
+        };
         lists.remove(index);
     }
 
@@ -898,13 +1045,12 @@ fn ls(input: &String) -> String {
     if config.proc {
         let procs: Vec<String> = getprocs();
         for strings in procs {
-            returnbuff = returnbuff + &format!("{strings}");
+            returnbuff = returnbuff + &format!("\n{strings}");
         }
         return returnbuff;
     }
 
     for names in &lists {
-
         // Entries store the files and directories inside path.
         let mut entries = Vec::new();
         // File buffer is used to store the file name if argument is not a dir.
@@ -928,12 +1074,13 @@ fn ls(input: &String) -> String {
 
         if config.lines && !config.clean {
             if !config.verbose {
-                returnbuff = returnbuff + &format!("\nList of elements in {}; {}", names, &entries.len());
+                returnbuff =
+                    returnbuff + &format!("\nList of elements in {}; {}", names, &entries.len());
                 return returnbuff;
             } else {
-                returnbuff = returnbuff + &format!("\nList of elements in {}; {}\n", names, &entries.len());
+                returnbuff =
+                    returnbuff + &format!("\nList of elements in {}; {}\n", names, &entries.len());
             }
-
         }
 
         if config.verbose && !config.clean {
@@ -959,13 +1106,16 @@ fn ls(input: &String) -> String {
                     continue;
                 }
 
-                let fmetadata = fs::metadata(h.display().to_string()).unwrap();
+                let fmetadata = match fs::metadata(h.display().to_string()){
+                    Ok(d) => d,
+                    Err(e) => return format!("Error getting metadata; {e}"),
+                };
 
                 // ID numeric to user
-                let ownerout = Command::new("/usr/bin/id")
-                    .arg(fmetadata.uid().to_string())
-                    .output()
-                    .unwrap();
+                let ownerout = match Command::new("/usr/bin/id").arg(fmetadata.uid().to_string()).output(){
+                    Ok(d) => d,
+                    Err(e) => return format!("Error getting uid; {e}"),
+                };
                 // When you use "output" method, the stdout of command will be stored in
                 // "stdout" field. But, is stored as u8, and needs to be processed as utf8.
 
@@ -974,48 +1124,62 @@ fn ls(input: &String) -> String {
                     Ok(d) => match d.strip_suffix('\n') {
                         Some(d) => {
                             let buffer = d;
-                            let buffer2 = buffer.split(' ').map(|e| e.to_string()).collect::<Vec<String>>();
+                            let buffer2 = buffer
+                                .split(' ')
+                                .map(|e| e.to_string())
+                                .collect::<Vec<String>>();
                             format!("{} {}", buffer2[0], buffer2[1])
-                        },
+                        }
                         None => format!("Error reading owner, check file/dir permissions."),
                     },
                 };
 
                 // We convert "h" to Path type, we get the last file/dir name and we convert it to static str.
-                let df_name = Path::new(h).file_name().expect("Fail getting path's filename").to_str().expect("Fail getting path's filename");
+                let df_name = match Path::new(h).file_name(){
+                    Some(d) => match d.to_str() {
+                        Some(d) => d,
+                        None => &"Error getting path's filename",
+                    }
+                    None => &"Error getting path's filename"
+                };
 
                 let varpermissions = {
                     let mut temp = String::new();
-                    for i in format!("{:o}",fmetadata.permissions().mode()).permission_to_human() {
+                    for i in format!("{:o}", fmetadata.permissions().mode()).permission_to_human() {
                         temp = temp + &i;
                     }
                     temp
                 };
 
-                returnbuff = returnbuff + &format!(
-                    "{} \t[{}]\t[{}]\t[{}] {}\n",
-                    if h.is_symlink() {
-                        format!("s: {df_name} -> {}", std::fs::read_link(h.clone()).unwrap().display())
-                    } else if h.is_file() {
-                        format!("f: {df_name}")
-                    // Why not use "else" directly?
-                    // because maybe there are one error
-                    // with the inode and is not correctly identified
-                    } else if h.is_dir() {
-                        format!("d: {df_name}/")
-                    } else {
-                        format!("?: {df_name}")
-                    },
-                    fmetadata.mtime().epoch_to_human(),
-                    // Permissions
-                    // Permissions method by default will return in bits, if you want the octal chmod
-                    // syntax need to use ".mode()".
-                    // As Octal is not a type by it self, we need use "format!" macro to convert it in
-                    // octal mode, the return is a String.
-                    varpermissions,
-                    owner,
-                    fmetadata.size().size_to_human()
-                );
+                returnbuff = returnbuff
+                    + &format!(
+                        "{} \t[{}]\t[{}]\t[{}] {}\n",
+                        if h.is_symlink() {
+                            format!("s: {df_name} -> {}", match std::fs::read_link(h.clone()){
+                                    Ok(d) => d.display().to_string(),
+                                    Err(_e) => format!("Error getting link information"),
+                                }
+                            )
+                        } else if h.is_file() {
+                            format!("f: {df_name}")
+                        // Why not use "else" directly?
+                        // because maybe there are one error
+                        // with the inode and is not correctly identified
+                        } else if h.is_dir() {
+                            format!("d: {df_name}/")
+                        } else {
+                            format!("?: {df_name}")
+                        },
+                        fmetadata.mtime().epoch_to_human(),
+                        // Permissions
+                        // Permissions method by default will return in bits, if you want the octal chmod
+                        // syntax need to use ".mode()".
+                        // As Octal is not a type by it self, we need use "format!" macro to convert it in
+                        // octal mode, the return is a String.
+                        varpermissions,
+                        owner,
+                        fmetadata.size().size_to_human()
+                    );
             }
             // Show filename and size.
             for ee in &buffer {
@@ -1023,9 +1187,9 @@ fn ls(input: &String) -> String {
             }
         } else {
             if !config.clean && lists.len() > 1 {
-                returnbuff = returnbuff + &format!("{names} {{ \n{}\n }}\n", &entries.iter().map(|e| e.display().to_string() + "\n").collect::<String>().trim());
+                returnbuff = returnbuff + &format!("{names} {{ \n{}\n }}\n", &entries.iter().map(|e| e.display().to_string() + "\n").collect::<String>().trim() );
             } else {
-                returnbuff = returnbuff + &format!("{names} {{ \n{}\n }}", &entries.iter().map(|e| e.display().to_string() + "\n").collect::<String>().trim());
+                returnbuff = returnbuff + &format!( "{names} {{ \n{}\n }}",&entries.iter().map(|e| e.display().to_string() + "\n").collect::<String>().trim() );
             }
         }
 
@@ -1037,22 +1201,24 @@ fn ls(input: &String) -> String {
 
 // Create a directory recusively
 // We use "Path" type because it returns absolute path
-fn mkdir_r(path: &Path) -> Result<u64,String> {
-    if path.display().to_string().is_empty(){
+fn mkdir_r(path: &Path) -> Result<u64, String> {
+    if path.display().to_string().is_empty() {
         Err("Help;\n mkdir [directory]".to_string())
     } else {
-        match std::fs::create_dir_all(path.display().to_string()){
+        match std::fs::create_dir_all(path.display().to_string()) {
             Ok(_d) => Ok(0),
-            Err(e) =>  return Err( e.to_string() ),
+            Err(e) => return Err(e.to_string()),
         }
     }
 }
 
-fn mkfile(path: &Path) -> Result<(),&str> {
+fn mkfile(path: &Path) -> Result<(), &str> {
     if !path.exists() {
-        match std::fs::File::create( path.display().to_string() ) {
+        match std::fs::File::create(path.display().to_string()) {
             Ok(_d) => return Ok(()),
-            Err(_e) => return Err ("Fail to create file, verify if path exists and if you have the right permissions."),
+            Err(_e) => return Err(
+                "Fail to create file, verify if path exists and if you have the right permissions.",
+            ),
         }
     } else {
         Err("File already exists.")
@@ -1062,10 +1228,10 @@ fn mkfile(path: &Path) -> Result<(),&str> {
 fn fdmove(input: String) {
     let arguments: Vec<_> = input.split(' ').collect();
     let n_arguments = arguments.len();
-    let destination = arguments[n_arguments-1];
+    let destination = arguments[n_arguments - 1];
     let mut source: Vec<String> = Vec::new();
 
-    for i in &arguments[0..(n_arguments-1)] {
+    for i in &arguments[0..(n_arguments - 1)] {
         source.push(i.to_string());
     }
 
@@ -1074,52 +1240,50 @@ fn fdmove(input: String) {
         for i in &source {
             let snumber: Vec<_> = i.split('/').collect();
             let sbuffer = snumber.len();
-            ndestination.push(destination.to_string() + snumber.iter().nth(sbuffer-1).unwrap());
+            ndestination.push(destination.to_string() + match snumber.iter().nth(sbuffer - 1){
+                Some(d) => d,
+                None => " ",
+            });
         }
         for i in &source {
             for j in &ndestination {
-                match copy(Path::new(&i),Path::new(&j)){
+                match copy(Path::new(&i), Path::new(&j)) {
                     Ok(_d) => {
                         let _ = remove_f_d(i.clone());
                         ()
                     }
                     Err(e) => eprintln!("{e}"),
                 };
-
             }
         }
-
     } else {
         for i in &source {
-            match copy(Path::new(&i),Path::new(&destination)){
+            match copy(Path::new(&i), Path::new(&destination)) {
                 Ok(_d) => {
                     let _ = remove_f_d(i.to_string());
                     ()
-                },
+                }
                 Err(e) => eprintln!("{e}"),
             };
-
         }
-
     }
 }
 
-fn number_line(input: &String) -> Result<(),&str>{
+fn number_line(input: &String) -> Result<(), &str> {
     let mut lnumber = 0;
     let mut fdata = String::new();
-    let file = match File::open( Path::new(input.trim()) ){
+    let file = match File::open(Path::new(input.trim())) {
         Ok(d) => d,
         Err(_e) => return Err("Error opening file, check permissions and file system"),
     };
     let mut buff = BufReader::new(&file);
     let _ = buff.read_to_string(&mut fdata);
     drop(file);
-    for i in fdata.lines(){
+    for i in fdata.lines() {
         lnumber += 1;
         println!("{lnumber}   {i}");
     }
     Ok(())
-
 }
 
 fn proc() -> Result<String, String> {
@@ -1132,13 +1296,13 @@ fn proc() -> Result<String, String> {
 }
 
 fn pwd() -> Result<String, String> {
-	match env::current_dir() {
-		Ok(d) => Ok( d.display().to_string() ),
-		Err(e) => Err(e.to_string()),
-	}
+    match env::current_dir() {
+        Ok(d) => Ok(d.display().to_string()),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
-fn remove_f_d(arguments: String) -> Result<(),String> {
+fn remove_f_d(arguments: String) -> Result<(), String> {
     // Split_whitespace do what name says
     let mut b_arguments: Vec<&str> = arguments.split_whitespace().collect();
     // Buff to store the position of argument for recursive
@@ -1147,16 +1311,19 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
     // As is a Vec<str> check if some of they is "-r"
 
     let recursive: bool = if b_arguments.contains(&"-r") {
-            // iterate over the vector and position method returns the position of
-            // element if match internal condition
-            b_argspo = b_arguments.iter().position(|e| e == &"-r").unwrap();
-            true
-        } else {
-            false
+        // iterate over the vector and position method returns the position of
+        // element if match internal condition
+        b_argspo = match b_arguments.iter().position(|e| e == &"-r"){
+            Some(d) => d,
+            None => return Err(format!("Error getting position of -r argument")),
         };
+        true
+    } else {
+        false
+    };
 
     if b_argspo != 2023 {
-        b_arguments.remove( b_argspo );
+        b_arguments.remove(b_argspo);
     }
 
     let mut a_files: Vec<&str> = Vec::new();
@@ -1180,7 +1347,10 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
         for d in a_files {
             match std::fs::remove_file(d) {
                 Ok(_d) => (),
-                Err(_e) => eprintln!("Error deleting file; {}, verify if exists, if you have right permissions", d),
+                Err(_e) => eprintln!(
+                    "Error deleting file; {}, verify if exists, if you have right permissions",
+                    d
+                ),
             }
         }
     } else {
@@ -1193,7 +1363,10 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
         for d in a_files {
             match std::fs::remove_file(d) {
                 Ok(_d) => (),
-                Err(_e) => eprintln!("Error deleting file; {}, verify if exists, if you have right permissions", d),
+                Err(_e) => eprintln!(
+                    "Error deleting file; {}, verify if exists, if you have right permissions",
+                    d
+                ),
             }
         }
     }
@@ -1202,14 +1375,13 @@ fn remove_f_d(arguments: String) -> Result<(),String> {
 
 fn show(input: &String) -> Option<String> {
     let arguments: Vec<String> = input.trim().split(' ').map(|e| e.to_string()).collect();
-    let mut string_return = String::new();
+    //let string_return = String::new();
 
     // Init the configuration as clean
     let mut config = libconfarg::ShowConfiguration {
         clean: false,
         stdin: false,
         hexa: false,
-        diff: false,
     };
 
     if arguments.checkarguments_help("show") {
@@ -1232,8 +1404,6 @@ fn show(input: &String) -> Option<String> {
             config.stdin = true;
         } else if confs == "hexa" {
             config.hexa = true;
-        } else if confs == "diff" {
-            config.diff = true;
         }
     }
 
@@ -1249,72 +1419,22 @@ fn show(input: &String) -> Option<String> {
             Ok(_i) => {
                 let buff = format!("stdin {{ {buffer} }}");
                 return Some(buff);
-            },
+            }
             Err(_j) => return None,
         }
     }
 
-    // Difference
-    if config.diff {
-        // file 1
-        let mut file1: File = File::open(&archives[0]).expect("Error opening file 1.");
-        let mut file1_buffer: String = String::new();
-        file1
-            .read_to_string(&mut file1_buffer)
-            .expect("Error reading file 1");
-
-        // file 2
-        let mut file2: File = File::open(&archives[1]).expect("Error opening file 2.");
-        let mut file2_buffer: String = String::new();
-        file2
-            .read_to_string(&mut file2_buffer)
-            .expect("Error reading file 2.");
-
-        let mut linen1: u64 = 0;
-        let mut linen2: u64 = 0;
-        let mut linebuffer = 1;
-
-        let mut hmap1 = HashMap::new();
-        let mut hmap2 = HashMap::new();
-
-        for ilines in file1_buffer.lines() {
-            linen1 += 1;
-            hmap1.insert(linen1, ilines);
-        }
-
-        for ilines2 in file2_buffer.lines() {
-            linen2 += 1;
-            hmap2.insert(linen2, ilines2);
-        }
-
-        while linebuffer <= linen2 {
-            if !hmap1.contains_key(&linebuffer) {
-                println!("ln {linebuffer} +{{ {} }}", hmap2.get(&linebuffer).unwrap());
-            } else {
-                if hmap1.get(&linebuffer) != hmap2.get(&linebuffer) {
-                    println!(
-                        "ln {linebuffer} {{ {} }}\n",
-                        hmap2.get(&linebuffer).unwrap()
-                    );
-                }
-            }
-
-            linebuffer += 1;
-        }
-
-        if linen1 > linen2 {
-            let diff = (linen1 - linen2) + linen2;
-            string_return = format!("ln {diff} -{{ {} }}", hmap1.get(&diff).unwrap());
-        }
-        return Some(string_return);
-    }
-
     // Opening files and showing them
+    dbg!(&archives);
     for names in &archives {
-        let fstring: String = String::from_utf8_lossy(&fs::read(names).unwrap()).to_string();
+        let fstring: String = String::from_utf8_lossy( match &fs::read(names){
+            Ok(d) => d,
+            Err(_e) => return None,
+        }).to_string();
 
-        if config.clean && !config.hexa{
-            return Some( format!("{}",fstring) );
+
+        if config.clean && !config.hexa {
+            return Some(format!("{}", fstring));
         } else if !config.clean && config.hexa {
             // Hexa mode
             // Remember; each char will be stored as hexa.
@@ -1330,7 +1450,7 @@ fn show(input: &String) -> Option<String> {
                     }
                 }
             }
-            return Some( format!("{names} data {{ {} }}", buffer) );
+            return Some(format!("{names} data {{ {} }}", buffer));
         } else if config.clean && config.hexa {
             // Hexa mode
             // Remember; each char will be stored as hexa.
@@ -1346,26 +1466,41 @@ fn show(input: &String) -> Option<String> {
                     }
                 }
             }
-            return Some( format!("{}", buffer) );
+            return Some(format!("{}", buffer));
         } else {
-            return Some( format!("{names} data {{ {} }}", fstring) );
+            return Some(format!("{names} data {{ {} }}", fstring));
         }
     }
     None
 }
 
 fn sleep(input: &String) -> Result<(), String> {
-    let seconds = (input.split(':').collect::<Vec<&str>>())[0].parse::<u64>().unwrap();
-    let nanoseconds = (input.split(':').collect::<Vec<&str>>())[1].parse::<u32>().unwrap();
-    let finalcount = Duration::new( seconds, nanoseconds );
+    let seconds = match (input.split(':').collect::<Vec<&str>>())[0].parse::<u64>(){
+        Ok(d) => d,
+        Err(_e) => 0,
+    };
+    let nanoseconds = match (input.split(':').collect::<Vec<&str>>())[1].parse::<u32>(){
+        Ok(d) => d,
+        Err(_e) => 0,
+    };
+    let finalcount = Duration::new(seconds, nanoseconds);
     thread::sleep(finalcount);
     Ok(())
 }
 
 fn seq(input: &String) -> Result<(), String> {
-    let first = (input.split(':').collect::<Vec<&str>>())[0].parse::<u64>().unwrap();
-    let last = (input.split(':').collect::<Vec<&str>>())[1].parse::<u64>().unwrap();
-    let increment = (input.split(':').collect::<Vec<&str>>())[2].parse::<u64>().unwrap();
+    let first = match (input.split(':').collect::<Vec<&str>>())[0].parse::<u64>(){
+        Ok(d) => d,
+        Err(_e) => 0,
+    };
+    let last = match (input.split(':').collect::<Vec<&str>>())[1].parse::<u64>(){
+        Ok(d) => d,
+        Err(_e) => 0,
+    };
+    let increment = match (input.split(':').collect::<Vec<&str>>())[2].parse::<u64>(){
+        Ok(d) => d,
+        Err(_e) => 0,
+    };
 
     let mut count = first;
     while count <= last {
@@ -1375,13 +1510,21 @@ fn seq(input: &String) -> Result<(), String> {
     Ok(())
 }
 
-fn tail(input: &String) -> Result<(), String> {
+fn tail(input: &String) -> Result<(), &str> {
     if input.len() <= 1 {
-        eprintln!("Not enough arguments; _tail [number] [file] : show the last [number] lines of [file].");
-        return Err(" ".to_string());
+        eprintln!(
+            "Not enough arguments; _tail [number] [file] : show the last [number] lines of [file]."
+        );
+        return Err(" ");
     }
-    let mut lnumber = (input.split(' ').collect::<Vec<&str>>())[0].parse::<u64>().unwrap();
-    let vfile = File::open( Path::new( (input.split(' ').collect::<Vec<&str>>())[1] )).unwrap();
+    let mut lnumber = match (input.split(' ').collect::<Vec<&str>>())[0].parse::<u64>(){
+        Ok(d) => d,
+        Err(_e) => return Err("Error getting line number"),
+    };
+    let vfile = match File::open(Path::new((input.split(' ').collect::<Vec<&str>>())[1])){
+        Ok(d) => d,
+        Err(_e) => return Err("Error getting file information"),
+    };
 
     let mut buffer = BufReader::new(&vfile);
     let mut fdata = String::new();
@@ -1389,13 +1532,12 @@ fn tail(input: &String) -> Result<(), String> {
     let _ = buffer.read_to_string(&mut fdata);
 
     let lines_vfile: Vec<&str> = fdata.lines().collect();
-    let mut lines_file: usize = fdata.lines().count() -1;
+    let mut lines_file: usize = fdata.lines().count() - 1;
 
     drop(buffer);
     let mut buffer: Vec<&str> = Vec::new();
 
     while lnumber > 0 {
-
         buffer.push(lines_vfile[lines_file]);
         lines_file -= 1;
         lnumber -= 1;
@@ -1405,21 +1547,20 @@ fn tail(input: &String) -> Result<(), String> {
         println!("{}", line);
     }
 
-
     Ok(())
 }
 
-fn fwhich(input: &String) -> Result<String,&str> {
+fn fwhich(input: &String) -> Result<String, &str> {
     let result: Vec<String> = which(input.to_string());
     let mut sreturn = String::new();
     if !result.is_empty() {
         if result.len() > 1 {
             for i in result {
-            	if !sreturn.is_empty() {
-            		sreturn = sreturn + &"," + &i;
-            	} else {
-            		sreturn = i;
-            	}
+                if !sreturn.is_empty() {
+                    sreturn = sreturn + &"," + &i;
+                } else {
+                    sreturn = i;
+                }
             }
         } else {
             for i in result {
@@ -1437,20 +1578,19 @@ fn fwhich(input: &String) -> Result<String,&str> {
 // Check the builtin executing it
 // The first argument is the command, the second the lbuilts list
 // Returns Ok(d) with the stdout of builtin or Err(e) if doesn't match
-pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
+pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String, &str> {
     use self::*;
 
     let result: String;
     // We MUST use trim() because always there are some unwelcomme characters at the start/end
     let command = command.trim();
 
-    if LBUILTINS.contains( &command ){
+    if LBUILTINS.contains(&command) {
         if command == "basename" {
-            match basename(&b_arguments){
+            match basename(&b_arguments) {
                 Some(d) => Ok(d),
                 None => Err("no file name"),
             }
-
         } else if command == "base64" {
             match base64(&b_arguments) {
                 Some(d) => Ok(d),
@@ -1470,7 +1610,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Some(d) => Ok(d),
                 None => Err("error converting"),
             }
-        } else if command == "du"{
+        } else if command == "du" {
             match disk_usage(&b_arguments) {
                 Some(d) => Ok(d),
                 None => Err("Error reading path"),
@@ -1487,8 +1627,8 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
         } else if command == "home" {
             envhome()
         } else if command == "mkdir" {
-            match mkdir_r( Path::new( &b_arguments ) ) {
-                Ok(_d) => Ok( "".to_string() ),
+            match mkdir_r(Path::new(&b_arguments)) {
+                Ok(_d) => Ok("".to_string()),
                 Err(_e) => {
                     if _e == "Help;\n mkdir [directory]" {
                         let error = "Help;\n mkdir [directory]";
@@ -1496,7 +1636,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                     } else {
                         Err("Error creating directory")
                     }
-                },
+                }
             }
         } else if command == "mkfile" {
             match mkfile ( Path::new( &b_arguments ) ){
@@ -1513,13 +1653,13 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             let _ = fdmove(b_arguments);
             Ok(" ".to_string())
         } else if command == "nl" {
-            match number_line(&b_arguments){
+            match number_line(&b_arguments) {
                 Ok(()) => Ok("".to_string()),
                 Err(_e) => Err("Error opening file, check permissions and file system"),
             }
         } else if command == "rm" {
             match remove_f_d(b_arguments) {
-                Ok(()) => Ok( "".to_string() ),
+                Ok(()) => Ok("".to_string()),
                 Err(_e) => Err("Error deleting object"),
             }
         } else if command == "proc" {
@@ -1528,10 +1668,10 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Err(_e) => Err("Error getting processes"),
             }
         } else if command == "pwd" {
-        	match pwd(){
-        		Ok(d) => Ok(d),
-        		Err(_e) => Err("Error getting actual working directory")
-        	}
+            match pwd() {
+                Ok(d) => Ok(d),
+                Err(_e) => Err("Error getting actual working directory"),
+            }
         } else if command == "cd" {
             let _ = cd(b_arguments);
             Ok(" ".to_string())
@@ -1546,11 +1686,10 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             let destination = buff[1];
 
             drop(buff);
-            match copy( Path::new(source), Path::new(destination) ) {
-                Ok(_d) => Ok( "".to_string() ),
+            match copy(Path::new(source), Path::new(destination)) {
+                Ok(_d) => Ok("".to_string()),
                 Err(e) => Err(e),
             }
-
         } else if command == "env" {
             result = environmentvar();
             Ok(result)
@@ -1560,8 +1699,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             // Well; https://github.com/rust-lang/rust/issues/53667
             if let Ok(()) = fresult {
                 return Err("");
-            }
-            else if let Err(false) = fresult {
+            } else if let Err(false) = fresult {
                 return Ok("".to_string());
             }
             Ok("".to_string())
@@ -1571,16 +1709,19 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
                 Err(_e) => Err("Error getting environment variables"),
             }
         } else if command == "join" {
-            match join(&b_arguments){
+            match join(&b_arguments) {
                 Ok(()) => Ok("Joined files".to_string()),
                 Err(_e) => Err("Error joining files, verify arguments, permissions and/or space"),
             }
         } else if command == "list" {
-            result = format!(" Bultins (they are called with '_'); {{\n {:?}\n}}", LBUILTINS);
+            result = format!(
+                " Bultins (they are called with '_'); {{\n {:?}\n}}",
+                LBUILTINS
+            );
             Ok(result)
         } else if command == "help" {
-          result = format!("{HBUILTINS}");
-          Ok(result)
+            result = format!("{HBUILTINS}");
+            Ok(result)
         } else if command == "ln" {
             let buff = b_arguments.split(' ').collect::<Vec<&str>>();
             if buff.len() < 2 {
@@ -1592,7 +1733,7 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             let destination = buff[1];
 
             drop(buff);
-            match ln( Path::new(source), Path::new(destination) ) {
+            match ln(Path::new(source), Path::new(destination)) {
                 Ok(d) => Ok(d),
                 Err(_e) => Err("Error creating symlink, maybe destionation already exists"),
             }
@@ -1606,13 +1747,13 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             }
         } else if command == "sleep" {
             let _ = sleep(&b_arguments);
-            Ok("".to_string() )
+            Ok("".to_string())
         } else if command == "seq" {
             let _ = seq(&b_arguments);
-            Ok("".to_string() )
+            Ok("".to_string())
         } else if command == "tail" {
             let _ = tail(&b_arguments);
-            Ok("".to_string() )
+            Ok("".to_string())
         } else if command == "which" {
             match fwhich(&b_arguments) {
                 Ok(d) => Ok(d),
@@ -1620,11 +1761,11 @@ pub fn rbuiltins(command: &str, b_arguments: String) -> Result<String,&str> {
             }
         } else if command == "clear" {
             let _ = clear();
-            Ok( " ".to_string() )
+            Ok(" ".to_string())
         } else {
-            Err( "builtin not recognized" )
+            Err("builtin not recognized")
         }
     } else {
-        Err( "not builtin found" )
+        Err("not builtin found")
     }
 }
