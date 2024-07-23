@@ -1,6 +1,6 @@
 [package]
 name = "rune"
-version = "0.45.26"
+version = "0.46.26"
 edition = "2021"
 readme = "../README.md"
 license = "GPL-3.0"

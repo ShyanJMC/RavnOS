@@ -144,7 +144,7 @@ _tail [number] [file] : show the last [number] lines of [file].
 _which [binary]: show where is located the binary based in PATH environment variable.
 _$?: print the latest command exit return, not include builtins";
 
-const RUNE_VERSION: &str = "v0.45.26";
+const RUNE_VERSION: &str = "v0.46.26";
 
 // Builtins
 // Are private for only be executed by rbuiltins
@@ -1425,53 +1425,92 @@ fn show(input: &String) -> Option<String> {
     }
 
     // Opening files and showing them
-    dbg!(&archives);
+    //let mut fstring: Vec<String> = Vec::new();
+    let mut buffer: String = String::new();
+    let mut fvec = HashMap::new();
+
     for names in &archives {
-        let fstring: String = String::from_utf8_lossy( match &fs::read(names){
+        if archives.len() == 1 {
+            buffer = String::from_utf8_lossy( match &fs::read(names){
+                Ok(d) => d,
+                Err(_e) => return None,
+            }).to_string();
+
+            if !config.clean && !config.hexa {
+                buffer = format!("{names} {{ {buffer} }}");
+            } else if config.clean && !config.hexa {
+                {}
+            }
+
+            if config.hexa {
+                // Hexa mode
+                // Remember; each char will be stored as hexa.
+                let mut buffer2: String = String::new();
+                // Split the file's data in lines() and collect each in &str vector.
+                for iteration in buffer.lines().collect::<Vec<&str>>() {
+                    // Splits each line in chars
+                    for dchar in iteration.chars() {
+                        // Transform each char in string and then into bytes data
+                        for fchar in dchar.to_string().into_bytes() {
+                            // Show each byte char into hexadecimal mode.
+                            buffer2 += &(format!("{:x} ", fchar)).to_string();
+                        }
+                    }
+                }
+                buffer = buffer2;
+                // End; archives.len() == 1
+            }
+
+            if config.clean && config.hexa {
+                {}
+            } else if !config.clean && config.hexa {
+                buffer = format!("{} {{ {} }}",names,buffer);
+            }
+    } else {
+        let mut buffer_hexa: String = String::new();
+        let buffer_string: String = String::from_utf8_lossy( match &fs::read(names){
             Ok(d) => d,
             Err(_e) => return None,
         }).to_string();
 
-
-        if config.clean && !config.hexa {
-            return Some(format!("{}", fstring));
-        } else if !config.clean && config.hexa {
+        if config.hexa {
             // Hexa mode
             // Remember; each char will be stored as hexa.
-            let mut buffer: String = String::new();
             // Split the file's data in lines() and collect each in &str vector.
-            for iteration in fstring.lines().collect::<Vec<&str>>() {
+            for iteration in buffer_string.lines().collect::<Vec<&str>>() {
                 // Splits each line in chars
                 for dchar in iteration.chars() {
                     // Transform each char in string and then into bytes data
                     for fchar in dchar.to_string().into_bytes() {
                         // Show each byte char into hexadecimal mode.
-                        buffer += &(format!("{:x} ", fchar)).to_string();
+                        buffer_hexa += &(format!("{:x} ", fchar)).to_string();
                     }
                 }
             }
-            return Some(format!("{names} data {{ {} }}", buffer));
-        } else if config.clean && config.hexa {
-            // Hexa mode
-            // Remember; each char will be stored as hexa.
-            let mut buffer: String = String::new();
-            // Split the file's data in lines() and collect each in &str vector.
-            for iteration in fstring.lines().collect::<Vec<&str>>() {
-                // Splits each line in chars
-                for dchar in iteration.chars() {
-                    // Transform each char in string and then into bytes data
-                    for fchar in dchar.to_string().into_bytes() {
-                        // Show each byte char into hexadecimal mode.
-                        buffer += &(format!("{:x} ", fchar)).to_string();
-                    }
-                }
-            }
-            return Some(format!("{}", buffer));
+            // I must use ".to_string()" into "names" variable because her type is &String
+            // and I want just String
+            fvec.insert(names.to_string(),buffer_hexa.clone());
+        // End; archives.len() == 1
         } else {
-            return Some(format!("{names} data {{ {} }}", fstring));
+            fvec.insert(names.to_string(),buffer_string);
+        }
+
+    }
+    }
+
+    let mut fstrings = String::new();
+    if archives.len() == 1 {
+        return Some(format!("{}", buffer));
+    } else {
+        for (names,files) in &fvec {
+            if !config.clean {
+                fstrings += &format!("{names} {{ {files} }}\n\n");
+            } else {
+                fstrings += &format!("{files}");
+            }
         }
     }
-    None
+    return Some(fstrings);
 }
 
 fn sleep(input: &String) -> Result<(), String> {
