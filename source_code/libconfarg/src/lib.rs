@@ -25,7 +25,6 @@ pub struct ShowConfiguration {
     pub clean: bool,
     pub stdin: bool,
     pub hexa: bool,
-    pub diff: bool,
 }
 
 /// Ls configuration struct
