@@ -27,14 +27,27 @@ echo "Verifing target and adding if not exist"
 rustup target add aarch64-unknown-none-softfloat
 	
 echo "Compiling"
-cargo rustc --target aarch64-unknown-none-softfloat --features $board --release -- -C target-cpu=$cpuboard -C link-arg=--library-path=$libpath -C link-arg=--script=$libpath/kernel.ld 
+cargo rustc --target aarch64-unknown-none-softfloat --features $board --release -- -C target-cpu=$cpuboard -C link-arg=--library-path=$libpath -C link-arg=--script=$libpath/kernel.ld > logs/kernel-output.log 2>logs/kernel-error_output.log
 	
 if [ $? -eq 0 ];then
-	echo "Copy object and stripping"
+	echo "Copying object and stripping"
+	mkdir cargo-tmp
+	CARGO_TARGET_DIR=cargo-tmp/ cargo install cargo-binutils >logs/binutils-output.log 2>logs/bintuils-error_output.log
+	if [ $? -ne 0 ]; then
+		echo "Error building and installing cargo-bintuils. See logs directory."
+		exit 1
+	fi
+	rm -rf cargo-tmp
+	
+	rustup component add llvm-tools
 	rust-objcopy --strip-all -O binary ../target/aarch64-unknown-none-softfloat/release/ravnos_kernel $kernel
-	ls -lh $kernel
+
+	echo "Kernel details;" && ls -lh $kernel
+
 	echo "Creating in ../target/doc the documentation"
-	cargo doc --target aarch64-unknown-none-softfloat
+	cargo doc --target aarch64-unknown-none-softfloat >/dev/null 2>/dev/null
 	echo -e "[0] Insert your SDCard\n[1] Copy kernel8.img and files in firmware/raspberry_pi-4/ into your SDCard.\n[2] Unplug it and boot"
 fi
 
+echo "Restaring rust toolchain to stable"
+rustup default stable
