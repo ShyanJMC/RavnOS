@@ -14,6 +14,8 @@ tock-registers = ["dep:tock-registers"]
 ##--------------------------------------------------------------------------------------------------
 
 [dependencies]
-aarch64-cpu = "9.x.x"
+aarch64-cpu = "10.0.0"
+embedded-alloc = "0.6.0"
+critical-section = "1"
 #tock-registers = { version = "0.8.x", default-features = false, features = ["register_types"], optional = true }
-tock-registers = { version = "0.8.x", features = ["register_types"], optional = true }
+tock-registers = { version = "0.9.0", features = ["register_types"], optional = true }
