@@ -13,7 +13,7 @@ use tock_registers::{
     register_bitfields, register_structs,
     registers::ReadWrite,
 };
-use aarch64_cpu::asm::nop;
+//use aarch64_cpu::asm::nop;
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
