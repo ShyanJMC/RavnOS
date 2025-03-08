@@ -4,10 +4,16 @@
 
 //! Driver support.
 
-use crate::{
-    println,
-    synchronization::{interface::Mutex, NullLock},
-};
+// Maybe you are asking; why are you importin macro println! if it
+// is defined in console/mod.rs ? Not should be first "use crate::console"
+// and then the macro is automatically imported? 
+// Well, not. Because when is imported in main.rs as module "mod console.rs",
+// is enabled as global macro in the hole program as root crate, and because
+// of that you just need use "use crate::println".
+// Remember that this is because is a macro, is not the same behaviour in functions.
+use crate::println;
+
+use crate::synchronization::{interface::Mutex, NullLock};
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
