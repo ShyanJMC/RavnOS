@@ -6,6 +6,7 @@
 
 mod null_console;
 
+use core::fmt;
 use crate::synchronization::{self, NullLock};
 
 //--------------------------------------------------------------------------------------------------
@@ -78,4 +79,34 @@ pub fn register_console(new_console: &'static (dyn interface::All + Sync)) {
 /// This is the global console used by all printing macros.
 pub fn console() -> &'static dyn interface::All {
     CUR_CONSOLE.lock(|con| *con)
+}
+
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    console().write_fmt(args).unwrap();
+}
+
+/// Prints without a newline.
+///
+/// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
+#[macro_export]
+macro_rules! print {
+    // For macro is mandatory use $crate::[crate_name], and not directly
+    // the call to _print function. This is because remember that the 
+    // macros are replaced at compile time by this code.
+    ($($arg:tt)*) => ($crate::console::_print(format_args!($($arg)*)));
+}
+
+/// Prints with a newline.
+///
+/// Carbon copy from <https://doc.rust-lang.org/src/std/macros.rs.html>
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ({
+        // For macro is mandatory use $crate::[crate_name], and not directly
+        // the call to _print function. This is because remember that the 
+        // macros are replaced at compile time by this code.
+        $crate::console::_print(format_args_nl!($($arg)*));
+    })
 }
