@@ -19,3 +19,4 @@ embedded-alloc = "0.6.0"
 critical-section = "1"
 #tock-registers = { version = "0.8.x", default-features = false, features = ["register_types"], optional = true }
 tock-registers = { version = "0.9.0", features = ["register_types"], optional = true }
+fdt = "0.1.5"
