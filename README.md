@@ -32,7 +32,7 @@ process or fixing regretion issues. RavnOS fix that isolating the system and the
 
 ## Screenshots
 
-| |[](images/kernel.png) |
+| ![](images/kernel.png) |
 | :---: |
 | RavnOS kernel |
 
