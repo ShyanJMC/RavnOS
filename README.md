@@ -32,6 +32,10 @@ process or fixing regretion issues. RavnOS fix that isolating the system and the
 
 ## Screenshots
 
+| |[](images/kernel.png) |
+| :---: |
+| RavnOS kernel |
+
 | ![](images/huginn.png) |
 | :---: |
 | Huginn v0.1.0 |
