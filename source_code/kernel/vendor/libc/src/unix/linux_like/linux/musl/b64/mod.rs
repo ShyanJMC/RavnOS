@@ -35,7 +35,7 @@ s! {
         pub msg_stime: crate::time_t,
         pub msg_rtime: crate::time_t,
         pub msg_ctime: crate::time_t,
-        __msg_cbytes: c_ulong,
+        pub __msg_cbytes: c_ulong,
         pub msg_qnum: crate::msgqnum_t,
         pub msg_qbytes: crate::msglen_t,
         pub msg_lspid: crate::pid_t,
@@ -81,10 +81,6 @@ pub const __SIZEOF_PTHREAD_RWLOCK_T: usize = 56;
 pub const __SIZEOF_PTHREAD_MUTEX_T: usize = 40;
 pub const __SIZEOF_PTHREAD_BARRIER_T: usize = 32;
 
-extern "C" {
-    pub fn getrandom(buf: *mut c_void, buflen: size_t, flags: c_uint) -> ssize_t;
-}
-
 cfg_if! {
     if #[cfg(target_arch = "aarch64")] {
         mod aarch64;
@@ -107,6 +103,9 @@ cfg_if! {
     } else if #[cfg(any(target_arch = "loongarch64"))] {
         mod loongarch64;
         pub use self::loongarch64::*;
+    } else if #[cfg(any(target_arch = "wasm32"))] {
+        mod wasm32;
+        pub use self::wasm32::*;
     } else {
         // Unknown target_arch
     }
