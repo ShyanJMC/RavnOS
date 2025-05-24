@@ -1,3 +1,6 @@
-﻿arm_64bit=1
+arm_64bit=1
+kernel=kernel8.img
+kernel_address=0x80000
 enable_uart=1
-core_freq=250
+device_tree=bcm2711-rpi-4-b.dtb
+device_tree_address=0x000000000000033c
