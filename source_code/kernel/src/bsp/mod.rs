@@ -7,7 +7,7 @@
 mod device_driver;
 
 #[cfg(feature = "bsp_rpi4")]
-mod raspberrypi;
+pub mod raspberrypi;
 
 #[cfg(feature = "bsp_rpi4")]
 pub use raspberrypi::*;
