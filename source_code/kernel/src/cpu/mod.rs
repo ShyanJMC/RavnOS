@@ -1,5 +1,23 @@
 mod boot;
+use core::ptr::{write_volatile};
+// Maybe you are asking; why are you importin macro println! if it
+// is defined in console/mod.rs ? Not should be first "use crate::console"
+// and then the macro is automatically imported? 
+// Well, not. Because when is imported in main.rs as module "mod console.rs",
+// is enabled as global macro in the hole program as root crate, and because
+// of that you just need use "use crate::println".
+// Remember that this is because is a macro, is not the same behaviour in functions.
+use crate::println;
+
+
 use aarch64_cpu::asm;
+use aarch64_cpu::asm::barrier::SY;
+// Data Synchronization Barrier
+use aarch64_cpu::asm::barrier::dsb;
+// Instruction Synchronization Barrier
+use aarch64_cpu::asm::barrier::isb;
+// Send EVent
+use aarch64_cpu::asm::sev;
 
 /// Pause execution on the core.
 #[inline(always)]
@@ -29,22 +47,21 @@ pub fn get_num_cores() -> u8 {
 
 // Start all cores available in the SOC
 pub fn start_cores() {
-	let CORE_START_ADDR: u64 = 0x80000;
-	let MAILBOX_BASE: u64 = 0x4000_0000;
+    const CORE_START_ADDR: u64 = 0x80000;
+    const MAILBOX_BASE: u64 = 0x4000_0000;
     let num_cores = get_num_cores();
 
     for i in 1..num_cores {
-        let mailbox_offset = (i as u64) * 0x10;
-        let mailbox_addr = MAILBOX_BASE + mailbox_offset;
-        
+        let mb = MAILBOX_BASE + (i as u64) * 0x10;
+        println!("[0] Starting core {} with total MAILBOX; {}", &i, &mb);
+        println!("[0] Setting Spin Table for core {} with address {}", &i, &CORE_START_ADDR);
         unsafe {
-        	// Here the inmutability is disabled because of that "unsafe"
-        	// Escribir la dirección de arranque en el mailbox
-            *(mailbox_addr as *mut u64) = CORE_START_ADDR;
-            // Start core
-            let release_addr = MAILBOX_BASE + 0x8 + (i as u64 * 8);
-            *(release_addr as *mut u32) = 0x1;
-            aarch64_cpu::asm::sev(); // Send Event
+            write_volatile(mb as *mut u64, CORE_START_ADDR);
+            dsb(SY);
+            isb(SY);
+            write_volatile((MAILBOX_BASE + 0x8 + (i as u64) * 8) as *mut u64, 1);
+            sev();
         }
+        println!("[0] Core {} started", i);
     }
 }
