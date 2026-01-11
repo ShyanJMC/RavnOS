@@ -2,100 +2,91 @@
 //
 // Cooperative scheduler scaffolding for multi-core bring-up experiments.
 
+use crate::cpu::{kernel_threads, userdebug_threads};
 use core::arch::asm;
 
-/// Constantes para configuración del scheduler y el timer
+/// Scheduler/timer configuration constants.
 pub const MAX_CORES: usize = 4;
 pub const MAX_KERNEL_TASKS: usize = 2;
 pub const MAX_USER_TASKS: usize = 3;
 
-/// Índice de tarea actual por core
+/// Per-core index of the task that should run next.
 #[no_mangle]
 pub static mut CURRENT_TASK_IDX: [usize; MAX_CORES] = [0; MAX_CORES];
 
-/// Tabla de tareas del kernel
+/// Kernel task table executed exclusively by Core 0 (kernel domain).
 #[no_mangle]
-pub static mut KERNEL_TASKS: [unsafe extern "C" fn(); MAX_KERNEL_TASKS] = [
-    kernel_task0,
-    kernel_task1,
-];
+pub static mut KERNEL_TASKS: [unsafe extern "C" fn(); MAX_KERNEL_TASKS] =
+    [kernel_task0, kernel_task1];
 
-/// Tabla de tareas de usuario/driver
+/// User/driver task table scheduled on the secondary cores (Core 1..MAX_CORES-1).
 #[no_mangle]
-pub static mut USER_TASKS: [unsafe extern "C" fn(); MAX_USER_TASKS] = [
-    user_task0,
-    user_task1,
-    user_task2,
-];
+pub static mut USER_TASKS: [unsafe extern "C" fn(); MAX_USER_TASKS] =
+    [user_task0, user_task1, user_task2];
 
-/// Plantillas/ejemplos de tareas del kernel
+/// Sample kernel tasks used when Core 0 is scheduled.
 #[no_mangle]
 pub unsafe extern "C" fn kernel_task0() {
-    // Código de la tarea de kernel 0
+    // TODO: Replace with real kernel task body.
+    kernel_threads::run_debug_checks();
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn kernel_task1() {
-    // Código de la tarea de kernel 1
+    // TODO: Replace with real kernel task body.
+    kernel_threads::run_debug_checks();
 }
 
-/// Plantillas/ejemplos de tareas de usuario/driver
+/// Sample user/driver tasks executed on cores 1..N.
 #[no_mangle]
 pub unsafe extern "C" fn user_task0() {
-    // Código de la tarea user/driver 0
+    // TODO: Replace with real user/driver task body.
+    userdebug_threads::run_debug_checks();
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn user_task1() {
-    // Código de la tarea user/driver 1
+    // TODO: Replace with real user/driver task body.
+    userdebug_threads::run_debug_checks();
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn user_task2() {
-    // Código de la tarea user/driver 2
+    // TODO: Replace with real user/driver task body.
+    userdebug_threads::run_debug_checks();
 }
 
-/// Tabla vectorial ARM64 (Exception Vector Table), alineada a 2 KiB.
-/// Esta tabla define a dónde saltar cuando ocurre una excepción/interrupción.
-#[repr(align(2048))]
+const VECTOR_TABLE_WORDS: usize = 512;
+const VECTOR_SLOT_STRIDE_WORDS: usize = 0x20 / core::mem::size_of::<u32>();
+
+const fn build_vector_table() -> [u32; VECTOR_TABLE_WORDS] {
+    let mut table = [0u32; VECTOR_TABLE_WORDS];
+
+    table[VECTOR_SLOT_STRIDE_WORDS * 0] = 0x1400_0000; // 0x000: Synchronous EL1t
+    table[VECTOR_SLOT_STRIDE_WORDS * 1] = 0x1400_0000; // 0x020: IRQ EL1t
+    table[VECTOR_SLOT_STRIDE_WORDS * 2] = 0x1400_0000; // 0x040: FIQ EL1t
+    table[VECTOR_SLOT_STRIDE_WORDS * 3] = 0x1400_0000; // 0x060: SError EL1t
+    table[VECTOR_SLOT_STRIDE_WORDS * 4] = 0x1400_0000; // 0x080: Synchronous EL1h
+    table[VECTOR_SLOT_STRIDE_WORDS * 5] = 0x9400_0000; // 0x0A0: IRQ EL1h (patched to bl scheduler)
+    table[VECTOR_SLOT_STRIDE_WORDS * 6] = 0x1400_0000; // 0x0C0: FIQ EL1h
+    table[VECTOR_SLOT_STRIDE_WORDS * 7] = 0x1400_0000; // 0x0E0: SError EL1h
+
+    table
+}
+
+/// ARM64 Exception Vector Table aligned to 2 KiB (required by VBAR_EL1).
+/// Each 0x20-byte slot reserves 32 bytes; we only need to seed the head opcode because the rest
+/// of the slot remains zeroed. The boot assembly (`cpu/boot.s`) patches the EL1h IRQ slot (0x0A0)
+/// at runtime so it issues a proper `bl scheduler_irq_handler` instruction with the correct imm26
+/// offset.
+#[repr(C, align(2048))]
+pub struct VectorTable(pub [u32; VECTOR_TABLE_WORDS]);
+
 #[no_mangle]
-pub static VECTOR_TABLE: [u32; 512] = [
-    // 0x000: Synchronous EL1t
-    0x14000000, // b .
-    0; 31,
+pub static VECTOR_TABLE: VectorTable = VectorTable(build_vector_table());
 
-    // 0x020: IRQ EL1t
-    0x14000000, // b .
-    0; 31,
-
-    // 0x040: FIQ EL1t
-    0x14000000, // b .
-    0; 31,
-
-    // 0x060: SError EL1t
-    0x14000000, // b .
-    0; 31,
-
-    // 0x080: Synchronous EL1h
-    0x14000000, // b .
-    0; 31,
-
-    // 0x0A0: IRQ EL1h (entrada principal de IRQ en modo kernel)
-    // NOTA: Al instalar la tabla se debe escribir aquí la instrucción bl scheduler_irq_handler
-    0x94000000, // bl (offset a parchear en tiempo de link o con binpatch)
-    0; 31,
-
-    // 0x0C0: FIQ EL1h
-    0x14000000, // b .
-    0; 31,
-
-    // 0x0E0: SError EL1h
-    0x14000000, // b .
-    0; 31,
-];
-
-/// Instala la tabla vectorial: el CPU la usará para saltar a los handlers de excepción/IRQ.
-/// Llamar durante la inicialización del kernel.
+/// Publish VECTOR_TABLE so the CPU jumps to our handlers on every exception/IRQ.
+/// Must be invoked from the early kernel init code before enabling interrupts.
 pub unsafe fn install_vector_table() {
     let addr = &VECTOR_TABLE as *const _ as usize;
     asm!(
@@ -105,107 +96,103 @@ pub unsafe fn install_vector_table() {
     );
 }
 
-/// Habilita las IRQs a nivel de CPU (DAIF register).
+/// Clears the IRQ mask bit in DAIF so timer interrupts are visible at EL1.
 pub unsafe fn enable_irq() {
-    asm!(
-        "msr daifclr, #2",
-        options(nostack, preserves_flags)
-    );
+    asm!("msr daifclr, #2", options(nostack, preserves_flags));
 }
 
-/// Configura el Generic Timer del CPU para que lance una IRQ cada 5 milisegundos.
-/// Debe llamarse después de configurar la vector table y antes de entrar en main loop.
-///
-/// - Lee la frecuencia del timer (`cntfrq_el0`), que normalmente es fija (e.g. 50MHz).
-/// - Calcula los ticks para 5ms.
-/// - Escribe el valor en `cntp_tval_el0` (timer del núcleo actual).
-/// - Habilita el timer y su IRQ vía `cntp_ctl_el0`.
+/// Programs the per-core Generic Timer so it fires an IRQ roughly every 5 ms.
+/// Sequence (per core):
+/// - Read `cntfrq_el0` to learn the fixed timer frequency.
+/// - Compute ticks = freq * 0.005 seconds.
+/// - Write the countdown value into `cntp_tval_el0`.
+/// - Enable the timer/IRQ through `cntp_ctl_el0`.
 pub unsafe fn setup_generic_timer_5ms() {
-    let mut freq: u32;
+    let mut freq: u64;
     let ticks: u64;
 
-    // Lee la frecuencia del timer (Hz) del registro cntfrq_el0
+    // Read the timer frequency in Hz from cntfrq_el0.
     asm!(
-        "mrs {freq}, cntfrq_el0",
+        "mrs {freq:x}, cntfrq_el0",
         freq = out(reg) freq
     );
-    // Calcula los ticks para 5 ms: ticks = freq * 0.005
-    ticks = (freq as u64) / 200;
+    // Convert frequency to ticks for 5 ms (ticks = freq / 200).
+    ticks = freq / 200;
 
-    // Configura el timer del núcleo: cuenta descendente, IRQ al llegar a 0
+    // Program the countdown and enable the timer so it raises an IRQ when it reaches zero.
     asm!(
-        "msr cntp_tval_el0, {ticks}", // Valor inicial del timer
+        "msr cntp_tval_el0, {ticks}", // Initial countdown value (per core)
         "mov x0, #1",
-        "msr cntp_ctl_el0, x0",       // Habilita timer y su IRQ
+        "msr cntp_ctl_el0, x0",       // Enable timer + IRQ routing
         ticks = in(reg) ticks,
         out("x0") _
     );
 }
 
-/// Handler del scheduler, llamado por la IRQ del timer cada 5ms.
-/// Alterna tareas según el núcleo, llamando a funciones kernel en core 0,
-/// y a funciones de usuario/driver en el resto.
+/// Timer IRQ handler that implements a cooperative multi-core scheduler.
+/// Core 0 rotates over KERNEL_TASKS; cores 1..N rotate over USER_TASKS.
 #[no_mangle]
 pub unsafe extern "C" fn scheduler_irq_handler() {
     asm!(
-        // Reprograma el timer para el próximo tick de 5ms (misma frecuencia)
+        // Re-arm the timer with the same 5 ms quantum.
         "mrs x10, cntfrq_el0",
-        "udiv x10, x10, #200",            // x10 = ticks para 5ms
+        "mov x11, #200",
+        "udiv x10, x10, x11",            // x10 = ticks needed for 5 ms
         "msr cntp_tval_el0, x10",
 
-        // Guarda x0, x1 (preserva valores originales)
+        // Preserve x0/x1 which are clobbered by the bookkeeping below.
         "stp x0, x1, [sp, #-16]!",
 
-        // 1. Lee el número de núcleo actual (Affinity Level 0)
+        // 1) Read the current core ID (Affinity Level 0).
         "mrs x0, mpidr_el1",
         "and x0, x0, #0b11",              // x0 = core_id (0..3)
 
-        // 2. Obtiene puntero a CURRENT_TASK_IDX
+        // 2) Load CURRENT_TASK_IDX base pointer.
         "ldr x1, ={current_task_idx}",
 
-        // 3. Calcula dirección del índice para este core
+        // 3) Compute the slot for this core.
         "add x2, x1, x0, lsl #3",         // x2 = &CURRENT_TASK_IDX[core_id]
 
-        // 4. Carga el índice de tarea actual de este core
-        "ldr x3, [x2]",                   // x3 = idx_tarea_actual
+        // 4) Read the currently scheduled task index.
+        "ldr x3, [x2]",                   // x3 = idx
 
-        // 5. Suma 1 al índice (próxima tarea)
+        // 5) Move to the next task slot.
         "add x3, x3, #1",
 
-        // 6. Chequea el máximo de tareas para el core
+        // 6) Clamp against the correct task table length.
         "cmp x0, #0",
         "b.eq 1f",
-        // Núcleos 1,2,3: User/driver
+        // Cores 1..N -> USER_TASKS
         "mov x4, {max_user_tasks}",
         "cmp x3, x4",
         "csel x3, xzr, x3, eq",
         "b 2f",
-        // Núcleo 0: Kernel
+        // Core 0 -> KERNEL_TASKS
         "1:",
         "mov x4, {max_kernel_tasks}",
         "cmp x3, x4",
         "csel x3, xzr, x3, eq",
         "2:",
-        // 7. Guarda el nuevo índice de tarea para este core
+        // 7) Persist the wrap-adjusted index.
         "str x3, [x2]",
 
-        // 8. Elige tabla y llama a la función correspondiente
+        // 8) Select the right task table and branch to the function pointer.
         "cmp x0, #0",
         "b.eq 3f",
-        // User/driver
+        // User/driver task dispatch
         "ldr x5, ={user_tasks}",
         "ldr x6, [x2]",
         "ldr x7, [x5, x6, lsl #3]",
         "blr x7",
         "b 4f",
-        // Kernel
+        // Kernel task dispatch
         "3:",
         "ldr x5, ={kernel_tasks}",
         "ldr x6, [x2]",
         "ldr x7, [x5, x6, lsl #3]",
         "blr x7",
         "4:",
-        // Restaura x0, x1
+        // 9) Restore x0/x1 and exit the exception.
         "ldp x0, x1, [sp], #16",
         "eret",
         current_task_idx = sym CURRENT_TASK_IDX,
@@ -217,9 +204,40 @@ pub unsafe extern "C" fn scheduler_irq_handler() {
     );
 }
 
-// === Ejemplo de inicialización básica en main o el entrypoint de tu kernel ===
+// === Scheduler bootstrap + call-by-call walkthrough ========================
+// Minimal main.rs bring-up (runs once on each core during init):
 // unsafe {
-//     install_vector_table();       // Instala la tabla vectorial (handlers de excepción)
-//     setup_generic_timer_5ms();    // Configura el timer para lanzar IRQ cada 5 ms
-//     enable_irq();                 // Habilita IRQs
+//     cpu::scheduler::install_vector_table();    // Publishes VECTOR_TABLE via VBAR_EL1; boot.s patches
+//                                                // slot 0x0A0 so it branches to scheduler_irq_handler.
+//     cpu::scheduler::setup_generic_timer_5ms(); // Arms the per-core timer to emit IRQs every 5 ms.
+//     cpu::scheduler::enable_irq();              // Clears DAIF.I so IRQs are delivered.
 // }
+// After that point:
+//  - main.rs can park in a loop or start higher-level services; the timer IRQ will keep firing.
+//  - kernel_main() iterates over core IDs 1..N and calls bsp::start_secondary_core(core_id) so every
+//    secondary CPU reuses the same init sequence: install vector table, arm its timer, unmask IRQs.
+//
+// IRQ/vector-table story:
+// 1) The per-core Generic Timer counts down from cntp_tval_el0 to zero.
+// 2) Once zero is reached, hardware raises an IRQ and indexes VBAR_EL1 + 0x0A0 (EL1h IRQ slot).
+// 3) Boot.s rewrites slot 0x0A0 so the 32-bit opcode becomes `bl scheduler_irq_handler`, i.e. the
+//    imm26 field is filled in with the correct offset toward the Rust handler.
+// 4) Execution continues inside scheduler_irq_handler() (Rust symbol), still at EL1h.
+//
+// scheduler_irq_handler() flow (per instruction in the asm! block):
+// 1) Re-arm cntp_tval_el0 so the next IRQ arrives 5 ms later (keeps the heartbeat going).
+// 2) Save x0/x1 on the stack because the handler needs scratch registers before invoking tasks.
+// 3) Read MPIDR_EL1, mask the low bits, and obtain `core_id` in x0.
+// 4) Index CURRENT_TASK_IDX[core_id] (x2 points at the slot; x3 holds the previous task index).
+// 5) Increment x3, wrap it if it reaches MAX_KERNEL_TASKS (core 0) or MAX_USER_TASKS (cores 1..N).
+// 6) Persist the wrapped index back into CURRENT_TASK_IDX[core_id] so the next tick knows where to resume.
+// 7) Select the proper task-table pointer: cores 1..N always follow USER_TASKS, core 0 sticks to
+//    KERNEL_TASKS. This is enforced by the `cmp x0, #0` / branch pair, so USER_TASKS never run on core 0.
+// 8) Load the function pointer (ldr x7, [table, index << 3]) and `blr x7` into the scheduled routine.
+// 9) Once the task returns, restore x0/x1, execute `eret`, and the CPU resumes the interrupted context.
+//
+// Cores that execute USER_TASKS:
+// - The handler explicitly routes any `core_id != 0` to the USER_TASKS table, so every secondary core
+//   (1..MAX_CORES-1) rotates exclusively through USER_TASKS. No code changes are needed to achieve it.
+// - To add more user-space routines, extend USER_TASKS and bump MAX_USER_TASKS; the scheduler logic
+//   automatically honors the new length when wrapping indices.

@@ -49,7 +49,7 @@ static mut DTB_SUMMARY: MaybeUninit<Summary> = MaybeUninit::uninit();
 
 impl Summary {
     pub fn fallback() -> Self {
-        #[cfg(feature = "bsp_rpi4")]
+        #[cfg(any(feature = "bsp_rpi4", feature = "bsp_qemu"))]
         {
             Self {
                 entries: Vec::new(),
@@ -64,7 +64,10 @@ impl Summary {
                 compatibles: vec!["raspberrypi,4-fallback".into()],
             }
         }
-        #[cfg(all(not(feature = "bsp_rpi4"), feature = "bsp_rpi5"))]
+        #[cfg(all(
+            not(any(feature = "bsp_rpi4", feature = "bsp_qemu")),
+            feature = "bsp_rpi5"
+        ))]
         {
             Self {
                 entries: Vec::new(),
@@ -144,9 +147,7 @@ pub fn ensure_loaded() -> Result<&'static Summary, &'static str> {
             selected_addr = Some(addr);
             true
         } else {
-            uart_println!(
-                "[0] DTB not found at {addr:#x} (bad magic: {magic:#x})"
-            );
+            uart_println!("[0] DTB not found at {addr:#x} (bad magic: {magic:#x})");
             false
         }
     };
@@ -273,8 +274,9 @@ fn parse_peripherals(fdt: &Fdt<'_>) -> Result<PeripheralsLayout, &'static str> {
     );
 
     let gic_node = find_compatible_node(fdt, &["arm,gic-400"]).ok_or("GIC-400 node missing")?;
-    let gic_distributor =
-        normalize_peripheral_addr(node_reg_entry(gic_node, 0).ok_or("GIC distributor reg missing")?);
+    let gic_distributor = normalize_peripheral_addr(
+        node_reg_entry(gic_node, 0).ok_or("GIC distributor reg missing")?,
+    );
     let gic_redistributor = normalize_peripheral_addr(node_reg_entry(gic_node, 1).unwrap_or(0));
 
     let local_intc = normalize_peripheral_addr(

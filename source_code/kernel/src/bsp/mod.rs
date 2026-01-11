@@ -4,30 +4,38 @@
 
 //! Board Support Package facade.
 
+#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
 use crate::uart_println;
+#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
 use core::mem::MaybeUninit;
 
 pub mod drivers;
 pub mod drivers_interface;
-#[cfg(feature = "bsp_rpi4")]
+#[cfg(feature = "bsp_qemu")]
+pub mod qemu;
+#[cfg(any(feature = "bsp_rpi4", feature = "bsp_qemu"))]
 pub mod raspberrypi4b;
 #[cfg(feature = "bsp_rpi5")]
 pub mod raspberrypi5;
 
-#[cfg(all(feature = "bsp_rpi4", feature = "bsp_rpi5"))]
-compile_error!("Select only one Raspberry Pi board feature at a time.");
+#[cfg(any(
+    all(feature = "bsp_rpi4", feature = "bsp_rpi5"),
+    all(feature = "bsp_rpi4", feature = "bsp_qemu"),
+    all(feature = "bsp_rpi5", feature = "bsp_qemu")
+))]
+compile_error!("Select only one BSP feature at a time.");
 
-#[cfg(not(any(feature = "bsp_rpi4", feature = "bsp_rpi5")))]
-compile_error!("Enable a BSP feature such as `bsp_rpi4` or `bsp_rpi5`.");
+#[cfg(not(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu")))]
+compile_error!("Enable a BSP feature such as `bsp_rpi4`, `bsp_rpi5`, or `bsp_qemu`.");
 
-#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5"))]
+#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
 mod raspberrypi;
 
-#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5"))]
+#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
 pub use raspberrypi::dtb::Summary as DtbSummary;
 
 /// Bring up board drivers and log them.
-#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5"))]
+#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
 pub fn init() -> Result<(), &'static str> {
     let mut fallback_summary = MaybeUninit::<raspberrypi::dtb::Summary>::uninit();
     let (dtb_summary, dtb_loaded) = match raspberrypi::dtb::ensure_loaded() {
@@ -50,14 +58,19 @@ pub fn init() -> Result<(), &'static str> {
     Ok(())
 }
 
-#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5"))]
+#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
 pub fn probe_dtb() -> Option<DtbSummary> {
     raspberrypi::dtb::probe()
 }
 
 #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5"))]
-pub fn start_secondary_cores(core_count: usize) {
-    raspberrypi::cpu::start_secondary_cores(core_count);
+pub fn start_secondary_core(core_id: usize) {
+    raspberrypi::cpu::start_secondary_core(core_id);
+}
+
+#[cfg(feature = "bsp_qemu")]
+pub fn start_secondary_core(core_id: usize) {
+    qemu::cpu::start_secondary_core(core_id);
 }
 
 /// Name of the active board reported by the driver subsystem.

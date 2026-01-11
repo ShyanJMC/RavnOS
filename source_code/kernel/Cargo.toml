@@ -8,6 +8,8 @@ edition = "2021"
 default = []
 bsp_rpi4 = ["tock-registers"]
 bsp_rpi5 = ["tock-registers"]
+bsp_qemu = ["tock-registers"]
+qemu_psci = []
 tock-registers = ["dep:tock-registers"]
 
 ##--------------------------------------------------------------------------------------------------

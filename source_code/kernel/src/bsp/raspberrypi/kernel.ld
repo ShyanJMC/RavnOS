@@ -35,6 +35,7 @@ SECTIONS
     ***********************************************************************************************/
     .boot_core_stack (NOLOAD) :
     {
+        __boot_core_stack_start = .;
                                              /*   ^             */
                                              /*   | stack       */
         . += __rpi_phys_binary_load_addr;    /*   | growth      */

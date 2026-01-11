@@ -1,12 +1,9 @@
 mod gpio;
 mod uart;
 
-use crate::{
-    bsp::drivers_interface::BoardDriver,
-    console,
-};
-use crate::console::interface::Write as ConsoleWrite;
 use crate::bsp::raspberrypi::dtb::Summary as DtbSummary;
+use crate::console::interface::Write as ConsoleWrite;
+use crate::{bsp::drivers_interface::BoardDriver, console};
 use gpio::init as gpio_init;
 
 pub struct RaspberryPi5Drivers;

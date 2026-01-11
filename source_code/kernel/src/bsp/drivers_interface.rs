@@ -8,10 +8,7 @@ use crate::{
 };
 use core::fmt;
 
-#[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5"))]
 type DriverSummary = super::raspberrypi::dtb::Summary;
-#[cfg(not(any(feature = "bsp_rpi4", feature = "bsp_rpi5")))]
-type DriverSummary = core::convert::Infallible;
 
 /// Common operations every board-specific driver bundle must implement.
 pub trait BoardDriver: Send + Sync {

@@ -4,7 +4,7 @@
 
 use super::dtb::Summary as DtbSummary;
 use crate::bsp::drivers_interface::{self, BoardDriver};
-#[cfg(feature = "bsp_rpi4")]
+#[cfg(any(feature = "bsp_rpi4", feature = "bsp_qemu"))]
 use crate::bsp::raspberrypi4b;
 #[cfg(feature = "bsp_rpi5")]
 use crate::bsp::raspberrypi5;
@@ -19,7 +19,7 @@ pub fn init(summary: &DtbSummary) -> Result<(), &'static str> {
 
     let mut driver: Option<&'static dyn BoardDriver> = None;
 
-    #[cfg(feature = "bsp_rpi4")]
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_qemu"))]
     {
         let candidate: &'static dyn BoardDriver = &raspberrypi4b::drivers::BOARD;
         if candidate.matches(summary) {
