@@ -26,25 +26,34 @@ pub static BOOT_CORE_ID: u64 = 0;
 /// Start secondary cores by poking the Raspberry Pi mailbox.
 pub fn start_secondary_cores(core_count: usize) {
     const CORE_START_ADDR: u64 = 0x80000;
-    const MAILBOX_BASE: u64 = 0x4000_0000;
+    const SPIN_TABLE_BASE: u64 = 0x4000_0000;
+    const SPIN_TABLE_STRIDE: u64 = 0x10;
+    const RELEASE_OFFSET: u64 = 0x8;
 
     for core in 1..core_count {
-        let mailbox_addr = MAILBOX_BASE + (core as u64) * 0x10;
+        let entry_addr = SPIN_TABLE_BASE + (core as u64) * SPIN_TABLE_STRIDE;
+        let release_addr = entry_addr + RELEASE_OFFSET;
+
         uart_println!(
             "[0] Starting core {} with total MAILBOX; {}",
-            core, mailbox_addr
+            core,
+            entry_addr
         );
         uart_println!(
             "[0] Setting Spin Table for core {} with address {}",
-            core, CORE_START_ADDR
+            core,
+            CORE_START_ADDR
         );
+
         unsafe {
-            write_volatile(mailbox_addr as *mut u64, CORE_START_ADDR);
+            write_volatile(entry_addr as *mut u64, CORE_START_ADDR);
             dsb(SY);
             isb(SY);
-            write_volatile((MAILBOX_BASE + 0x8 + (core as u64) * 8) as *mut u64, 1);
+            write_volatile(release_addr as *mut u64, 0);
+            dsb(SY);
             sev();
         }
+
         uart_println!("[0] Core {} started", core);
     }
 }
