@@ -1,71 +1,47 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
-// Copyright (c) 2018-2023 Andre Richter <andre.o.richter@gmail.com>
+//! Delegates driver initialization to the board-specific implementations.
 
-//! BSP driver support.
-
-use super::memory::map::mmio;
-use crate::{bsp::device_driver, console, driver as generic_driver};
+use super::dtb::Summary as DtbSummary;
+use crate::bsp::drivers_interface::{self, BoardDriver};
+#[cfg(feature = "bsp_rpi4")]
+use crate::bsp::raspberrypi4b;
+#[cfg(feature = "bsp_rpi5")]
+use crate::bsp::raspberrypi5;
 use core::sync::atomic::{AtomicBool, Ordering};
 
-//--------------------------------------------------------------------------------------------------
-// Global instances
-//--------------------------------------------------------------------------------------------------
-
-static PL011_UART: device_driver::PL011Uart =
-    unsafe { device_driver::PL011Uart::new(mmio::PL011_UART_START) };
-static GPIO: device_driver::GPIO = unsafe { device_driver::GPIO::new(mmio::GPIO_START) };
-
-//--------------------------------------------------------------------------------------------------
-// Private Code
-//--------------------------------------------------------------------------------------------------
-
-/// This must be called only after successful init of the UART driver.
-fn post_init_uart() -> Result<(), &'static str> {
-    console::register_console(&PL011_UART);
-
-    Ok(())
-}
-
-/// This must be called only after successful init of the GPIO driver.
-fn post_init_gpio() -> Result<(), &'static str> {
-    GPIO.map_pl011_uart();
-    Ok(())
-}
-
-fn driver_uart() -> Result<(), &'static str> {
-    let uart_descriptor =
-        generic_driver::DeviceDriverDescriptor::new(&PL011_UART, Some(post_init_uart));
-    generic_driver::driver_manager().register_driver(uart_descriptor);
-
-    Ok(())
-}
-
-fn driver_gpio() -> Result<(), &'static str> {
-    let gpio_descriptor = generic_driver::DeviceDriverDescriptor::new(&GPIO, Some(post_init_gpio));
-    generic_driver::driver_manager().register_driver(gpio_descriptor);
-
-    Ok(())
-}
-
-//--------------------------------------------------------------------------------------------------
-// Public Code
-//--------------------------------------------------------------------------------------------------
-
-/// Initialize the driver subsystem.
-///
-/// # Safety
-///
-/// See child function calls.
-pub unsafe fn init() -> Result<(), &'static str> {
+/// Initialize the active board driver based on DTB information.
+pub fn init(summary: &DtbSummary) -> Result<(), &'static str> {
     static INIT_DONE: AtomicBool = AtomicBool::new(false);
-    if INIT_DONE.load(Ordering::Relaxed) {
-        return Err("Init already done");
+    if INIT_DONE.swap(true, Ordering::SeqCst) {
+        return Err("BSP drivers already initialized");
     }
 
-    driver_uart()?;
-    driver_gpio()?;
+    let mut driver: Option<&'static dyn BoardDriver> = None;
 
-    INIT_DONE.store(true, Ordering::Relaxed);
+    #[cfg(feature = "bsp_rpi4")]
+    {
+        let candidate: &'static dyn BoardDriver = &raspberrypi4b::drivers::BOARD;
+        if candidate.matches(summary) {
+            driver = Some(candidate);
+        }
+    }
+
+    #[cfg(feature = "bsp_rpi5")]
+    {
+        let candidate: &'static dyn BoardDriver = &raspberrypi5::drivers::BOARD;
+        if driver.is_none() && candidate.matches(summary) {
+            driver = Some(candidate);
+        }
+    }
+
+    let driver = driver.ok_or("Unsupported DTB: no matching board driver registered")?;
+
+    unsafe {
+        driver.init(summary)?;
+    }
+
+    drivers_interface::set_active_driver(driver);
+
     Ok(())
 }

@@ -9,18 +9,17 @@
 //! - <https://github.com/raspberrypi/documentation/files/1888662/BCM2837-ARM-Peripherals.-.Revised.-.V2-1.pdf>
 //! - <https://developer.arm.com/documentation/ddi0183/latest>
 
+use super::common::MMIODerefWrapper;
 use crate::{
-//    bsp::device_driver::common::MMIODerefWrapper, console, cpu, driver, synchronization,
-    bsp::device_driver::common::MMIODerefWrapper, console, driver, synchronization,
-    synchronization::NullLock,
+    console,
+    synchronization::{interface::Mutex, NullLock},
 };
-use core::fmt;
+use core::{fmt, hint::spin_loop};
 use tock_registers::{
     interfaces::{Readable, Writeable},
     register_bitfields, register_structs,
     registers::{ReadOnly, ReadWrite, WriteOnly},
 };
-use aarch64_cpu::asm::nop;
 
 //--------------------------------------------------------------------------------------------------
 // Private Definitions
@@ -163,13 +162,15 @@ register_structs! {
 /// Abstraction for the associated MMIO registers.
 type Registers = MMIODerefWrapper<RegisterBlock>;
 
+const DEFAULT_BAUD_RATE: u32 = 921_600;
+
 #[derive(PartialEq)]
 enum BlockingMode {
     Blocking,
     NonBlocking,
 }
 
-struct PL011UartInner {
+struct Pl011UartInner<const CLOCK_HZ: u32> {
     registers: Registers,
     chars_written: usize,
     chars_read: usize,
@@ -180,15 +181,15 @@ struct PL011UartInner {
 //--------------------------------------------------------------------------------------------------
 
 /// Representation of the UART.
-pub struct PL011Uart {
-    inner: NullLock<PL011UartInner>,
+pub struct Pl011Uart<const CLOCK_HZ: u32> {
+    inner: NullLock<Pl011UartInner<CLOCK_HZ>>,
 }
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
 //--------------------------------------------------------------------------------------------------
 
-impl PL011UartInner {
+impl<const CLOCK_HZ: u32> Pl011UartInner<CLOCK_HZ> {
     /// Create an instance.
     ///
     /// # Safety
@@ -216,7 +217,7 @@ impl PL011UartInner {
     /// `INTEGER((0.2552083 * 64) + 0.5) = 16`.
     ///
     /// Therefore, the generated baud rate divider is: `3 + 16/64 = 3.25`. Which results in a
-    /// genrated baud rate of `48_000_000 / (16 * 3.25) = 923_077`.
+    /// generated baud rate of `48_000_000 / (16 * 3.25) = 923_077`.
     ///
     /// Error = `((923_077 - 921_600) / 921_600) * 100 = 0.16%`.
     pub fn init(&mut self) {
@@ -243,8 +244,7 @@ impl PL011UartInner {
         // contents of IBRD or FBRD, a LCR_H write must always be performed at the end.
         //
         // Set the baud rate, 8N1 and FIFO enabled.
-        self.registers.IBRD.write(IBRD::BAUD_DIVINT.val(3));
-        self.registers.FBRD.write(FBRD::BAUD_DIVFRAC.val(16));
+        self.program_baud(DEFAULT_BAUD_RATE);
         self.registers
             .LCR_H
             .write(LCR_H::WLEN::EightBit + LCR_H::FEN::FifosEnabled);
@@ -255,11 +255,31 @@ impl PL011UartInner {
             .write(CR::UARTEN::Enabled + CR::TXE::Enabled + CR::RXE::Enabled);
     }
 
+    fn program_baud(&mut self, baud_rate: u32) {
+        let denominator = (16 * baud_rate) as u64;
+        let clock = CLOCK_HZ as u64;
+
+        let integer = clock / denominator;
+        let remainder = clock % denominator;
+        let fractional = ((remainder * 64) + (denominator / 2)) / denominator;
+
+        debug_assert!(integer > 0 && integer < (1 << 16));
+        debug_assert!(fractional < 64);
+
+        self.registers
+            .IBRD
+            .write(IBRD::BAUD_DIVINT.val(integer as u32));
+        self.registers
+            .FBRD
+            .write(FBRD::BAUD_DIVFRAC.val((fractional & 0x3F) as u32));
+    }
+
     /// Send a character.
+    #[inline(always)]
     fn write_char(&mut self, c: char) {
         // Spin while TX FIFO full is set, waiting for an empty slot.
         while self.registers.FR.matches_all(FR::TXFF::SET) {
-            nop();
+            spin_loop();
         }
 
         // Write the character to the buffer.
@@ -269,14 +289,16 @@ impl PL011UartInner {
     }
 
     /// Block execution until the last buffered character has been physically put on the TX wire.
+    #[inline(always)]
     fn flush(&self) {
         // Spin until the busy bit is cleared.
         while self.registers.FR.matches_all(FR::BUSY::SET) {
-            nop();
+            spin_loop();
         }
     }
 
     /// Retrieve a character.
+    #[inline(always)]
     fn read_char_converting(&mut self, blocking_mode: BlockingMode) -> Option<char> {
         // If RX FIFO is empty,
         if self.registers.FR.matches_all(FR::RXFE::SET) {
@@ -287,7 +309,7 @@ impl PL011UartInner {
 
             // Otherwise, wait until a char was received.
             while self.registers.FR.matches_all(FR::RXFE::SET) {
-                nop();
+                spin_loop();
             }
         }
 
@@ -307,7 +329,7 @@ impl PL011UartInner {
 }
 
 /// Implementing `core::fmt::Write` enables usage of the `format_args!` macros, which in turn are
-/// used to implement the `kernel`'s `print!` and `println!` macros. By implementing `write_str()`,
+/// used to implement the kernel's UART logging macros. By implementing `write_str()`,
 /// we get `write_fmt()` automatically.
 ///
 /// The function takes an `&mut self`, so it must be implemented for the inner struct.
@@ -315,7 +337,7 @@ impl PL011UartInner {
 /// See [`src/print.rs`].
 ///
 /// [`src/print.rs`]: ../../print/index.html
-impl fmt::Write for PL011UartInner {
+impl<const CLOCK_HZ: u32> fmt::Write for Pl011UartInner<CLOCK_HZ> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.chars() {
             self.write_char(c);
@@ -329,7 +351,7 @@ impl fmt::Write for PL011UartInner {
 // Public Code
 //--------------------------------------------------------------------------------------------------
 
-impl PL011Uart {
+impl<const CLOCK_HZ: u32> Pl011Uart<CLOCK_HZ> {
     pub const COMPATIBLE: &'static str = "BCM PL011 UART";
 
     /// Create an instance.
@@ -339,29 +361,17 @@ impl PL011Uart {
     /// - The user must ensure to provide a correct MMIO start address.
     pub const unsafe fn new(mmio_start_addr: usize) -> Self {
         Self {
-            inner: NullLock::new(PL011UartInner::new(mmio_start_addr)),
+            inner: NullLock::new(Pl011UartInner::new(mmio_start_addr)),
         }
     }
-}
 
-//------------------------------------------------------------------------------
-// OS Interface Code
-//------------------------------------------------------------------------------
-use synchronization::interface::Mutex;
-
-impl driver::interface::DeviceDriver for PL011Uart {
-    fn compatible(&self) -> &'static str {
-        Self::COMPATIBLE
-    }
-
-    unsafe fn init(&self) -> Result<(), &'static str> {
+    /// Initialize the hardware block.
+    pub fn enable(&self) {
         self.inner.lock(|inner| inner.init());
-
-        Ok(())
     }
 }
 
-impl console::interface::Write for PL011Uart {
+impl<const CLOCK_HZ: u32> console::interface::Write for Pl011Uart<CLOCK_HZ> {
     /// Passthrough of `args` to the `core::fmt::Write` implementation, but guarded by a Mutex to
     /// serialize access.
     fn write_char(&self, c: char) {
@@ -380,23 +390,23 @@ impl console::interface::Write for PL011Uart {
     }
 }
 
-impl console::interface::Read for PL011Uart {
+impl<const CLOCK_HZ: u32> console::interface::Read for Pl011Uart<CLOCK_HZ> {
     fn read_char(&self) -> char {
         self.inner
             .lock(|inner| inner.read_char_converting(BlockingMode::Blocking).unwrap())
     }
 
     fn clear_rx(&self) {
-        // Read from the RX FIFO until it is indicating empty.
-        while self
-            .inner
-            .lock(|inner| inner.read_char_converting(BlockingMode::NonBlocking))
-            .is_some()
-        {}
+        self.inner.lock(|inner| {
+            while inner
+                .read_char_converting(BlockingMode::NonBlocking)
+                .is_some()
+            {}
+        });
     }
 }
 
-impl console::interface::Statistics for PL011Uart {
+impl<const CLOCK_HZ: u32> console::interface::Statistics for Pl011Uart<CLOCK_HZ> {
     fn chars_written(&self) -> usize {
         self.inner.lock(|inner| inner.chars_written)
     }
@@ -406,4 +416,4 @@ impl console::interface::Statistics for PL011Uart {
     }
 }
 
-impl console::interface::All for PL011Uart {}
+impl<const CLOCK_HZ: u32> console::interface::All for Pl011Uart<CLOCK_HZ> {}

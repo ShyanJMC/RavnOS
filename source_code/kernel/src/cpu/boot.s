@@ -27,6 +27,8 @@
 // fn _start()
 //------------------------------------------------------------------------------
 _start:
+	// Preserve the DTB pointer provided by the firmware (in x0).
+	mov	x21, x0
 	// Only proceed on the boot core. Park it otherwise.
 	mrs	x0, MPIDR_EL1
 	and	x0, x0, {CONST_CORE_ID_MASK}
@@ -48,6 +50,10 @@ _start:
 
 	// Prepare the jump to Rust code.
 .L_prepare_rust:
+	// Publish the DTB pointer for Rust code.
+	ADR_REL	x0, __dtb_load_addr
+	str	x21, [x0]
+
 	// Set the stack pointer.
 	ADR_REL	x0, __boot_core_stack_end_exclusive
 	mov	sp, x0

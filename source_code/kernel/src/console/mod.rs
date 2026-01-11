@@ -6,8 +6,8 @@
 
 mod null_console;
 
-use core::fmt;
 use crate::synchronization::{self, NullLock};
+use core::fmt;
 
 //--------------------------------------------------------------------------------------------------
 // Public Definitions
@@ -92,7 +92,7 @@ pub fn _print(args: fmt::Arguments) {
 #[macro_export]
 macro_rules! print {
     // For macro is mandatory use $crate::[crate_name], and not directly
-    // the call to _print function. This is because remember that the 
+    // the call to _print function. This is because remember that the
     // macros are replaced at compile time by this code.
     ($($arg:tt)*) => ($crate::console::_print(format_args!($($arg)*)));
 }
@@ -105,7 +105,7 @@ macro_rules! println {
     () => ($crate::print!("\n"));
     ($($arg:tt)*) => ({
         // For macro is mandatory use $crate::[crate_name], and not directly
-        // the call to _print function. This is because remember that the 
+        // the call to _print function. This is because remember that the
         // macros are replaced at compile time by this code.
         $crate::console::_print(format_args_nl!($($arg)*));
     })

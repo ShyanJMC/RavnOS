@@ -4,7 +4,7 @@
 
 //! BSP console facilities.
 
-use crate::console;
+use crate::{bsp::drivers_interface, console};
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
@@ -12,5 +12,7 @@ use crate::console;
 
 /// Return a reference to the console.
 pub fn console() -> &'static dyn console::interface::All {
-    &super::driver::PL011_UART
+    drivers_interface::active_driver()
+        .map(|driver| driver.uart())
+        .expect("UART console requested before initialization")
 }
