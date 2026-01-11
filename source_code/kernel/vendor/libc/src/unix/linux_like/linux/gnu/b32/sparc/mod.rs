@@ -1,11 +1,16 @@
 //! SPARC-specific definitions for 32-bit linux-like values
 
 use crate::prelude::*;
-use crate::{off64_t, off_t};
+use crate::{
+    off64_t,
+    off_t,
+};
 
 pub type wchar_t = i32;
 
 s! {
+    // FIXME(1.0): This should not implement `PartialEq`
+    #[allow(unpredictable_function_pointer_comparisons)]
     pub struct sigaction {
         pub sa_sigaction: crate::sighandler_t,
         pub sa_mask: crate::sigset_t,
@@ -34,7 +39,7 @@ s! {
         pub si_signo: c_int,
         pub si_errno: c_int,
         pub si_code: c_int,
-        _pad: [c_int; 29],
+        _pad: Padding<[c_int; 29]>,
         _align: [usize; 0],
     }
 
@@ -52,7 +57,7 @@ s! {
         pub l_start: off64_t,
         pub l_len: off64_t,
         pub l_pid: crate::pid_t,
-        __reserved: c_short,
+        __reserved: Padding<c_short>,
     }
 
     pub struct stack_t {
@@ -64,14 +69,14 @@ s! {
     pub struct stat {
         pub st_dev: crate::dev_t,
         #[cfg(not(gnu_file_offset_bits64))]
-        __pad1: c_ushort,
+        __pad1: Padding<c_ushort>,
         pub st_ino: crate::ino_t,
         pub st_mode: crate::mode_t,
         pub st_nlink: crate::nlink_t,
         pub st_uid: crate::uid_t,
         pub st_gid: crate::gid_t,
         pub st_rdev: crate::dev_t,
-        __pad2: c_ushort,
+        __pad2: Padding<c_ushort>,
         pub st_size: off_t,
         pub st_blksize: crate::blksize_t,
         pub st_blocks: crate::blkcnt_t,
@@ -81,8 +86,8 @@ s! {
         pub st_mtime_nsec: c_long,
         pub st_ctime: crate::time_t,
         pub st_ctime_nsec: c_long,
-        __glibc_reserved4: c_ulong,
-        __glibc_reserved5: c_ulong,
+        __glibc_reserved4: Padding<c_ulong>,
+        __glibc_reserved5: Padding<c_ulong>,
     }
 
     pub struct stat64 {
@@ -93,7 +98,7 @@ s! {
         pub st_uid: crate::uid_t,
         pub st_gid: crate::gid_t,
         pub st_rdev: crate::dev_t,
-        __pad2: c_ushort,
+        __pad2: Padding<c_ushort>,
         pub st_size: off64_t,
         pub st_blksize: crate::blksize_t,
         pub st_blocks: crate::blkcnt64_t,
@@ -103,8 +108,8 @@ s! {
         pub st_mtime_nsec: c_long,
         pub st_ctime: crate::time_t,
         pub st_ctime_nsec: c_long,
-        __glibc_reserved4: c_ulong,
-        __glibc_reserved5: c_ulong,
+        __glibc_reserved4: Padding<c_ulong>,
+        __glibc_reserved5: Padding<c_ulong>,
     }
 
     pub struct statfs64 {
@@ -132,7 +137,7 @@ s! {
         pub f_ffree: u64,
         pub f_favail: u64,
         pub f_fsid: c_ulong,
-        __f_unused: c_int,
+        __f_unused: Padding<c_int>,
         pub f_flag: c_ulong,
         pub f_namemax: c_ulong,
         __f_spare: [c_int; 6],
@@ -144,50 +149,58 @@ s! {
         pub gid: crate::gid_t,
         pub cuid: crate::uid_t,
         pub cgid: crate::gid_t,
-        __pad1: c_ushort,
+        __pad1: Padding<c_ushort>,
         pub mode: c_ushort,
-        __pad2: c_ushort,
+        __pad2: Padding<c_ushort>,
         pub __seq: c_ushort,
-        __unused1: c_ulonglong,
-        __unused2: c_ulonglong,
+        __unused1: Padding<c_ulonglong>,
+        __unused2: Padding<c_ulonglong>,
     }
 
     pub struct shmid_ds {
         pub shm_perm: crate::ipc_perm,
-        __pad1: c_uint,
+        #[cfg(gnu_time_bits64)]
+        pub shm_segsz: size_t,
+        #[cfg(not(gnu_time_bits64))]
+        __pad1: Padding<c_uint>,
         pub shm_atime: crate::time_t,
-        __pad2: c_uint,
+        #[cfg(not(gnu_time_bits64))]
+        __pad2: Padding<c_uint>,
         pub shm_dtime: crate::time_t,
-        __pad3: c_uint,
+        #[cfg(not(gnu_time_bits64))]
+        __pad3: Padding<c_uint>,
         pub shm_ctime: crate::time_t,
+        #[cfg(not(gnu_time_bits64))]
         pub shm_segsz: size_t,
         pub shm_cpid: crate::pid_t,
         pub shm_lpid: crate::pid_t,
         pub shm_nattch: crate::shmatt_t,
-        __reserved1: c_ulong,
-        __reserved2: c_ulong,
+        __reserved1: Padding<c_ulong>,
+        __reserved2: Padding<c_ulong>,
     }
 
     pub struct msqid_ds {
         pub msg_perm: crate::ipc_perm,
-        __pad1: c_uint,
+        #[cfg(not(gnu_time_bits64))]
+        __pad1: Padding<c_uint>,
         pub msg_stime: crate::time_t,
-        __pad2: c_uint,
+        #[cfg(not(gnu_time_bits64))]
+        __pad2: Padding<c_uint>,
         pub msg_rtime: crate::time_t,
-        __pad3: c_uint,
+        #[cfg(not(gnu_time_bits64))]
+        __pad3: Padding<c_uint>,
         pub msg_ctime: crate::time_t,
-        pub __msg_cbytes: c_ushort,
+        pub __msg_cbytes: c_ulong,
         pub msg_qnum: crate::msgqnum_t,
         pub msg_qbytes: crate::msglen_t,
         pub msg_lspid: crate::pid_t,
         pub msg_lrpid: crate::pid_t,
-        __glibc_reserved1: c_ulong,
-        __glibc_reserved2: c_ulong,
+        __glibc_reserved4: Padding<c_ulong>,
+        __glibc_reserved5: Padding<c_ulong>,
     }
 }
 
 s_no_extra_traits! {
-    #[allow(missing_debug_implementations)]
     #[repr(align(8))]
     pub struct max_align_t {
         priv_: [i64; 3],
@@ -306,6 +319,7 @@ pub const SOCK_DGRAM: c_int = 2;
 pub const SA_SIGINFO: c_int = 0x200;
 pub const SA_NOCLDWAIT: c_int = 0x100;
 
+pub const SIGEMT: c_int = 7;
 pub const SIGTTIN: c_int = 21;
 pub const SIGTTOU: c_int = 22;
 pub const SIGXCPU: c_int = 24;

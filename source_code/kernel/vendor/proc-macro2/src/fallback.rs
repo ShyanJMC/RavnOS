@@ -5,12 +5,22 @@ use crate::location::LineColumn;
 use crate::parse::{self, Cursor};
 use crate::rcvec::{RcVec, RcVecBuilder, RcVecIntoIter, RcVecMut};
 use crate::{Delimiter, Spacing, TokenTree};
+use alloc::borrow::ToOwned as _;
+use alloc::boxed::Box;
 #[cfg(all(span_locations, not(fuzzing)))]
 use alloc::collections::BTreeMap;
+use alloc::format;
+use alloc::string::{String, ToString as _};
+#[cfg(all(span_locations, not(fuzzing)))]
+use alloc::vec;
+use alloc::vec::Vec;
 #[cfg(all(span_locations, not(fuzzing)))]
 use core::cell::RefCell;
 #[cfg(span_locations)]
 use core::cmp;
+#[cfg(all(span_locations, not(fuzzing)))]
+use core::cmp::Ordering;
+use core::ffi::CStr;
 use core::fmt::{self, Debug, Display, Write};
 use core::mem::ManuallyDrop;
 #[cfg(span_locations)]
@@ -20,11 +30,12 @@ use core::ptr;
 use core::str;
 #[cfg(feature = "proc-macro")]
 use core::str::FromStr;
-use std::ffi::CStr;
 #[cfg(wrap_proc_macro)]
 use std::panic;
-#[cfg(procmacro2_semver_exempt)]
+#[cfg(span_locations)]
 use std::path::PathBuf;
+#[cfg(all(span_locations, not(fuzzing)))]
+use std::thread_local;
 
 /// Force use of proc-macro2's fallback implementation of the API for now, even
 /// if the compiler's implementation is available.
@@ -220,13 +231,13 @@ impl Display for TokenStream {
             }
             joint = false;
             match tt {
-                TokenTree::Group(tt) => Display::fmt(tt, f),
-                TokenTree::Ident(tt) => Display::fmt(tt, f),
+                TokenTree::Group(tt) => write!(f, "{}", tt),
+                TokenTree::Ident(tt) => write!(f, "{}", tt),
                 TokenTree::Punct(tt) => {
                     joint = tt.spacing() == Spacing::Joint;
-                    Display::fmt(tt, f)
+                    write!(f, "{}", tt)
                 }
-                TokenTree::Literal(tt) => Display::fmt(tt, f),
+                TokenTree::Literal(tt) => write!(f, "{}", tt),
             }?;
         }
 
@@ -455,36 +466,39 @@ impl SourceMap {
         span
     }
 
-    #[cfg(procmacro2_semver_exempt)]
-    fn filepath(&self, span: Span) -> String {
-        for (i, file) in self.files.iter().enumerate() {
-            if file.span_within(span) {
-                return if i == 0 {
-                    "<unspecified>".to_owned()
-                } else {
-                    format!("<parsed string {}>", i)
-                };
+    fn find(&self, span: Span) -> usize {
+        match self.files.binary_search_by(|file| {
+            if file.span.hi < span.lo {
+                Ordering::Less
+            } else if file.span.lo > span.hi {
+                Ordering::Greater
+            } else {
+                assert!(file.span_within(span));
+                Ordering::Equal
             }
+        }) {
+            Ok(i) => i,
+            Err(_) => unreachable!("Invalid span with no related FileInfo!"),
         }
-        unreachable!("Invalid span with no related FileInfo!");
+    }
+
+    fn filepath(&self, span: Span) -> String {
+        let i = self.find(span);
+        if i == 0 {
+            "<unspecified>".to_owned()
+        } else {
+            format!("<parsed string {}>", i)
+        }
     }
 
     fn fileinfo(&self, span: Span) -> &FileInfo {
-        for file in &self.files {
-            if file.span_within(span) {
-                return file;
-            }
-        }
-        unreachable!("Invalid span with no related FileInfo!");
+        let i = self.find(span);
+        &self.files[i]
     }
 
     fn fileinfo_mut(&mut self, span: Span) -> &mut FileInfo {
-        for file in &mut self.files {
-            if file.span_within(span) {
-                return file;
-            }
-        }
-        unreachable!("Invalid span with no related FileInfo!");
+        let i = self.find(span);
+        &mut self.files[i]
     }
 }
 
@@ -568,7 +582,7 @@ impl Span {
         })
     }
 
-    #[cfg(procmacro2_semver_exempt)]
+    #[cfg(span_locations)]
     pub(crate) fn file(&self) -> String {
         #[cfg(fuzzing)]
         return "<unspecified>".to_owned();
@@ -580,7 +594,7 @@ impl Span {
         })
     }
 
-    #[cfg(procmacro2_semver_exempt)]
+    #[cfg(span_locations)]
     pub(crate) fn local_file(&self) -> Option<PathBuf> {
         None
     }
@@ -884,7 +898,7 @@ impl Display for Ident {
         if self.raw {
             f.write_str("r#")?;
         }
-        Display::fmt(&self.sym, f)
+        f.write_str(&self.sym)
     }
 }
 

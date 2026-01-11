@@ -200,7 +200,7 @@ fn test_floating() {
         #e32
         #e64
     };
-    let expected = concat!("2.345f32 2.345f64");
+    let expected = "2.345f32 2.345f64";
     assert_eq!(expected, tokens.to_string());
 }
 
@@ -561,6 +561,7 @@ fn test_type_inference_for_span() {
     let inferred = CallSite::get();
     let _ = quote_spanned!(inferred=> ...);
 
+    #[cfg(feature = "proc-macro")]
     if false {
         let proc_macro_span = proc_macro::Span::call_site();
         let _ = quote_spanned!(proc_macro_span.into()=> ...);

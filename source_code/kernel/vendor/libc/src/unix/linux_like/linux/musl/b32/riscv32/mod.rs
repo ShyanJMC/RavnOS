@@ -1,9 +1,11 @@
 //! RISC-V-specific definitions for 32-bit linux-like values
 
+use crate::off_t;
 use crate::prelude::*;
-use crate::{off64_t, off_t};
 
 pub type wchar_t = c_int;
+
+pub type stat64 = stat;
 
 s! {
     pub struct stat {
@@ -19,35 +21,28 @@ s! {
         pub st_blksize: crate::blksize_t,
         pub __pad2: c_int,
         pub st_blocks: crate::blkcnt_t,
-        pub st_atime: crate::time_t,
-        pub st_atime_nsec: c_long,
-        pub st_mtime: crate::time_t,
-        pub st_mtime_nsec: c_long,
-        pub st_ctime: crate::time_t,
-        pub st_ctime_nsec: c_long,
-        __unused: [c_int; 2usize],
-    }
 
-    pub struct stat64 {
-        pub st_dev: crate::dev_t,
-        pub st_ino: crate::ino64_t,
-        pub st_mode: crate::mode_t,
-        pub st_nlink: crate::nlink_t,
-        pub st_uid: crate::uid_t,
-        pub st_gid: crate::gid_t,
-        pub st_rdev: crate::dev_t,
-        pub __pad1: crate::dev_t,
-        pub st_size: off64_t,
-        pub st_blksize: crate::blksize_t,
-        pub __pad2: c_int,
-        pub st_blocks: crate::blkcnt64_t,
+        #[cfg(not(musl_v1_2_3))]
         pub st_atime: crate::time_t,
+        #[cfg(not(musl_v1_2_3))]
         pub st_atime_nsec: c_long,
+        #[cfg(not(musl_v1_2_3))]
         pub st_mtime: crate::time_t,
+        #[cfg(not(musl_v1_2_3))]
         pub st_mtime_nsec: c_long,
+        #[cfg(not(musl_v1_2_3))]
         pub st_ctime: crate::time_t,
+        #[cfg(not(musl_v1_2_3))]
         pub st_ctime_nsec: c_long,
-        __unused: [c_int; 2],
+
+        #[cfg(musl_v1_2_3)]
+        pub st_atim: crate::timespec,
+        #[cfg(musl_v1_2_3)]
+        pub st_mtim: crate::timespec,
+        #[cfg(musl_v1_2_3)]
+        pub st_ctim: crate::timespec,
+
+        __unused: Padding<[c_int; 2usize]>,
     }
 
     pub struct stack_t {
@@ -63,11 +58,11 @@ s! {
         pub cuid: crate::uid_t,
         pub cgid: crate::gid_t,
         pub mode: c_ushort,
-        __pad1: c_ushort,
+        __pad1: Padding<c_ushort>,
         pub __seq: c_ushort,
-        __pad2: c_ushort,
-        __unused1: c_ulong,
-        __unused2: c_ulong,
+        __pad2: Padding<c_ushort>,
+        __unused1: Padding<c_ulong>,
+        __unused2: Padding<c_ulong>,
     }
 
     pub struct shmid_ds {
@@ -79,30 +74,29 @@ s! {
         pub shm_cpid: crate::pid_t,
         pub shm_lpid: crate::pid_t,
         pub shm_nattch: crate::shmatt_t,
-        __unused5: c_ulong,
-        __unused6: c_ulong,
+        __unused5: Padding<c_ulong>,
+        __unused6: Padding<c_ulong>,
     }
 
     pub struct msqid_ds {
         pub msg_perm: crate::ipc_perm,
         pub msg_stime: crate::time_t,
-        __unused1: c_int,
+        __unused1: Padding<c_int>,
         pub msg_rtime: crate::time_t,
-        __unused2: c_int,
+        __unused2: Padding<c_int>,
         pub msg_ctime: crate::time_t,
-        __unused3: c_int,
+        __unused3: Padding<c_int>,
         pub __msg_cbytes: c_ulong,
         pub msg_qnum: crate::msgqnum_t,
         pub msg_qbytes: crate::msglen_t,
         pub msg_lspid: crate::pid_t,
         pub msg_lrpid: crate::pid_t,
-        __pad1: c_ulong,
-        __pad2: c_ulong,
+        __pad1: Padding<c_ulong>,
+        __pad2: Padding<c_ulong>,
     }
 }
 
 s_no_extra_traits! {
-    #[allow(missing_debug_implementations)]
     #[repr(align(8))]
     pub struct max_align_t {
         priv_: (i64, f64),
@@ -205,8 +199,6 @@ pub const ENOTRECOVERABLE: c_int = 131;
 pub const EHWPOISON: c_int = 133;
 pub const ERFKILL: c_int = 132;
 
-pub const SOCK_STREAM: c_int = 1;
-pub const SOCK_DGRAM: c_int = 2;
 pub const SA_ONSTACK: c_int = 0x08000000;
 pub const SA_SIGINFO: c_int = 4;
 pub const SA_NOCLDWAIT: c_int = 2;
@@ -246,6 +238,7 @@ pub const O_DIRECT: c_int = 16384;
 pub const O_DIRECTORY: c_int = 65536;
 pub const O_LARGEFILE: c_int = 0o0100000;
 pub const O_NOFOLLOW: c_int = 131072;
+pub const MADV_SOFT_OFFLINE: c_int = 101;
 pub const MAP_HUGETLB: c_int = 262144;
 pub const MAP_LOCKED: c_int = 8192;
 pub const MAP_NORESERVE: c_int = 16384;
@@ -633,3 +626,23 @@ pub const SYS_faccessat2: c_long = 439;
 pub const SYS_process_madvise: c_long = 440;
 pub const SYS_epoll_pwait2: c_long = 441;
 pub const SYS_mount_setattr: c_long = 442;
+
+// Plain syscalls aliased to their time64 variants
+pub const SYS_clock_gettime: c_long = SYS_clock_gettime64;
+pub const SYS_clock_settime: c_long = SYS_clock_settime64;
+pub const SYS_clock_adjtime: c_long = SYS_clock_adjtime64;
+pub const SYS_clock_getres: c_long = SYS_clock_getres_time64;
+pub const SYS_clock_nanosleep: c_long = SYS_clock_nanosleep_time64;
+pub const SYS_timer_gettime: c_long = SYS_timer_gettime64;
+pub const SYS_timer_settime: c_long = SYS_timer_settime64;
+pub const SYS_timerfd_gettime: c_long = SYS_timerfd_gettime64;
+pub const SYS_timerfd_settime: c_long = SYS_timerfd_settime64;
+pub const SYS_utimensat: c_long = SYS_utimensat_time64;
+pub const SYS_pselect6: c_long = SYS_pselect6_time64;
+pub const SYS_ppoll: c_long = SYS_ppoll_time64;
+pub const SYS_recvmmsg: c_long = SYS_recvmmsg_time64;
+pub const SYS_mq_timedsend: c_long = SYS_mq_timedsend_time64;
+pub const SYS_mq_timedreceive: c_long = SYS_mq_timedreceive_time64;
+pub const SYS_rt_sigtimedwait: c_long = SYS_rt_sigtimedwait_time64;
+pub const SYS_futex: c_long = SYS_futex_time64;
+pub const SYS_sched_rr_get_interval: c_long = SYS_sched_rr_get_interval_time64;
