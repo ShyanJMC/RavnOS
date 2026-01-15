@@ -8,7 +8,7 @@ fi
 
 function kernel(){
 	cd kernel/
-	echo "Insert supported board;"
+	echo "Insert supported board. Options are; rpi4 rpi5 qemu"
 	read board
 	bash build.sh $board
 	cd ../
@@ -52,6 +52,6 @@ elif [ $1 == "kernel" ]; then
 	kernel;
 elif [ $1 == "rune" ]; then
 	rune;
-elif [ $1 == "search"]; then
+elif [ $1 == "search" ]; then
 	search;
 fi
