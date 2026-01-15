@@ -6,7 +6,7 @@
 
 #[cfg(feature = "qemu_psci")]
 mod imp {
-    use crate::uart_println;
+    use crate::await_kernel_uart_println;
     use core::arch::asm;
 
     pub const DEFAULT_CORE_COUNT: usize = 4;
@@ -48,17 +48,17 @@ mod imp {
         let entry = unsafe { (&__rpi_phys_binary_load_addr as *const u8) as u64 };
 
         if core_id == 0 {
-            uart_println!("[0] PSCI: boot core 0 already active; skipping CPU_ON");
+            await_kernel_uart_println!("[0] PSCI: boot core 0 already active; skipping CPU_ON");
             return;
         }
 
         match unsafe { psci_cpu_on(core_id as u64, entry) } {
-            Ok(()) => uart_println!(
+            Ok(()) => await_kernel_uart_println!(
                 "[0] PSCI: requested start of core {} at entry {:#x}",
                 core_id,
                 entry
             ),
-            Err(code) => uart_println!(
+            Err(code) => await_kernel_uart_println!(
                 "[0] PSCI: failed to start core {} (error {})",
                 core_id,
                 code
@@ -69,8 +69,8 @@ mod imp {
 
 #[cfg(not(feature = "qemu_psci"))]
 mod imp {
+    use crate::await_kernel_uart_println;
     use crate::bsp::raspberrypi::cpu as rpi_cpu;
-    use crate::uart_println;
 
     pub const DEFAULT_CORE_COUNT: usize = 4;
 
@@ -82,7 +82,7 @@ mod imp {
     /// Route secondary-core requests through the Raspberry Pi spin-table path, which QEMU's
     /// `-M raspi4b` emulates closely enough for testing.
     pub fn start_secondary_core(core_id: usize) {
-        uart_println!(
+        await_kernel_uart_println!(
             "[0] QEMU raspi4b: forwarding secondary-core start request for core {}",
             core_id
         );

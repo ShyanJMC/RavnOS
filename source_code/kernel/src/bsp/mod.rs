@@ -5,7 +5,7 @@
 //! Board Support Package facade.
 
 #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
-use crate::uart_println;
+use crate::await_kernel_uart_println;
 #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
 use core::mem::MaybeUninit;
 
@@ -49,7 +49,7 @@ pub fn init() -> Result<(), &'static str> {
     raspberrypi::driver::init(dtb_summary)?;
 
     if !dtb_loaded {
-        uart_println!(
+        await_kernel_uart_println!(
             "[0] WARNING: DTB missing at {:#x}; using fallback peripheral layout",
             raspberrypi::dtb::load_addr()
         );
@@ -71,6 +71,87 @@ pub fn start_secondary_core(core_id: usize) {
 #[cfg(feature = "bsp_qemu")]
 pub fn start_secondary_core(core_id: usize) {
     qemu::cpu::start_secondary_core(core_id);
+}
+
+/// Initialize the interrupt controller for the boot core.
+pub fn init_primary_interrupts() -> Result<(), &'static str> {
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
+    {
+        raspberrypi::interrupt_controller::init_primary()
+    }
+    #[cfg(not(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu")))]
+    {
+        Err("Interrupt controller init not implemented for this BSP")
+    }
+}
+
+/// Initialize the interrupt controller for a secondary core.
+pub fn init_secondary_interrupts() -> Result<(), &'static str> {
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
+    {
+        raspberrypi::interrupt_controller::init_secondary()
+    }
+    #[cfg(not(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu")))]
+    {
+        Err("Interrupt controller init not implemented for this BSP")
+    }
+}
+
+/// Return the GIC CPU-interface base address if available.
+pub fn interrupt_controller_cpu_base() -> Option<usize> {
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
+    {
+        raspberrypi::interrupt_controller::cpu_interface_base()
+    }
+    #[cfg(not(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu")))]
+    {
+        None
+    }
+}
+
+/// Snapshot the timer interrupt routing state for diagnostics.
+pub fn timer_irq_snapshot() -> Option<raspberrypi::interrupt_controller::TimerIrqState> {
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
+    {
+        raspberrypi::interrupt_controller::timer_irq_snapshot()
+    }
+    #[cfg(not(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu")))]
+    {
+        None
+    }
+}
+
+/// Emit a debug line describing the timer IRQ routing state.
+pub fn log_timer_irq_state(label: &str) {
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
+    {
+        raspberrypi::interrupt_controller::log_timer_irq_state(label);
+    }
+}
+
+pub fn cpu_interface_state() -> Option<raspberrypi::interrupt_controller::CpuInterfaceState> {
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
+    {
+        raspberrypi::interrupt_controller::cpu_interface_state()
+    }
+    #[cfg(not(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu")))]
+    {
+        None
+    }
+}
+
+pub fn log_cpu_interface_state(label: &str) {
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
+    {
+        raspberrypi::interrupt_controller::log_cpu_interface_state(label);
+    }
+}
+
+pub fn force_timer_irq() {
+    #[cfg(any(feature = "bsp_rpi4", feature = "bsp_rpi5", feature = "bsp_qemu"))]
+    {
+        raspberrypi::interrupt_controller::force_timer_irq();
+    }
 }
 
 /// Name of the active board reported by the driver subsystem.

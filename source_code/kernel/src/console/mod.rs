@@ -6,6 +6,7 @@
 
 mod null_console;
 
+use crate::bsp;
 use crate::synchronization::{self, NullLock};
 use core::fmt;
 
@@ -63,6 +64,7 @@ pub mod interface {
 
 static CUR_CONSOLE: NullLock<&'static (dyn interface::All + Sync)> =
     NullLock::new(&null_console::NULL_CONSOLE);
+static UART_PRINT_LOCK: NullLock<()> = NullLock::new(());
 
 //--------------------------------------------------------------------------------------------------
 // Public Code
@@ -83,7 +85,12 @@ pub fn console() -> &'static dyn interface::All {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    console().write_fmt(args).unwrap();
+    write_via_driver(args);
+}
+
+#[doc(hidden)]
+pub fn _locked_print(args: fmt::Arguments) {
+    UART_PRINT_LOCK.lock(move |_| write_via_driver(args));
 }
 
 /// Prints without a newline.
@@ -109,4 +116,27 @@ macro_rules! println {
         // macros are replaced at compile time by this code.
         $crate::console::_print(format_args_nl!($($arg)*));
     })
+}
+
+#[macro_export]
+macro_rules! await_kernel_uart_println {
+    () => ({
+        $crate::console::_locked_print(format_args!("\n"));
+    });
+    ($($arg:tt)*) => ({
+        $crate::console::_locked_print(format_args_nl!($($arg)*));
+    });
+}
+
+fn write_via_driver(args: fmt::Arguments) {
+    if let Some(driver) = bsp::drivers_interface::active_driver() {
+        let uart = driver.uart();
+        let _ = uart.write_fmt(args);
+        uart.flush();
+    } else {
+        CUR_CONSOLE.lock(|con| {
+            let _ = con.write_fmt(args);
+            con.flush();
+        });
+    }
 }

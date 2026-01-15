@@ -11,7 +11,7 @@
 //!
 //! crate::cpu::boot::arch_boot
 
-use crate::uart_println;
+use crate::await_kernel_uart_println;
 use core::arch::global_asm;
 
 // Assembly counterpart to this file.
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn _start_rust() -> ! {
 /// Secondary-core entry invoked from the assembly trampoline once a non-boot CPU is released.
 #[no_mangle]
 pub unsafe extern "C" fn secondary_start_rust(core_id: u64) -> ! {
-    uart_println!(
+    await_kernel_uart_println!(
         "[{}] secondary_start_rust(): entering secondary Rust path at EL1",
         core_id
     );

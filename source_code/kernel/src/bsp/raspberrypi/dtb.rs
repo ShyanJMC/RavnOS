@@ -1,9 +1,10 @@
+use core::convert::TryInto;
 use core::mem::MaybeUninit;
 use core::ptr::read_volatile;
 use core::slice;
 use core::sync::atomic::{AtomicBool, Ordering};
 use fdt::node::FdtNode;
-use fdt::standard_nodes::Aliases;
+use fdt::standard_nodes::{Aliases, Cpu};
 use fdt::Fdt;
 
 extern crate alloc;
@@ -12,25 +13,35 @@ use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
 
-use crate::uart_println;
+use crate::await_kernel_uart_println;
 
 /// Magic value expected at the start of a flattened device tree blob.
 pub const MAGIC: u32 = 0xd00dfeed;
 
 const FALLBACK_DTB_ADDR: usize = 0x0000_0000_0000_033c;
+const FALLBACK_RAM_SIZE_BYTES: u64 = 1024 * 1024 * 1024; // 1 GiB
 
 #[no_mangle]
 #[link_section = ".text._start_arguments"]
 static mut __dtb_load_addr: u64 = 0;
 
 /// High level view of the parsed DTB that the rest of the kernel cares about.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Summary {
     pub entries: Vec<String>,
     pub cpu_count: Option<usize>,
     pub peripherals: PeripheralsLayout,
     pub model: String,
     pub compatibles: Vec<String>,
+    pub memory_regions: Vec<MemoryRegion>,
+    pub cpu_release_addrs: Vec<u64>,
+}
+
+/// Simple description of a RAM range reported by the firmware.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MemoryRegion {
+    pub start: u64,
+    pub size: u64,
 }
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -58,10 +69,18 @@ impl Summary {
                     mmio_start: 0xFE20_0000,
                     uart_pl011: 0xFE20_1000,
                     gpio: 0xFE20_0000,
+                    gic_distributor: 0x4004_1000,
+                    gic_redistributor: 0x4004_2000,
+                    local_intc: 0x4000_0000,
                     ..Default::default()
                 },
                 model: "Raspberry Pi 4 (fallback)".into(),
                 compatibles: vec!["raspberrypi,4-fallback".into()],
+                memory_regions: vec![MemoryRegion {
+                    start: 0,
+                    size: FALLBACK_RAM_SIZE_BYTES,
+                }],
+                cpu_release_addrs: vec![0xD8, 0xE0, 0xE8, 0xF0],
             }
         }
         #[cfg(all(
@@ -75,6 +94,11 @@ impl Summary {
                 peripherals: PeripheralsLayout::default(),
                 model: "Raspberry Pi 5 (fallback)".into(),
                 compatibles: vec!["raspberrypi,5-fallback".into()],
+                memory_regions: vec![MemoryRegion {
+                    start: 0,
+                    size: FALLBACK_RAM_SIZE_BYTES,
+                }],
+                cpu_release_addrs: Vec::new(),
             }
         }
     }
@@ -126,7 +150,7 @@ pub fn probe() -> Option<Summary> {
     match ensure_loaded() {
         Ok(summary) => Some(summary.clone()),
         Err(error) => {
-            uart_println!("[0] Failed to parse DTB: {}", error);
+            await_kernel_uart_println!("[0] Failed to parse DTB: {}", error);
             None
         }
     }
@@ -142,12 +166,12 @@ pub fn ensure_loaded() -> Result<&'static Summary, &'static str> {
 
     let mut probe_addr = |addr: usize| {
         let magic = read_u32_be(addr);
-        uart_println!("[0] Verifying DTB at {addr:#x}; magic {magic:#x}");
+        await_kernel_uart_println!("[0] Verifying DTB at {addr:#x}; magic {magic:#x}");
         if magic == MAGIC {
             selected_addr = Some(addr);
             true
         } else {
-            uart_println!("[0] DTB not found at {addr:#x} (bad magic: {magic:#x})");
+            await_kernel_uart_println!("[0] DTB not found at {addr:#x} (bad magic: {magic:#x})");
             false
         }
     };
@@ -159,7 +183,7 @@ pub fn ensure_loaded() -> Result<&'static Summary, &'static str> {
     }
 
     let dtb_addr = selected_addr.ok_or("DTB not present")?;
-    uart_println!("[0] DTB found at {dtb_addr:#x}.");
+    await_kernel_uart_println!("[0] DTB found at {dtb_addr:#x}.");
 
     let summary = parse(dtb_addr)?;
     Ok(store_summary(summary))
@@ -167,6 +191,14 @@ pub fn ensure_loaded() -> Result<&'static Summary, &'static str> {
 
 pub fn peripherals_layout() -> Option<&'static PeripheralsLayout> {
     cached_summary().map(|summary| &summary.peripherals)
+}
+
+pub fn memory_regions() -> Option<&'static [MemoryRegion]> {
+    cached_summary().map(|summary| summary.memory_regions.as_slice())
+}
+
+pub fn cpu_release_addrs() -> Option<&'static [u64]> {
+    cached_summary().map(|summary| summary.cpu_release_addrs.as_slice())
 }
 
 pub fn parse(dtb_addr: usize) -> Result<Summary, &'static str> {
@@ -177,17 +209,17 @@ pub fn parse(dtb_addr: usize) -> Result<Summary, &'static str> {
     let fdt = match Fdt::new(dtb_slice) {
         Ok(fdt) => fdt,
         Err(err) => {
-            uart_println!("Error FDT: {:?}", err);
+            await_kernel_uart_println!("Error FDT: {:?}", err);
             return Err("Failed to decode DTB");
         }
     };
 
-    uart_println!("DTB found: version {}", fdt.total_size());
+    await_kernel_uart_println!("DTB found: version {}", fdt.total_size());
 
     let mut entries = Vec::new();
     let root = fdt.root();
     let soc = fdt.find_node("/soc");
-    uart_println!(
+    await_kernel_uart_println!(
         "[INFO] SOC detected; {}",
         if soc.is_some() { "yes" } else { "no" }
     );
@@ -202,7 +234,7 @@ pub fn parse(dtb_addr: usize) -> Result<Summary, &'static str> {
     }
 
     let model = root.model().to_string();
-    uart_println!("[DTB INFO]: Root model {}", model);
+    await_kernel_uart_println!("[DTB INFO]: Root model {}", model);
 
     let compatibles = root
         .compatible()
@@ -210,30 +242,34 @@ pub fn parse(dtb_addr: usize) -> Result<Summary, &'static str> {
         .map(|entry| entry.to_string())
         .collect::<Vec<_>>();
 
-    let cpu_count = fdt.cpus().count();
-    uart_println!("[DTB INFO]: CPUS number {}", cpu_count);
+    let (cpu_count, cpu_release_addrs) = collect_cpu_release_info(&fdt);
+    await_kernel_uart_println!("[DTB INFO]: CPUS number {}", cpu_count);
 
-    let mut region_count = 0usize;
-    let mut first_region_start = None;
+    let mut memory_regions = Vec::new();
     for region in fdt.memory().regions() {
-        region_count += 1;
-        if first_region_start.is_none() {
-            first_region_start = Some(region.starting_address as usize);
+        let start = region.starting_address as u64;
+        let size = region.size.unwrap_or(0) as u64;
+
+        if size == 0 {
+            continue;
         }
+
+        memory_regions.push(MemoryRegion { start, size });
+        await_kernel_uart_println!(
+            "[DTB INFO]: Memory region start {start:#x} size {size:#x} ({}) bytes",
+            size
+        );
+    }
+    if memory_regions.is_empty() {
+        await_kernel_uart_println!("[DTB INFO]: Memory regions missing from DTB");
     }
 
-    uart_println!("[DTB INFO]: Memory regions {}", region_count);
-
-    if let Some(start) = first_region_start {
-        uart_println!("[DTB INFO]: Memory regions start at {}", start);
-    }
-
-    uart_println!("[DTB INFO]: Bootargs; {:?}", fdt.chosen().bootargs());
-    uart_println!(
+    await_kernel_uart_println!("[DTB INFO]: Bootargs; {:?}", fdt.chosen().bootargs());
+    await_kernel_uart_println!(
         "[DTB INFO]: standard output (stdout); {:?}",
         fdt.chosen().stdout()
     );
-    uart_println!(
+    await_kernel_uart_println!(
         "[DTB INFO]: standard input (stdin); {:?}",
         fdt.chosen().stdin()
     );
@@ -246,6 +282,8 @@ pub fn parse(dtb_addr: usize) -> Result<Summary, &'static str> {
         peripherals,
         model,
         compatibles,
+        memory_regions,
+        cpu_release_addrs,
     })
 }
 
@@ -334,12 +372,18 @@ fn node_is_pl011(node: &FdtNode<'_, '_>) -> bool {
 }
 
 fn normalize_peripheral_addr(addr: u64) -> u64 {
-    const BUS_BASE: u64 = 0x7E00_0000;
-    const BUS_SPAN: u64 = 0x0200_0000;
-    const PHYS_BASE_PI4: u64 = 0xFE00_0000;
+    const VC_BUS_BASE: u64 = 0x7E00_0000;
+    const VC_BUS_SPAN: u64 = 0x0200_0000;
+    const VC_PHYS_BASE_PI4: u64 = 0xFE00_0000;
 
-    if (BUS_BASE..BUS_BASE + BUS_SPAN).contains(&addr) {
-        PHYS_BASE_PI4 + (addr - BUS_BASE)
+    const LOCAL_BUS_BASE: u64 = 0x4000_0000;
+    const LOCAL_BUS_SPAN: u64 = 0x0100_0000;
+    const LOCAL_PHYS_BASE_PI4: u64 = 0xFF80_0000;
+
+    if (VC_BUS_BASE..VC_BUS_BASE + VC_BUS_SPAN).contains(&addr) {
+        VC_PHYS_BASE_PI4 + (addr - VC_BUS_BASE)
+    } else if (LOCAL_BUS_BASE..LOCAL_BUS_BASE + LOCAL_BUS_SPAN).contains(&addr) {
+        LOCAL_PHYS_BASE_PI4 + (addr - LOCAL_BUS_BASE)
     } else {
         addr
     }
@@ -375,4 +419,51 @@ fn node_reg_entry(node: FdtNode<'_, '_>, index: usize) -> Option<u64> {
     let mut regs = node.reg()?;
     regs.nth(index)
         .map(|region| region.starting_address as usize as u64)
+}
+
+fn collect_cpu_release_info(fdt: &Fdt<'_>) -> (usize, Vec<u64>) {
+    let mut cpu_count = 0usize;
+    let mut release_slots = Vec::new();
+
+    for cpu in fdt.cpus() {
+        cpu_count += 1;
+        let core_id = cpu.ids().first();
+
+        if release_slots.len() <= core_id {
+            release_slots.resize(core_id + 1, 0);
+        }
+
+        match cpu_release_addr(&cpu) {
+            Some(addr) => {
+                release_slots[core_id] = addr;
+                await_kernel_uart_println!(
+                    "[DTB INFO]: cpu{} release address {:#x}",
+                    core_id,
+                    addr
+                );
+            }
+            None => await_kernel_uart_println!(
+                "[0] WARNING: cpu{} missing cpu-release-addr property",
+                core_id
+            ),
+        }
+    }
+
+    (cpu_count, release_slots)
+}
+
+fn cpu_release_addr(cpu: &Cpu<'_, '_>) -> Option<u64> {
+    cpu.property("cpu-release-addr")
+        .and_then(|prop| be_bytes_to_u64(prop.value))
+}
+
+fn be_bytes_to_u64(bytes: &[u8]) -> Option<u64> {
+    match bytes.len() {
+        8 => bytes.try_into().ok().map(u64::from_be_bytes),
+        4 => bytes
+            .try_into()
+            .ok()
+            .map(|raw: [u8; 4]| u32::from_be_bytes(raw) as u64),
+        _ => None,
+    }
 }

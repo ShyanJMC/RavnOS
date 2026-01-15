@@ -36,6 +36,8 @@ impl BoardDriver for RaspberryPi4bDrivers {
 
         gpio_init(gpio_base);
         uart::init(uart_base)?;
+        // Make the newly initialized UART the global console so that macros print again.
+        console::register_console(uart::driver());
         uart::driver().write_char('>');
         uart::driver().write_char('\n');
         Ok(())

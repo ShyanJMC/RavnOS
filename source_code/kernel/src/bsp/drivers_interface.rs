@@ -78,9 +78,9 @@ macro_rules! uart_print {
 #[macro_export]
 macro_rules! uart_println {
     () => ({
-        $crate::bsp::drivers_interface::write_uart(format_args!("\n"));
+        $crate::await_kernel_uart_println!();
     });
     ($($arg:tt)*) => ({
-        $crate::bsp::drivers_interface::write_uart(format_args_nl!($($arg)*));
+        $crate::await_kernel_uart_println!($($arg)*);
     });
 }

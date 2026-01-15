@@ -14,6 +14,7 @@ mod critical_section_impl;
 // Bring to scope the UART logging macros.
 mod console;
 mod cpu;
+mod memory;
 mod panic_wait;
 mod synchronization;
 
@@ -29,7 +30,7 @@ use embedded_alloc::LlffHeap as Heap;
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-const HEAP_SIZE: usize = 128 * 1024;
+const HEAP_SIZE: usize = 2 * 1024 * 1024;
 const SECONDARY_SPIN_LIMIT: usize = 1_000_000;
 
 static SCHEDULER_READY: AtomicBool = AtomicBool::new(false);
@@ -38,6 +39,7 @@ static CORE_ONLINE: [AtomicBool; scheduler::MAX_CORES] =
 
 // Only a single core must be active and running this function.
 unsafe fn kernel_init() -> ! {
+    cpu::ensure_el1();
     init_heap();
 
     if let Err(x) = bsp::init() {
@@ -50,33 +52,39 @@ unsafe fn kernel_init() -> ! {
 
 // The main function running after the early init.
 fn kernel_main() -> ! {
-    uart_println!("RavnOS kernel");
-    uart_println!("Board; {}", bsp::board_name());
+    await_kernel_uart_println!("RavnOS kernel");
+    await_kernel_uart_println!("Board; {}", bsp::board_name());
 
     let dtb_info = bsp::probe_dtb();
+    memory::init(dtb_info.as_ref());
+    await_kernel_uart_println!("[0] Enabling MMU on boot core");
+    if let Err(err) = memory::enable_mmu_on_this_core() {
+        panic!("Failed to enable MMU on boot core: {}", err);
+    }
+    await_kernel_uart_println!("[0] MMU enabled on boot core");
     let core_count = dtb_info
         .as_ref()
         .and_then(|summary| summary.cpu_count)
         .unwrap_or_else(|| bsp::default_core_count());
 
-    uart_println!("[0] Cores number: {}", core_count);
+    await_kernel_uart_println!("[0] Cores number: {}", core_count);
     if core_count > 1 {
-        uart_println!("[0] Starting secondary cores (1..{})", core_count - 1);
+        await_kernel_uart_println!("[0] Starting secondary cores (1..{})", core_count - 1);
         for core_id in 1..core_count {
             bsp::start_secondary_core(core_id);
         }
-        uart_println!("[0] Secondary core start requests issued");
+        await_kernel_uart_println!("[0] Secondary core start requests issued");
         wait_for_secondary_online(core_count);
     } else {
-        uart_println!("[0] Single-core system detected; no secondary cores to start");
+        await_kernel_uart_println!("[0] Single-core system detected; no secondary cores to start");
     }
 
     if let Some(summary) = dtb_info {
         if !summary.entries.is_empty() {
             for entry in summary.entries {
-                uart_println!("[1] DTB data; {entry}");
+                await_kernel_uart_println!("[1] DTB data; {entry}");
             }
-            uart_println!("[1] End reading DTB");
+            await_kernel_uart_println!("[1] End reading DTB");
         }
     }
 
@@ -94,20 +102,31 @@ fn init_heap() {
 }
 
 fn kernel_init_scheduler() {
+    if let Err(err) = bsp::init_primary_interrupts() {
+        panic!("Failed to initialize interrupt controller: {}", err);
+    }
+
+    scheduler::init_kernel_process_descriptors();
+    scheduler::init_user_process_descriptors();
+
     // SAFETY: Scheduler globals are singletons per core; this runs once on the boot core.
     unsafe {
         scheduler::install_vector_table();
+        scheduler::log_irq_vector_slot("boot");
         scheduler::setup_generic_timer_5ms();
         scheduler::enable_irq();
     }
     SCHEDULER_READY.store(true, Ordering::Release);
     asm::sev();
     kernel_threads::run_debug_checks();
-    uart_println!("[0] Scheduler armed: vector table installed, timer running, IRQs enabled");
+    await_kernel_uart_println!(
+        "[0] Scheduler armed: vector table installed, timer running, IRQs enabled"
+    );
 }
 
 pub fn secondary_core_main(core_id: usize) -> ! {
-    uart_println!(
+    cpu::ensure_el1();
+    await_kernel_uart_println!(
         "[{}] Secondary core online; waiting for scheduler init on core 0",
         core_id
     );
@@ -116,12 +135,27 @@ pub fn secondary_core_main(core_id: usize) -> ! {
         spin_loop();
     }
 
+    if let Err(err) = memory::enable_mmu_on_this_core() {
+        panic!(
+            "Failed to enable MMU on secondary core {}: {}",
+            core_id, err
+        );
+    }
+
+    if let Err(err) = bsp::init_secondary_interrupts() {
+        panic!(
+            "Failed to initialize interrupt controller on secondary core {}: {}",
+            core_id, err
+        );
+    }
+
     unsafe {
         scheduler::install_vector_table();
+        scheduler::log_irq_vector_slot("secondary");
         scheduler::setup_generic_timer_5ms();
         scheduler::enable_irq();
     }
-    uart_println!(
+    await_kernel_uart_println!(
         "[{}] Scheduler armed on secondary core: timer running, IRQs enabled",
         core_id
     );
@@ -143,7 +177,7 @@ fn wait_for_secondary_online(core_count: usize) {
         let mut spins = 0;
         while spins < SECONDARY_SPIN_LIMIT {
             if CORE_ONLINE[core_id].load(Ordering::Acquire) {
-                uart_println!("[0] Secondary core {} acknowledged startup", core_id);
+                await_kernel_uart_println!("[0] Secondary core {} acknowledged startup", core_id);
                 break;
             }
             spin_loop();
@@ -151,7 +185,7 @@ fn wait_for_secondary_online(core_count: usize) {
         }
 
         if !CORE_ONLINE[core_id].load(Ordering::Acquire) {
-            uart_println!(
+            await_kernel_uart_println!(
                 "[0] WARNING: core {} never signaled online state (likely unsupported in this environment)",
                 core_id
             );

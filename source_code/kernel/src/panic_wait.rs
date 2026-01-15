@@ -6,14 +6,14 @@
 
 use core::panic::PanicInfo;
 
-// Maybe you are asking; why are you importin macro uart_println! if it
+// Maybe you are asking; why are you importin macro await_kernel_uart_println! if it
 // is defined in console/mod.rs ? Not should be first "use crate::console"
 // and then the macro is automatically imported?
 // Well, not. Because when is imported in main.rs as module "mod console.rs",
 // is enabled as global macro in the hole program as root crate, and because
-// of that you just need use "use crate::uart_println".
+// of that you just need use "use crate::await_kernel_uart_println".
 // Remember that this is because is a macro, is not the same behaviour in functions.
-use crate::{cpu, uart_println};
+use crate::{await_kernel_uart_println, cpu};
 
 //--------------------------------------------------------------------------------------------------
 // Private Code
@@ -55,7 +55,7 @@ fn panic(info: &PanicInfo) -> ! {
         _ => ("???", 0, 0),
     };
 
-    uart_println!(
+    await_kernel_uart_println!(
         "Kernel panic!\n\n\
         Panic location:\n      File '{}', line {}, column {}\n\n\
         {}",

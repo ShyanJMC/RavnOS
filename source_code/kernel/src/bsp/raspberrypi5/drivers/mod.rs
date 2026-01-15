@@ -36,6 +36,8 @@ impl BoardDriver for RaspberryPi5Drivers {
 
         gpio_init(gpio_base);
         uart::init(uart_base)?;
+        // Publish the UART implementation as the global console for printing macros.
+        console::register_console(uart::driver());
         uart::driver().write_char('>');
         uart::driver().write_char('\n');
         Ok(())

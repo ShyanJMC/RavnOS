@@ -9,13 +9,13 @@ El scheduler tiene una arquitectura modular manteniendo la filosofía KISS: "Kee
 3. **EL0 / EL1:** Exception Levels del CPU; EL0 ejecuta procesos de usuario, EL1 ejecuta el kernel.
 4. **IPI (Inter-Processor Interrupt) / SGI:** Interrupciones enviadas entre cores via GIC para coordinar eventos (TLB shootdown, mailboxes, migraciones).
 5. **GIC (Generic Interrupt Controller):** Controlador ARM encargado de enrutar interrupciones entre cores.
-6. **MMU (Memory Management Unit):** Hardware que traduce direcciones virtuales a físicas mediante tablas de 4 niveles.
+6. **MMU (Memory Management Unit):** Hardware que traduce direcciones virtuales a físicas mediante tablas de 3 niveles basadas en granulos de 64 KiB.
 7. **DMB/DSB/ISB:** Barreras de memoria ARM usadas para garantizar orden (Data/Instruction Memory Barrier).
 8. **TLB (Translation Lookaside Buffer):** Caché de traducciones de la MMU que se invalida en migraciones o cambios de PTE.
-9. **PTE (Page Table Entry):** Entrada individual de la tabla de páginas que describe la dirección física, permisos y atributos de una página de 4KB.
+9. **PTE (Page Table Entry):** Entrada individual de la tabla de páginas que describe la dirección física, permisos y atributos de una página de 64KB.
 10. **Guard page:** Página marcada como `Fault` (sin permisos) colocada adyacente a un stack para detectar overflows mediante page fault controlado.
 11. **DTB (Device Tree Blob):** Estructura provista por el bootloader con información del hardware, mapeada read-only en TTBR1.
-12. **OOM (Out Of Memory) protection:** Reserva de 1MB que evita que userland deje sin memoria al kernel.
+12. **OOM (Out Of Memory) protection:** Reserva de 10MB (pool crítico del kernel + colchón OOM) que evita que userland deje sin memoria al kernel.
 13. **SVC (Supervisor Call):** Instrucción de software que dispara una syscall (X8 define el ID).
 14. **AtomicPtr:** Primitiva atómica de Rust usada para actualizar punteros de procesos sin condiciones de carrera.
 15. **ASLR (Address Space Layout Randomization):** Técnica para randomizar base de heap/stack mediante PRNG LCG.
@@ -44,6 +44,7 @@ El scheduler tiene una arquitectura modular manteniendo la filosofía KISS: "Kee
 4. La estructura de directorios debe ser:
    - `cpu/mod.rs`: archivo principal que exporta los módulos
    - `cpu/scheduler.rs`: lógica principal del scheduler (alto nivel)
+   - `cpu/process.rs`: tablas de procesos (kernel/user) y definición completa del PCB
    - `cpu/aarch64.rs`: funciones Rust con ensamblador específicas para ARMv8
    - `memory/mod.rs`: gestión de memoria virtual y física
    - `memory/mmu.rs`: operaciones de la MMU
@@ -54,6 +55,29 @@ El scheduler tiene una arquitectura modular manteniendo la filosofía KISS: "Kee
 5. El archivo `cpu/scheduler.rs` utiliza las funciones de `cpu/aarch64.rs` según la configuración de compilación. El target `aarch64-unknown-none-softfloat` en el comando `cargo build` determina qué módulo de arquitectura se compila.
 
 **Razón:** Permite compilación condicional por arquitectura sin duplicar lógica de scheduling.
+
+6. El subsistema `memory/` expone un `MemorySummary` en tiempo de ejecución para telemetría y depuración:
+   - `granule_size`: fija en 64 KiB para todo el kernel (TTBR0 y TTBR1 usan el mismo tamaño).
+   - `ram_regions`: copia íntegra de las regiones reportadas por el DTB (`start`, `size`) para estadísticos futuros.
+   - `reserved_regions`: instantánea del `PageAllocator` (imagen del kernel, MMIO críticos, reservas personalizadas).
+   - `kernel_image`: tupla `(start, end)` con el span reservado para `kernel8.img` en RAM física.
+   - `emergency_pool`: reserva opcional de 10 MiB garantizada para rutinas críticas; se etiqueta como `ReservationKind::EmergencyPool`.
+   - `total_free_bytes`: bytes libres después de descontar todas las reservas, calculado sobre granulos de 64 KiB.
+   - `mmio_base`: dirección física mínima del bloque MMIO mapeado 1:1 en TTBR1.
+   `memory::summary()` devuelve una copia del estado para que scheduler, telemetría o tests puedan verificar límites sin mutar el allocator. El snapshot siempre se genera bajo el lock global del gestor para mantener coherencia.
+
+7. `cpu/process.rs` inicializa un `KernelProcessTable` estático (`NullLock`) y enlaza cada `kernel_task*` del prototipo cooperativo con un PCB completo:
+   - Cada slot se registra durante `kernel_init_scheduler()` mediante `scheduler::init_kernel_process_descriptors()`.
+   - Los valores clásicos (`pid`, `priority`, `pc`, `state`, `ttbr0`) quedan poblados de inmediato, así que el resto del kernel ya puede inspeccionar/telemetriar los hilos mientras se migra a un scheduler preventivo.
+   - `kernel_threads::run_debug_checks()` consulta el PCB asociado al slot vigente (`scheduler::current_task_slot(core_id)`) y lo imprime para garantizar coherencia con TTBR1.
+   - Una tabla gemela (`UserProcessTable`) hace lo propio para los `user_task*` de Core 1..N. Sus PCBs se rellenan con los TTBR0 reales provistos por `memory::init()` y se exponen vía `userdebug_threads::run_debug_checks()` para comprobar que el scheduler respeta la separación EL0/EL1 desde el principio.
+   - El handler del timer guarda x0-x30 + SP/ELR/SPSR dentro de un `ExceptionFrame` sobre el stack del hilo interrumpido, invoca `scheduler_preempt_tick()` y recibe de vuelta el `ContextFrame` del PCB que debe reanudarse. El ensamblador reprograma el timer, restaura los registros que describe el frame y hace `eret`, obteniendo un cambio de contexto preemptivo sin que las tareas tengan que cooperar.
+
+**Estado actual de la implementación**
+
+- Los PCBs (kernel y usuario) contienen un `ContextFrame` alineado a 16B que refleja exactamente el layout que el handler guarda sobre el stack. `scheduler_preempt_tick()` copia ahí el frame entrante, actualiza campos de telemetría (`sp`, `pc`, `lr`, `registers[..30]`, `spsr_el1`) y devuelve un puntero al frame que debe restaurarse.
+- Cada slot de scheduler tiene un stack dedicado de 4 KiB que se inicializa en `scheduler::init_{kernel,user}_process_descriptors()`. El `ContextFrame` de arranque deja el `SP` alineado al tope del stack, programa `ELR` con la función `kernel_task*`/`user_task*` y usa un `SPSR` configurado para EL1h con IRQs habilitadas, por lo que el primer tick ya puede saltar directamente a la tarea.
+- El vector `scheduler_irq_handler` programa TTBR0_EL1 cuando el siguiente slot pertenece a usuario (si el PCB declara un TTBR válido), garantizando que cada dominio utilice su espacio de direcciones incluso mientras todos los threads corren todavía en EL1.
 
 ## Arquitectura de Ejecución
 
@@ -155,7 +179,7 @@ El scheduler tiene una arquitectura modular manteniendo la filosofía KISS: "Kee
 
 14. **Tablas de procesos separadas:**
     - `kernel_process_table`: arreglo fijo `[ProcessControlBlock; KERNEL_MAX_PROCESSES]` reservado únicamente para Core 0 y sus threads internos. Siempre reside en TTBR1 (mapeo 1:1) y jamás se expone a Cores 1-N.
-    - `user_process_arena`: colección dinámica de slabs de PCBs dedicada a procesos usuario. Cada slab contiene 64 PCBs contiguos (≈64KB) y se reserva desde un rango virtual del kernel `0xFFFF_9000_0000_0000+` que nunca se mapea en TTBR0. Cuando el `free_list` queda vacío, Core 0 toma otra página física del pool de kernel, la mapea en TTBR1 y la inicializa como nuevo slab, por lo que no existe un límite fijo de procesos: la única barrera es la memoria disponible (`RAM_total - kernel - 4MB`).
+    - `user_process_arena`: colección dinámica de slabs de PCBs dedicada a procesos usuario. Cada slab contiene 64 PCBs contiguos (≈64KB) y se reserva desde un rango virtual del kernel `0xFFFF_9000_0000_0000+` que nunca se mapea en TTBR0. Cuando el `free_list` queda vacío, Core 0 toma otra página física del pool de kernel, la mapea en TTBR1 y la inicializa como nuevo slab, por lo que no existe un límite fijo de procesos: la única barrera es la memoria disponible (`RAM_total - kernel - 10MB`).
     - Ambas tablas viven solo en TTBR1_EL1 y se marcan como **no mapeadas en TTBR0** de los procesos user. Cuando un Core N necesita leer/escribir su PCB lo hace desde EL1 dentro de su handler; en EL0 no existe ningún mapeo que permita inspeccionar PCBs ajenos.
     - El número máximo de procesos por UID no-root es 10 000; Core 0 rechaza `sys_exec` con `-EAGAIN` si excede este tope para evitar fork-bombs.
     - Para evitar que dos cores asignen el mismo PCB simultáneamente, cada entrada tiene un `claim_flag: AtomicBool`. El scheduler solo entrega un PCB si `claim_flag.swap(true, Acquire)` retorna `false`. Al liberar el PCB (cuando Core N sale de él) se ejecuta `claim_flag.store(false, Release)` y se permite otro CORE.
@@ -209,7 +233,7 @@ bitflags::bitflags! {
 
 #[repr(C)]
 pub struct PageFrameDescriptor {
-    pub phys_addr: u64,      // Dirección física alineada a 4KB
+    pub phys_addr: u64,      // Dirección física alineada a 64KB
     pub page_count: u16,     // Cantidad de frames contiguos (para bloques de 64KB)
     pub source: FrameSource,
     pub flags: FrameFlags,
@@ -258,29 +282,26 @@ pub struct ProcessMailbox {
 
 ## Gestión de Memoria Virtual y MMU
 
-### Configuración de registros ARMv8 (baseline Linux)
+### Configuración de registros ARMv8 (granulo 64 KiB)
 
-Se replica la configuración usada por el kernel Linux 6.6 sobre SoCs BCM2711/BCM2712 (páginas de 4KB y 48 bits de VA). Se listan los campos relevantes para poder recalcularlos si cambian los targets.
+La configuración base sigue el layout de Linux pero cambia el translation granule a 64 KiB para TTBR0/TTBR1. Se listan los campos relevantes:
 
-- **`TCR_EL1` (valor de referencia `0x10B5_19B5`):**
+- **`TCR_EL1`:**
   1. `T0SZ = T1SZ = 16` (`bits[5:0]` y `bits[21:16]`) → espacios virtuales de 48 bits.  
-  2. `TG0 = 0b00`, `TG1 = 0b10` (`bits[15:14]`, `bits[31:30]`) → cuarta parte de 4KB en ambos espacios.  
-  3. `IRGNx/ORGNx = 0b01` (`bits[9:8]`, `bits[11:10]`, `bits[25:24]`, `bits[27:26]`) → Write-Back Write-Allocate para tablas user/kernel.  
+  2. `TG0 = 0b01` (64 KiB), `TG1 = 0b11` (64 KiB) garantizando el mismo granulo para user y kernel.  
+  3. `IRGNx/ORGNx = 0b01` (`bits[9:8]`, `bits[11:10]`, `bits[25:24]`, `bits[27:26]`) → Write-Back Write-Allocate tanto para TTBR0 como TTBR1.  
   4. `SH0 = SH1 = 0b11` → Inner Shareable (`bits[13:12]`, `bits[29:28]`).  
   5. `AS = 1` (`bit 36`) para ASID de 16 bits.  
-  6. `TBI0 = 1` y `TBID0 = 0` (`bit 37`) → se ignoran los 8 bits altos de punteros userland permitiendo usar direcciones canónicas con tags.  
-  7. `EPD0 = EPD1 = 0` → se permiten caminatas de tabla completas (`bits 7 y 23`).  
-  8. `IPS = 0b010` (`bits[34:32]`) → 40 bits de PA para Cortex-A72/A76 según `ID_AA64MMFR0_EL1`. El valor se recalcula en tiempo de arranque leyendo el registro para soportar futuros SoC con 44/48 bits.  
-  9. `HA = 1`, `HD = 0` (`bits 39 y 40`) → hardware actualiza Access Flag mientras que Dirty Bit queda en software, igual que Linux.  
-  10. Cuando se compila con `--features kasan`/`mte`, se replica el comportamiento de Linux habilitando `TBI1|TBID1` (bits 38 y 59) para tener tags en TTBR1; por defecto permanecen en 0.
+  6. `TBI0 = 1` y `TBID0 = 0` (`bit 37`) → se ignoran los 8 bits altos de punteros userland permitiendo direcciones con tags; TTBR1 mantiene `TBI1=0` por defecto.  
+  7. `EPD0 = 1` hasta que exista el primer proceso user para evitar caminatas innecesarias; `EPD1 = 0` para permitir las de TTBR1.  
+  8. `IPS = 0b010` (`bits[34:32]`) → 40 bits de PA para Cortex-A72/A76; se recalcula leyendo `ID_AA64MMFR0_EL1` al boot.  
+  9. `HA = 1`, `HD = 0` (`bits 39 y 40`) → hardware actualiza Access Flag; Dirty se emula en software.  
+  10. `TBI1|TBID1` solo se habilitan cuando la build activa `--features kasan`/`mte`.
 
-- **`MAIR_EL1` (valor `0x0004_0044_F0FF`):**
-  - Índice 0 (`MT_NORMAL`) = `0xFF` (WB/WA caché normal).  
-  - Índice 1 (`MT_NORMAL_TAGGED`) = `0xF0` (WB/WA apto para MTE).  
-  - Índice 2 (`MT_NORMAL_NC`) = `0x44` (Normal no-cacheable).  
-  - Índice 3 (`MT_DEVICE_nGnRnE`) = `0x00` (dispositivo fuertemente ordenado).  
-  - Índice 4 (`MT_DEVICE_nGnRE`) = `0x04` (Device nGnRE).  
-  - Los índices adicionales quedan reservados para futuras plataformas pero se inicializan en cero para reproducir el layout de Linux.
+- **`MAIR_EL1` (valor `0x0000_0000_0000_FF04`):**
+  - Índice 0 (`MT_DEVICE_nGnRE`) = `0x04`.  
+  - Índice 1 (`MT_NORMAL_WBWA`) = `0xFF`.  
+  - El resto queda en cero hasta que se agreguen más atributos.
 
 - **`SCTLR_EL1` (`INIT_SCTLR_EL1_MMU_ON = 0x34D5_1993`):**
   - `M|C|I = 1` → MMU + cachés habilitados.  
@@ -310,7 +331,8 @@ Se replica la configuración usada por el kernel Linux 6.6 sobre SoCs BCM2711/BC
     - **Stacks y heap de usuario:** El stack vive en `[0x7FFFFFFFFFFF ↓ 0x70000000]` y el heap en `[0x00000000 - 0x6FFFFFFF]`, ambos creciendo bajo demanda mediante page faults.
     - **Rango user:** Todo espacio restante utiliza TTBR0_EL1 con tablas de 4 niveles; ASLR determina offsets distintos por proceso.
     - **Separación estricta de VA:** El kernel solo ocupa las direcciones altas `0xFFFF_8000_0000_0000+`, mientras que userland queda confinado a `0x0000_0000 - 0x7FFF_FFFF_FFFF`. Los allocators (incluyendo `user_process_arena`, stacks y tablas de páginas) nunca asignan páginas fuera de su mitad correspondiente, evitando cualquier colisión entre VA de kernel y de usuario.
-    - **Acceso por core:** Core 0 opera únicamente en EL1 con TTBR1. Cores 1-N ejecutan en EL0 y solo ven unas pocas páginas del kernel (vector table, stubs de syscall) en read-only.
+- **Acceso por core:** Core 0 opera únicamente en EL1 con TTBR1. Cores 1-N ejecutan en EL0 y solo ven unas pocas páginas del kernel (vector table, stubs de syscall) en read-only.
+- **TTBR0 compartido para tareas user:** Cada entrada de `USER_TASKS` posee un TTBR0 propio (`USER_TASK_TTBR0[]`) que el scheduler instala antes de saltar al handler vía `msr ttbr0_el1, x`. Mientras no existan procesos reales se reutiliza un espacio de direcciones identitario, pero la infraestructura ya permite conectar cada PCB a su tabla TTBR0 y hacer `dsb ish` + `isb` en el vector de interrupción.
 
 ### Direccionamiento de periféricos derivado del DTB
 
@@ -329,39 +351,40 @@ pub struct PeripheralsLayout {
 }
 ```
 
+- Además de los periféricos, el parser del DTB persiste todas las entradas del nodo `/memory` en `Summary::memory_regions` (start + size). Esa información alimenta al `PageAllocator` para alinear las reservas de 64KB según la DRAM real. Si el firmware no provee regiones válidas, se cae a un fallback de 1GiB.
 - **RPi 4B+ (DTB `bcm2711-rpi-4-b.dtb`):** el nodo `/soc` define `ranges = <0x7e000000 0x0 0xfe000000 0x01800000>` y `interrupt-controller@40041000`. Se suman `0x8000_0000` a todas las direcciones de `/soc` generando: `PL011=0xFE201000`, `GPIO=0xFE200000`, `SPI0=0xFE204000`, `GICD=0xFF841000`, `GICR=0xFF842000`, `local_intc=0xFF800000`.  
 - **RPi 5 (DTB `bcm2712-rpi-5-b.dtb`):** el `ranges` mapea `<child_address, 0x10, parent_address, size>`, por lo que basta concatenar `0x10` como los bits altos: `PL011=0x107D001000`, `GPIO=0x107D200000`, `SPI0=0x107D204000`, `GICD=0x107FFF9000`, `GICR=0x107FFFA000`, `local_intc=0x107C001000`.  
 - Si falta algún nodo imprescindible (`serial`, `gpio`, `spi0`, `interrupt-controller`), el kernel aborta el boot para evitar usar valores incorrectos.  
 - Esta estructura se exporta desde `bsp::raspberrypi::<board>::memory::map` y es la única fuente de verdad para los drivers, lo que facilita incorporar nuevas plataformas (Raspberry Pi 5, Allwinner, etc.) simplemente añadiendo nuevos extractores de DTB y correspondientes `cargo --features bsp_<board>`.
 
-17. **Tabla de páginas (4 niveles - ARMv8 format):**
-    - Estructura idéntica a Linux kernel ARMv8
-    - Niveles: L0 (PGD), L1 (PUD), L2 (PMD), L3 (PTE)
-    - Tamaño de página: 4KB
+17. **Tabla de páginas (3 niveles - granulo 64 KiB):**
+    - Basada en el formato ARMv8 para translation granule de 64 KiB
+    - Niveles: L1 (PGD), L2 (PMD), L3 (PTE)
+    - Tamaño de página: 64KB
     - Espacio virtual soportado: 48-bit (256TB)
     - **Page Table Entry (PTE) contiene:**
       - Valid bit: página mapea a memoria física válida
       - Permissions (AP bits): read/write/execute, kernel vs user
-      - Physical address: dirección física de 4KB
+      - Physical address: dirección física de 64KB
       - Accessed bit: 1 si se accedió recientemente
       - Dirty bit: 1 si se escribió
       - Shareability bits: para coherencia entre cores
       - Contiguity bits: optimización de TLB
     - **Ciclo de vida de tablas:**
-      1. Core 0 asigna tablas (L0-L3) del mismo bitmap de memoria física que usa para páginas de datos.
+      1. Core 0 asigna tablas (L1-L3) del mismo bitmap de memoria física que usa para páginas de datos.
       2. Core 0 las mapea read-only en rango kernel (TTBR1_EL1) para poder editarlas desde EL1.
-      3. Procesos user cargan la tabla L0 en TTBR0_EL1.
-      4. Al terminar un proceso, Core 0 libera todas las tablas L0-L3 volviendo a marcar esas páginas en el bitmap (con limpieza a cero igual que cualquier otra página de datos).
+      3. Procesos user cargan la tabla raíz (L1) en TTBR0_EL1.
+      4. Al terminar un proceso, Core 0 libera todas las tablas L1-L3 volviendo a marcar esas páginas en el bitmap (con limpieza a cero igual que cualquier otra página de datos).
 
 18. **Espacios de direcciones virtuales por proceso:**
     - Cada proceso usuario tiene su propio espacio de direcciones virtual aislado
-    - Comienza con 4KB de memoria virtual asignado (heap inicial)
-    - Crece dinámicamente en incrementos de 4KB bajo demanda (detectado mediante page faults)
+    - Comienza con 64KB de memoria virtual asignado (heap inicial)
+    - Crece dinámicamente en incrementos de 64KB bajo demanda (detectado mediante page faults)
     - Rango virtual disponible para procesos user: desde 0x00000000 hasta 0x6FFFFFFF (1.75GB, reserva para stack)
-    - Stack inicial: 64KB por proceso, puede crecer en saltos de 64KB hasta agotar `RAM_total - kernel - 4MB` (el espacio máximo asignable a userland).
+    - Stack inicial: 64KB por proceso, puede crecer en saltos de 64KB hasta agotar `RAM_total - kernel - 10MB` (el espacio máximo asignable a userland).
     - Stack reside en rango virtual alto [0x7FFFFFFFFFFF downward]
     - **Kernel mapeado en TTBR0:** Solo el código necesario para trampas (vector table, stubs de SVC/IRQ) permanece mapeado en región alta (0xFFFF800000000000+) en modo read-only para EL0. Las tablas de procesos, bitmap y mailboxes **no** se mapean en TTBR0 y solo existen en TTBR1 para EL1.
-    - Cada proceso tiene su propia tabla de páginas (TTBR0_EL1 en ARMv8) con 4 niveles
+    - Cada proceso tiene su propia tabla de páginas (TTBR0_EL1 en ARMv8) con 3 niveles (granulo 64KB)
     - **ASLR:** Utiliza un PRNG tipo Linear Congruential Generator (`state = state * 6364136223846793005 + 1`) sembrado con `CNTVCT_EL0`, ID del core y ruido del SoC. El resultado determina offsets independientes para heap y stack en cada proceso (sin usar `core::hash`).
 
 19. **Invalidación de TLB (Translation Lookaside Buffer):**
@@ -390,7 +413,7 @@ pub struct PeripheralsLayout {
 
 21. **Estructura: PhysicalMemoryManager con Bitmap:**
     - Responsable de trackear y asignar toda la memoria física disponible para procesos user
-    - Implementada como bitmap (array de `u64`), donde cada bit representa un frame de página (4KB)
+    - Implementada como bitmap (array de `u64`), donde cada bit representa un frame de página (64KB)
     - Bit en 0 = página libre, Bit en 1 = página ocupada
     - Mantenida exclusivamente por Core 0
     - Completamente implementada en `core` sin dependencias externas (bare metal aarch64)
@@ -403,10 +426,10 @@ pub struct PeripheralsLayout {
     - Asignación es secuencial simple (first-fit o best-fit por simplicidad inicialmente)
 
 23. **Ciclo de vida de memoria virtual por proceso:**
-    - **Creación:** Core 0 crea tabla de páginas (4 niveles), asigna 4KB inicial de heap, mapea región kernel si es necesario, asigna stack inicial (dinámico)
-    - **Crecimiento de heap:** Al detectarse page fault en rango de heap, Core 0 asigna 4KB adicionales, actualiza tabla de páginas, invalida TLB remoto si es necesario
+    - **Creación:** Core 0 crea tabla de páginas (3 niveles), asigna 64KB inicial de heap, mapea región kernel si es necesario, asigna stack inicial (dinámico)
+    - **Crecimiento de heap:** Al detectarse page fault en rango de heap, Core 0 asigna 64KB adicionales, actualiza tabla de páginas, invalida TLB remoto si es necesario
     - **Crecimiento de stack:** Al detectarse page fault en rango de stack, Core 0 asigna página del bitmap, mapea en tabla de páginas en dirección virtual decreciente
-    - **Stack explosion protection:** Si el crecimiento solicitado consumiría la reserva `RAM_total - kernel - 4MB` o alcanzaría el límite superior del rango virtual `[0x7000_0000, 0x7FFF_FFFF_FFFF]`, se rechaza la asignación y se termina el proceso con segfault.
+    - **Stack explosion protection:** Si el crecimiento solicitado consumiría la reserva `RAM_total - kernel - 10MB` o alcanzaría el límite superior del rango virtual `[0x7000_0000, 0x7FFF_FFFF_FFFF]`, se rechaza la asignación y se termina el proceso con segfault.
     - **Liberación:** Cuando proceso termina, Core 0 libera todas sus páginas físicas
 
 24. **Liberación de memoria física (con limpieza):**
@@ -425,7 +448,7 @@ pub struct PeripheralsLayout {
     - **Razón de limpieza:** Previene que datos sensibles de procesos anteriores queden expuestos en memoria para procesos posteriores (security best practice)
 
 25. **Reserva de memoria para kernel:**
-    - Se aparta un bloque total de **4MB** inmediatamente después del rango del kernel: 3MB para operaciones críticas y 1MB para protección OOM.
+    - Se aparta un bloque total de **10MB** inmediatamente después del rango del kernel: 8MB para operaciones críticas (tablas, stacks de emergencia) y 2MB como colchón OOM exclusivo de Core 0.
     - Este pool no se asigna jamás a procesos en Cores 1-N y alimenta el crecimiento ilimitado de stacks de 64 KB y cualquier buffer urgente del kernel.
     - Garantiza que el kernel nunca quedará sin recursos incluso si el userland consume toda la RAM disponible.
     - Core 0 rechaza solicitudes de asignación cuando `available_memory <= 3MB` (mantiene el MB extra intacto como airbag final).
@@ -443,12 +466,12 @@ pub struct PeripheralsLayout {
     - **Handler en Core N:**
       1. Identifica tipo de fault (translation, permission, alignment, etc.)
       2. **Si es acceso a stack (rango 0x70000000 - 0x7FFFFFFFFFFF):**
-         - Verifica que nueva página solicitada no exceda límite: `RAM_total - kernel - 4MB reservas`
-         - Si hay memoria disponible: envía syscall a Core 0 (`sys_page_fault`) para asignar nuevo bloque de 64KB
-         - Si no hay memoria: rechaza asignación, termina proceso con segfault
+        - Verifica que nueva página solicitada no exceda límite: `RAM_total - kernel - 10MB reservas`
+        - Si hay memoria disponible: envía syscall a Core 0 (`sys_page_fault`) para asignar nuevo bloque de 64KB
+        - Si no hay memoria: rechaza asignación, termina proceso con segfault
       3. **Si es acceso a heap (rango 0x00000000 - 0x6FFFFFFF):**
-         - Verifica que es acceso válido dentro de límites del proceso
-         - Envía syscall a Core 0 para asignar 4KB adicionales
+        - Verifica que es acceso válido dentro de límites del proceso
+        - Envía syscall a Core 0 para asignar 64KB adicionales
       4. **Si es acceso a memoria kernel desde EL0:** genera segmentation fault → termina proceso
       5. Core 0 procesa: asigna página física, mapea en tabla de páginas, invalida TLB
       6. Retorna a Core N, reintenta acceso
@@ -564,7 +587,7 @@ pub struct PeripheralsLayout {
       - **Carga de binario en memoria (proceso Linux estándar):**
         1. Leer `e_entry` (entry point), `e_phoff`, `e_phnum`
         2. Iterar program headers (Elf64_Phdr), para cada PT_LOAD:
-           - Asignar páginas físicas necesarias (`p_memsz / 4KB`)
+        - Asignar páginas físicas necesarias (`p_memsz / 64KB`)
            - Mapear en tabla de páginas en `p_vaddr` con permisos según `p_flags` (PF_R, PF_W, PF_X)
            - Copiar `p_filesz` bytes del ELF al espacio virtual del proceso (no se ejecuta directamente desde memoria física compartida)
            - Si `p_memsz > p_filesz`: llenar resto con ceros (sección .bss)
@@ -596,7 +619,7 @@ pub struct PeripheralsLayout {
         1. `reserve_slot(uid)` entrega `{pcb_index, claim_handle}` y crea un `ProcessMemoryPlan` vacío.
         2. Core 0 reserva el stack de kernel (64KB) del pool protegido, marca su guard page y anota el frame en el plan.
         3. Reserva las tablas de páginas L0-L3 desde la zona “kernel only”, adornando cada frame en el plan.
-        4. Reserva páginas iniciales de userland: heap (4KB) y stack (64KB) desde el bitmap general.
+        4. Reserva páginas iniciales de userland: heap (64KB) y stack (64KB) desde el bitmap general.
         5. Carga los segmentos del ELF en páginas recién asignadas, añadiéndolas al plan hasta que todas las copias hayan sido exitosas.
         6. Si alguna etapa falla (ELF inválido, falta de memoria, verificación setuid, etc.), se invoca `plan.rollback()` que itera la lista de frames en orden inverso, los limpia y los devuelve al bitmap/pool antes de liberar el `claim_flag` y llamar a `rollback_slot`.
         7. Si todo sale bien, `plan.commit()` marca cada frame como definitivo: vincula las tablas a `ttbr0`, publica el stack kernel en el PCB y deja `claim_flag` en `true` hasta que Core N lo ejecute por primera vez.
@@ -623,8 +646,8 @@ pub struct PeripheralsLayout {
       - Asignación a Core N menos cargado (medido por cantidad de procesos RUNNING)
       - Prioridad heredada del padre
     - `sys_page_fault(virtual_addr, type)`: Pedir más memoria (interno)
-      - Valida que hay memoria disponible (respetando 4MB reservas)
-      - Asigna bloque (4KB heap, 64KB stack)
+      - Valida que hay memoria disponible (respetando 10MB de reservas)
+      - Asigna bloque (64KB heap, 64KB stack)
       - Mapea en tabla de páginas
       - Invalida TLB
     - `sys_wait(pid)`: Leer `exit_code` del hijo
@@ -656,7 +679,7 @@ pub struct PeripheralsLayout {
     3. **Inicializar bitmap de memoria física:**
        - Marcar rango kernel como ocupado (primeros 10MB)
        - Marcar el pool reservado para stacks de kernel (bloques de 64 KB + guard page) como ocupado inicialmente; se irá liberando/asignando por PCB.
-       - Marcar rango reserva como ocupado (4MB: 3MB kernel + 1MB OOM protection) y etiquetarlo como "solo Core 0" para que nunca se entregue a procesos usuario.
+       - Marcar rango reserva como ocupado (10MB: 8MB kernel + 2MB OOM protection) y etiquetarlo como "solo Core 0" para que nunca se entregue a procesos usuario.
        - Resto disponible para asignación
     4. **Inicializar tablas de procesos:**
        - `kernel_process_table`: `[ProcessControlBlock; KERNEL_MAX_PROCESSES]`.
@@ -737,7 +760,7 @@ pub struct PeripheralsLayout {
 35. **Funciones de introspección del scheduler:**
     - `print_scheduler_state()`: Imprime estado actual de cada scheduler por core (core, proceso actual, PID, prioridad, estado)
     - `print_process_table()`: Lista todos los procesos en tabla maestra (PID, UID/GID, prioridad, estado, TTBR0)
-    - `print_memory_state()`: Muestra estado del bitmap (páginas libres, ocupadas, fragmentación, 4MB reservados)
+    - `print_memory_state()`: Muestra estado del bitmap (páginas libres, ocupadas, fragmentación, 10MB reservados)
     - `print_core_status()`: Para cada Core N, muestra el puntero actual y proceso que está ejecutando
     - `print_exception_state()`: Muestra últimas 64 excepciones manejadas (buffer circular), FAR_EL1, ESR_EL1, tipo, timestamp
     - Todas estas funciones usan `println!` macro para output por UART
