@@ -14,6 +14,7 @@ target_board="$1"
 shift
 
 echo "Cleaning temp files and backuping kernel8.img file"
+echo "Compiling with options; '$target_board'"
 cargo clean 2>/dev/null >/dev/null
 if [ -f $kernel ]; then
 	mv $kernel $kernel.old
@@ -34,7 +35,7 @@ if [ "$target_board" == "rpi4" ]; then
 	board="bsp_rpi4"
 	cpuboard="cortex-a72"
 	firmware_hint="firmware/raspberry_pi-4/"
-	qemu_hint="[3] Test locally with; qemu-system-aarch64 -M raspi4b -cpu cortex-a72 -smp 4 -m 2G -kernel kernel8.img -device loader,file=firmware/raspberry_pi-4/bcm2711-rpi-4-b.dtb,addr=0x000000000000033c -display none -serial stdio "
+	qemu_hint="[3] Test locally with; qemu-system-aarch64 -d int -D qemu-int.log -M raspi4b -cpu cortex-a72 -smp 4 -m 2G -kernel kernel8.img -device loader,file=firmware/raspberry_pi-4/bcm2711-rpi-4-b.dtb,addr=0x000000000000033c -display none -serial stdio "
 elif [ "$target_board" == "rpi5" ]; then
 	board="bsp_rpi5"
 	cpuboard="cortex-a76"
@@ -44,7 +45,7 @@ elif [ "$target_board" == "qemu" ]; then
 	board="bsp_qemu"
 	cpuboard="cortex-a72"
 	firmware_hint="firmware/raspberry_pi-4/"
-	qemu_hint="[3] Test locally with; qemu-system-aarch64 -M raspi4b -cpu cortex-a72 -smp 4 -m 2G -kernel kernel8.img -device loader,file=firmware/raspberry_pi-4/bcm2711-rpi-4-b.dtb,addr=0x000000000000033c -display none -serial stdio\n[4] The build also enables PSCI helpers so you can run: qemu-system-aarch64 -M virt -cpu cortex-a72 -smp 4 -m 2G -kernel kernel8.img -serial stdio -display none"
+	qemu_hint="[3] Test locally with; qemu-system-aarch64 -d int -D qemu-int.log -M raspi4b -cpu cortex-a72 -smp 4 -m 2G -kernel kernel8.img -device loader,file=firmware/raspberry_pi-4/bcm2711-rpi-4-b.dtb,addr=0x000000000000033c -display none -serial stdio\n[4] The build also enables PSCI helpers so you can run: qemu-system-aarch64 -M virt -cpu cortex-a72 -smp 4 -m 2G -kernel kernel8.img -serial stdio -display none"
 else
 	echo "Unsupported board '$target_board'. Supported boards: rpi4 rpi5 qemu"
 	exit 1
@@ -91,6 +92,7 @@ if [ "$target_board" == "qemu" ]; then
 fi
 
 libpath=$(pwd)/src/bsp/raspberrypi
+artifact_path="../target/aarch64-unknown-none-softfloat/release/ravnos_kernel"
 cargo rustc --target aarch64-unknown-none-softfloat --features "$feature_list" --release -- -C target-cpu=$cpuboard -C link-arg=--library-path=$libpath -C link-arg=--script=$libpath/kernel.ld 2>logs/kernel-error_output.log > logs/kernel-output.log
 	
 if [ $? -eq 0 ];then
@@ -105,11 +107,13 @@ if [ $? -eq 0 ];then
 	rm -rf cargo-tmp
 	
 	rustup component add llvm-tools
-	rust-objcopy --strip-all -O binary ../target/aarch64-unknown-none-softfloat/release/ravnos_kernel $kernel
+	rust-objcopy --strip-all -O binary "$artifact_path" $kernel
+	cp "$artifact_path" ravnos_kernel.elf
 
-	echo "Kernel details;" && ls -lh $kernel
+		echo "Kernel details;" && ls -lh $kernel
+		echo "ELF artifact for objdump saved as ravnos_kernel.elf"
 
-	echo "Creating in ../target/doc the documentation"
+		echo "Creating in ../target/doc the documentation"
 	cargo doc --target aarch64-unknown-none-softfloat >/dev/null 2>/dev/null
 	echo -e "[0] Insert your SDCard\n[1] Copy kernel8.img and files in ${firmware_hint} into your SDCard.\n[2] Unplug it and boot"
 	echo -e "$qemu_hint"
