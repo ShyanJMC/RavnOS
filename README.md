@@ -4,7 +4,7 @@
 | :---: |
 | Image created with Stable Diffusion 2.1 |
 
-RanvOS, (from norwegian; raven),  is a operative system programmed in Rust. Aims to be; minimal, stable, secure and modern ( this maybe you know as; state-of-art ).
+RavnOS, (from norwegian; raven),  is a operative system programmed in Rust. Aims to be; minimal, stable, secure and modern ( this maybe you know as; state-of-art ).
 
 Is my personal project to make from scratch an operative system, take this project as a hobby, nothing professional.
 
