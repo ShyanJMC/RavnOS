@@ -1,15 +1,15 @@
 # RavnOS
 
-| ![](images/ravnos-2.png) |
+| ![](images/RavnOS-2.png) |
 | :---: |
 | Image created with Stable Diffusion 2.1 |
 
-RavnOS, (from norwegian; raven),  is a operative system programmed in Rust. Aims to be; minimal, stable, secure and modern ( this maybe you know as; state-of-art ).
+RavnOS, (from norwegian; raven),  is a operating system programmed in Rust. Aims to be; minimal, stable, secure and modern ( this maybe you know as; state-of-art ).
 
-Is my personal project to make from scratch an operative system, take this project as a hobby, nothing professional.
+Is my personal project to make from scratch an operating system, take this project as a hobby, nothing professional.
 
 <!-- TOC START min:1 max:5 link:true asterisk:false update:true -->
-- [RavnOS](#ravnos)
+- [RavnOS](#RavnOS)
 	- [Screenshots](#screenshots)
 	- [Target](#target)
 	- [Requirements](#requirements)
@@ -23,12 +23,12 @@ Is my personal project to make from scratch an operative system, take this proje
 	- [Contributions and support](#contributions-and-support)
 <!-- TOC END -->
 
-## Objetive
+## Objective
 
-The objetive of RavnOS is make an operative system minimalist, self hosted (with some exceptions; hardware architecture crates), stable and secure.
+The objetive of RavnOS is make an operating system minimalist, self-hosted (with some exceptions; hardware architecture crates), stable and secure.
 
-Think in this situation; you are in a wood or in another place, working with critical systems and without the time or resources to fix issues in the compilation
-process or fixing regretion issues. RavnOS fix that isolating the system and the user parts.
+Imagine the following situation; you are in a woods or in another place, working with critical systems and without the time or resources to fix issues in the compilation
+process or fixing regression issues. RavnOS fixes that by isolating the system and the user parts.
 
 ## Screenshots
 
@@ -70,12 +70,12 @@ Will have absolute priority the stability and security of the system over X feat
 
 - Isolation and portability
 
-Each part of system must be portable over Rust supported platforms.
+Each part of the system must be portable over Rust supported platforms.
 
-Each part of system must be self hosted, no external crates (over internet) are allowed. All must be local, how can you be sure that the remote dependency is secure? how can you be sure that the remote dependency will be developed to the end of times? how can you be sure that the remote dependency will not break the compatibility?
-With this point I must do an exception; are allowed crates for hardware (like AArch64/ARM64) because is very hard do crates at the same level than officials.
+Each part of the system must be self-hosted, no external crates (over internet) are allowed. All must be local, how can you be sure that the remote dependency is secure? how can you be sure that the remote dependency will be developed to the end of times? how can you be sure that the remote dependency will not break the compatibility?
+With this point I must do an exception; crates are allowed for hardware (like AArch64/ARM64) because is very hard do crates at the same level than officials.
 
-Each part of system distributed in binary form must be done as static, at 2022 the best way for this is use MUSL standard C library.
+Each part of the system distributed in binary form must be done as static, at 2022 the best way for this is use MUSL standard C library.
 
 - Keys - Data
 
@@ -87,12 +87,12 @@ The information is printed in screen and worked with syntax;
 }
 ```
 
-This allow work with data grouped by keys and avoid issues trying to extract data when it have "", '', \\, \\\, and others characters.
+This allows working with data grouped by keys and avoid issues trying to extract data when it have "", '', \\, \\\, and others characters.
 
  - OS Image - Container
 
 The final distribution must use the 'OS image' schema; the base system is immutable and the mutable part
-is used trough containers schema.
+is used through a container scheme.
 
 ## Requirements
 - Rustc
@@ -108,7 +108,7 @@ is used trough containers schema.
 
 ## Versioning
 
-The versioning schema for releases follows Semantic Versioning v2 ( https://semver.org/spec/v2.0.0.html ), here a resume;
+The versioning schema for releases follows Semantic Versioning v2 ( https://semver.org/spec/v2.0.0.html ), here a summary;
 
 ```
 Given a version number MAJOR.MINOR.PATCH, increment the:
@@ -147,7 +147,7 @@ Contains information about each system part.
 
 ## Build
 
-Right now the OS is in alpha, so right now you can only test it another OS.
+Right now the OS is in alpha, so right now you can only test it on another OS.
 
 There are two ways for build RavnOS. ;
 
@@ -155,25 +155,25 @@ There are two ways for build RavnOS. ;
 
 Remember replace; [x86_64/aarch64] and [linux/windows/etc] for your case.
 
-I recommend use this configuration inside "~/.cargo/.config";
+I recommend using this configuration inside "~/.cargo/.config";
 
 ```rust
 [build]
-target= "[x86_64/aarch64]-unknown-linux-musl"
+target= "[x86_64/aarch64]-unknown-linux-MUSL"
 jobs=20
 rustflags = ["-C","opt-level=2","-C","debuginfo=0","-C", "target-feature=+crt-static","-C","target-cpu=native"]
 ```
 
-Add the target built with musl;
+Add the target built with MUSL;
 
 ```rust
-rustup target add [x86_64/aarch64]-unknown-[linux/windows/etc]-musl
+rustup target add [x86_64/aarch64]-unknown-[linux/windows/etc]-MUSL
 ```
 
 To build;
 
 ```rust
-cargo build --release --target [x86_64/aarch64]-unknown-[linux/windows/etc]-musl
+cargo build --release --target [x86_64/aarch64]-unknown-[linux/windows/etc]-MUSL
 ```
 
 
@@ -194,10 +194,10 @@ rustc --crate-type=rlib --crate-name libfile [PATH_TO_LIBFILE]/src/lib.rs -o lib
 Then you can link into the binary build;
 
 ```rust
-rustc --target=[x86_64/aarm64/etc]-unknown-[linux/windows/etc]-musl -C opt-level=2 -C target-feature=+crt-static --extern libconfarg=libconfarg.rlib --extern libfile=libfile.rlib --extern libstream=libstream.rlib [COMPONENT]/src/main.rs -o [final_name]
+rustc --target=[x86_64/aarm64/etc]-unknown-[linux/windows/etc]-MUSL -C opt-level=2 -C target-feature=+crt-static --extern libconfarg=libconfarg.rlib --extern libfile=libfile.rlib --extern libstream=libstream.rlib [COMPONENT]/src/main.rs -o [final_name]
 ```
 
-with above command, you will the final binary of [COMPONENT] in static final form (aka; statically linked) with optimization level 2 and specific libs (crates).
+with above command, you will get the final binary of [COMPONENT] in static final form (aka; statically linked) with optimization level 2 and specific libs (crates).
 
 As with cargo, I recommend do "strip" to the final binaries to delete debug symbols.
 
@@ -215,7 +215,7 @@ After strip;
 f: ls 	[10/4/2023 10:49:11 UTC-0]	["sticky bit", "rwx", "r-x", "r-x"]	[uid=1000(shyanjmc) gid=1000(shyanjmc)] 542K
 ```
 
-The strip command clean the debug symbols, which are the 86.45% of space.
+The strip command cleans the debug symbols, which are the 86.45% of space.
 
 ## Coypright
 
@@ -232,7 +232,7 @@ I, Joaquin Manuel 'ShyanJMC' Crespo, am the main developer and creator of this p
 RavnOS and all parts are licensed under GPLv3.
 
 ## Contact
-If you want contact me, you can do it trough:
+If you want to contact me, you can do it through:
 
 Email:
 
@@ -250,11 +250,11 @@ For now I am the main and only dev in this project, maybe in the future I will a
 
 If you want support this project you can;
 
-Join my patreon;
+Join my Patreon;
 
-   - https://patreon.com/shyanjmc
+   - https://Patreon.com/shyanjmc
 
-Donate me crypto;
+Donate crypto to me;
 
 - DAI (ERC-20) - The preferred stablecoin;
 
@@ -268,4 +268,4 @@ Donate me crypto;
 
    0x27219354cC70dE84e7fae0B71E9e2605026b10B2
 
-And if you know me personally, let me know that you have donated, since that moment we will share a beer (or mead if you are man/women of honor).
+And if you know me personally, let me know that you have donated, since that moment we will share a beer (or mead if you are man/woman of honor).
