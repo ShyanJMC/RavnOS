@@ -1,6 +1,6 @@
 [package]
 name = "ravnos_kernel"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Joaquin 'ShyanJMC' Crespo <shyan@shyanjmc.com>"]
 edition = "2021"
 
