@@ -2,8 +2,10 @@
 //
 // Memory subsystem entry point: page allocator + 3-level 64 KiB tables.
 
-pub mod mmu;
+pub mod arch;
 pub mod page_allocator;
+
+pub use arch::mmu;
 
 use alloc::vec;
 use alloc::vec::Vec;
@@ -134,9 +136,16 @@ impl MemoryManager {
             summary.peripherals.gic_redistributor,
             summary.peripherals.local_intc,
         ]);
+        // Kernel-only spans (kernel image, emergency pool, boot stack) must never be
+        // reachable from a user task's TTBR0 tables, otherwise EL0 code could read or
+        // corrupt kernel state directly through the identity-mapped DRAM range. This is
+        // the counterpart, in the "cores 1..N" direction, to disabling TTBR0 walks on
+        // core 0 in `mmu::enable_kernel_mmu`: together they keep the kernel core and the
+        // kernel's own memory unreachable from user address spaces.
+        let excluded = kernel_only_spans(&allocator);
         let mut user_spaces = Vec::with_capacity(scheduler::MAX_USER_TASKS);
         for _ in 0..scheduler::MAX_USER_TASKS {
-            user_spaces.push(UserAddressSpace::new(&regions, &user_mmio_windows));
+            user_spaces.push(UserAddressSpace::new(&regions, &user_mmio_windows, &excluded));
         }
 
         for (idx, space) in user_spaces.iter().enumerate() {
@@ -256,7 +265,7 @@ struct UserAddressSpace {
 }
 
 impl UserAddressSpace {
-    fn new(regions: &[RamRegion], mmio_windows: &[u64]) -> Self {
+    fn new(regions: &[RamRegion], mmio_windows: &[u64], excluded: &[(u64, u64)]) -> Self {
         let mut tables = KernelTables::new();
 
         for region in regions {
@@ -265,19 +274,24 @@ impl UserAddressSpace {
             if end <= start {
                 continue;
             }
-            let size = end - start;
-            tables
-                .map_identity(
-                    start,
-                    size,
-                    PageAttributes::new(
-                        MemoryType::Normal,
-                        Shareability::InnerShareable,
-                        AccessPermissions::UserReadWrite,
-                        false,
-                    ),
-                )
-                .expect("Failed to map shared user DRAM region");
+            for (piece_start, piece_end) in subtract_excluded(start, end, excluded) {
+                let size = piece_end - piece_start;
+                if size == 0 {
+                    continue;
+                }
+                tables
+                    .map_identity(
+                        piece_start,
+                        size,
+                        PageAttributes::new(
+                            MemoryType::Normal,
+                            Shareability::InnerShareable,
+                            AccessPermissions::UserReadWrite,
+                            false,
+                        ),
+                    )
+                    .expect("Failed to map shared user DRAM region");
+            }
         }
 
         for &window_base in mmio_windows {
@@ -369,6 +383,54 @@ fn boot_stack_range() -> (u64, u64) {
             &__boot_core_stack_end_exclusive as *const u8 as u64,
         )
     }
+}
+
+/// Physical spans that belong exclusively to the kernel (its own image, the
+/// boot stack, and the emergency OOM pool) and must therefore be left
+/// unmapped in every `UserAddressSpace`, regardless of the identity-mapped
+/// DRAM range they happen to fall inside.
+fn kernel_only_spans(allocator: &PageAllocator) -> Vec<(u64, u64)> {
+    let mut spans: Vec<(u64, u64)> = allocator
+        .reserved_regions()
+        .iter()
+        .filter(|region| {
+            matches!(
+                region.kind,
+                ReservationKind::KernelImage | ReservationKind::EmergencyPool
+            )
+        })
+        .map(|region| (region.start, region.start + region.size))
+        .collect();
+
+    let (stack_start, stack_end) = boot_stack_range();
+    spans.push((align_down(stack_start), align_up(stack_end)));
+
+    spans
+}
+
+/// Splits `[start, end)` into the sub-ranges that remain after removing every
+/// overlapping span in `excluded`.
+fn subtract_excluded(start: u64, end: u64, excluded: &[(u64, u64)]) -> Vec<(u64, u64)> {
+    let mut pieces = vec![(start, end)];
+
+    for &(ex_start, ex_end) in excluded {
+        let mut next_pieces = Vec::with_capacity(pieces.len());
+        for (s, e) in pieces {
+            if ex_end <= s || ex_start >= e {
+                next_pieces.push((s, e));
+                continue;
+            }
+            if ex_start > s {
+                next_pieces.push((s, ex_start));
+            }
+            if ex_end < e {
+                next_pieces.push((ex_end, e));
+            }
+        }
+        pieces = next_pieces;
+    }
+
+    pieces
 }
 
 #[inline(always)]
