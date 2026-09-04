@@ -1,0 +1,57 @@
+- kernel
+	- [ ] Documentacion de todo
+		- [ ] todo en idioma ingles
+		- [ ] ubicacion en directorio del kernel; "documentation/"
+			- [ ] separacion por subcarpetas
+				- [ ] "documentation/drivers"
+				- [ ] "documentation/files_systems"
+				- [ ] etc
+	- [x] main.rs
+		- [x] minimalizacion para solamente lo necesario, eliminar lo basura o no necesario. (revisado: "main.rs" ya contiene solo el flujo de boot -heap, BSP, MMU, cores secundarios, scheduler-, sin codigo muerto ni restos de debug)
+		- [x] el init debe estar modularizado para cargar segun la BSP destino a compilar (ya cubierto por las features de Cargo "bsp_rpi4"/"bsp_rpi5"/"bsp_qemu" en "bsp/mod.rs": cada board compila su propio camino de init, arranque de cores secundarios e interrupciones)
+	- [ ] Uso de un scheduler de memoria virtual para cada programa de 64 bits. (parcial: hoy los espacios de usuario son identity-mapped placeholders en "memory/mod.rs", falta gestion real de VM por proceso -fault handling, allocation on-demand-)
+		- [x] ubicacion en directorio del kernel; "memory/"
+		- [x] modulos para implementaciones de arquitecturas especificas en ensamblador (implementado: "memory/arch/mod.rs" selecciona por "target_arch" y "memory/arch/aarch64/mmu.rs" contiene toda la implementacion especifica de ARM64; deja el patron listo para sumar "memory/arch/riscv64/" el dia que se porte esa arquitectura)
+			- [x] implementacion completa para la arquitectura ARM64. (TTBR0/1, TCR_EL1, MAIR_EL1, SCTLR_EL1 e invalidacion de TLB/icache via asm! en "memory/arch/aarch64/mmu.rs")
+			- [ ] implementacion completa para la arquitectura RISC-V 64 bits. (diferido a proposito: es un port de arquitectura completo -boot M-mode/S-mode, paginacion Sv39/Sv48, PLIC/CLINT, UART NS16550, linker script y target de build nuevos- que no se puede verificar booteando desde esta sesion; "main.rs" sigue bloqueando explicitamente cualquier target que no sea aarch64)
+	- [x] Uso de un scheduler de procesos de CPU preempitvo
+		- [x] ubicacion en directorio del kernel; "cpu/"
+		- [x] 5 ms entre cada cambio de contexto entre programas. (implementado en "cpu/scheduler.rs", funcion setup_generic_timer_5ms)
+		- [x] el nucleo cero/principal es para los procesos/hilos del kernel.
+		- [x] los nucleos 1..N son para los procesos/hilos de los usuarios.
+		- [x] el nucleo cero/principal esta totalmente aislado del resto a nivel de seguridad (implementado en dos capas: 1) "memory/arch/aarch64/mmu.rs" programa TCR_EL1.EPD0 = DisableTTBR0Walks solo en el core 0, un candado de hardware que le impide caminar cualquier tabla TTBR0 de usuario aunque hubiera un bug de scheduler; 2) "memory/mod.rs" excluye la imagen del kernel, el boot stack y el emergency pool del mapeo identidad UserReadWrite que reciben los "UserAddressSpace", asi el codigo de usuario nunca puede leer ni escribir memoria del kernel. Ademas "cpu/scheduler.rs" agrega un debug_assert defensivo que aborta si algo intentara cargar un TTBR0 de usuario en el core 0)
+	- [ ] tabla de syscall 
+		- [ ] ubicacion en directorio del kernel; "syscall/"
+		- [ ] prioridad ser compatible con la libreria estandar de Rust, no implementar libreria estandar C.
+			- [ ] modulos para implementaciones de arquitecturas especificas en ensamblador
+				- [ ] implementacion completa para la arquitectura ARM64.
+				- [ ] implementacion completa para la arquitectura RISC-V 64 bits.
+	- [ ] drivers
+		- [ ] ubicacion en directorio del kernel; "bsp/drivers"
+			- [ ] una carpeta por categoria de driver, con las implementaciones especificas de cada dispositivo dentro (ejemplos; bsp/drivers/net, bsp/drivers/audio, etc).
+			- [ ] en "bsp/drivers/video" deben estar "hdmi", "usb-c-video" y "displayport"
+				- [ ] implementaciones especificas y optimizadas para DRM (Direct Rendering Manager) y KMS (Kernel Mode Setting)
+				- [ ] implementaciones especificas y optimizadas para cada hardware en concreto compatible con ARM64.
+		- [ ] Mayor soporte de implementaciones de arquitecturas ARM64/Aarch64
+			- [ ] ubicacion en directorio del kernel; "bsp/"
+		- [ ] lectura de los drivers implementados en Linux y crear los ports equivalentes en RavnOS kernel usando su syscall.
+			- [ ] ubicacion del kernel Linux en; 
+		- [ ] drivers esenciales a ser cargados obligatoriamente en los procesos/hilos del kernel; HDMI, USB 2, USB 3, teclado/keyboard, ethernet
+		- [ ] los drivers no esenciales son cargados en los procesos/hilos de usuario.
+	- [ ] file system
+		- [ ] ubicacion en directorio del kernel; "file_system"
+		- [ ] soporte para EXT4 de Linux
+			- [ ] ubicacion en directorio del kernel; "file_system/ext4"
+		- [ ] soporte para FAT32
+			- [ ] ubicacion en directorio del kernel; "file_system/fat32"
+		- [ ] implementacion de un file system de journaling estilo EXT4 con los siguientes agregados y modificaciones;
+			- [ ] ubicacion en directorio del kernel; "file_system/ravnfs/"
+			- [ ] soporte para versioning (dado en cada syscall write), manteniendo la ultima version modificada del archivo anterior a la actual para restaurar ante corrupcion o peticion del usuario (soporte para tal en las syscalls).
+				- [ ] en el mismo journaling debe haber un campo adicional que indique el inodo de la version anterior.
+				- [ ] uso de CRC32 de ARM64 para el checksum de datos, con guardado en los campos del journal para la version del archivo
+				- [ ] versionado de N-1 al ultimo modificado. El versionado es inmutable (solo lectura) de forma obligatoria.
+				- [ ] reserva de 120MB como espacio libre obligatorio para el versionado de ravnfs.
+				- [ ] soporte para cifrado AES-XTS usando ensamblador de ARM64.
+					- [ ] superbloque y journaling cifrados por defecto.
+					- [ ] archivo con seed de cifrado ubicado en directorio del kernel; 'secret/ravnfs/seed.txt' que se embebe en el kernel y lo usa ravnfs para cifrar/descifrar.
+		- [ ] los file system FAT32 y RavnFS son esenciales, deben cargarse en los procesos/hilos del kernel.
