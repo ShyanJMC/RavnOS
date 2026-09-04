@@ -811,6 +811,14 @@ fn load_user_context(slot: usize) -> *const ContextFrame {
 }
 
 fn configure_user_ttbr(core_id: usize, slot: usize) {
+    // Core 0 is the kernel-only core (see `memory::arch::aarch64::mmu::enable_kernel_mmu`,
+    // which disables TCR_EL1.EPD0 there): it must never load a user TTBR0. This assert is
+    // defense in depth on top of the fact that `scheduler_preempt_tick` never routes core 0
+    // through `handle_user_tick` in the first place.
+    debug_assert_ne!(
+        core_id, 0,
+        "[sched] BUG: attempted to configure a user TTBR0 on the isolated kernel core"
+    );
     let _ = process::with_user_process(slot, |pcb| {
         if pcb.ttbr0 != 0 {
             await_kernel_uart_println!(
